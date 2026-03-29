@@ -1,0 +1,47 @@
+import { Controller, Get, Post, Patch, Param, Body } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { UserConnectionsService } from './user-connections.service.js';
+import { CreateConnectionDto } from './dto/create-connection.dto.js';
+import { UpdateConnectionDto } from './dto/update-connection.dto.js';
+import { TenantId } from '../../shared/tenant/tenant.decorator.js';
+import { CurrentUser } from '../../shared/decorators/current-user.decorator.js';
+
+@ApiTags('Connections')
+@ApiBearerAuth()
+@Controller('connections')
+export class UserConnectionsController {
+  constructor(private readonly connectionsService: UserConnectionsService) {}
+
+  @Post()
+  @ApiOperation({ summary: 'Send connection request' })
+  create(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: any,
+    @Body() dto: CreateConnectionDto,
+  ) {
+    return this.connectionsService.create(tenantId, user.id, dto);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Accept or block connection' })
+  update(
+    @TenantId() tenantId: string,
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+    @Body() dto: UpdateConnectionDto,
+  ) {
+    return this.connectionsService.update(tenantId, id, user.id, dto);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'List accepted connections' })
+  findAll(@TenantId() tenantId: string, @CurrentUser() user: any) {
+    return this.connectionsService.findAll(tenantId, user.id);
+  }
+
+  @Get('pending')
+  @ApiOperation({ summary: 'List pending connection requests' })
+  findPending(@TenantId() tenantId: string, @CurrentUser() user: any) {
+    return this.connectionsService.findPending(tenantId, user.id);
+  }
+}
