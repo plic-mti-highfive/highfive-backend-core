@@ -1,12 +1,10 @@
 {
   "name": "core_backend",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "",
   "author": "",
   "private": true,
-  "license": "UNLICENSED",
   "type": "commonjs",
-  "packageManager": "pnpm@9.0.0",
   "engines": {
     "node": ">=22.10.0",
     "pnpm": ">=9.0.0"
