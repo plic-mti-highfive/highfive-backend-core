@@ -18,10 +18,7 @@ export class UserProfilesService {
     return this.profileRepo.save(profile);
   }
 
-  async findByUserId(
-    tenantId: string,
-    userId: string,
-  ): Promise<UserProfile> {
+  async findByUserId(tenantId: string, userId: string): Promise<UserProfile> {
     const profile = await this.profileRepo.findOne({
       where: { userId, tenantId },
     });

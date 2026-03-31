@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -6,14 +7,18 @@ import { TicketsService } from './tickets.service.js';
 import { Ticket } from './entities/ticket.entity.js';
 import { ProjectMembersService } from '../project-members/project-members.service.js';
 import { UsersService } from '../../identity/users/users.service.js';
-import { ProjectRole, TicketStatus, UserStatus } from '../../shared/enums/index.js';
+import {
+  ProjectRole,
+  TicketStatus,
+  UserStatus,
+} from '../../shared/enums/index.js';
 
 describe('TicketsService', () => {
   let service: TicketsService;
   let ticketRepo: any;
-  let membersService: jest.Mocked<Partial<ProjectMembersService>>;
-  let usersService: jest.Mocked<Partial<UsersService>>;
-  let eventEmitter: jest.Mocked<Partial<EventEmitter2>>;
+  let membersService: Partial<ProjectMembersService>;
+  let usersService: Partial<UsersService>;
+  let eventEmitter: Partial<EventEmitter2>;
 
   const tenantId = 'tenant-1';
   const projectId = 'project-1';
@@ -21,31 +26,33 @@ describe('TicketsService', () => {
 
   beforeEach(async () => {
     ticketRepo = {
-      create: jest.fn().mockImplementation((data) => ({ id: 'ticket-1', ...data })),
-      save: jest.fn().mockImplementation((data) => ({ id: 'ticket-1', ...data })),
-      findOne: jest.fn(),
-      findAndCount: jest.fn().mockResolvedValue([[], 0]),
+      create: vi
+        .fn()
+        .mockImplementation((data) => ({ id: 'ticket-1', ...data })),
+      save: vi.fn().mockImplementation((data) => ({ id: 'ticket-1', ...data })),
+      findOne: vi.fn(),
+      findAndCount: vi.fn().mockResolvedValue([[], 0]),
     };
 
     membersService = {
-      assertRole: jest.fn().mockResolvedValue({
+      assertRole: vi.fn().mockResolvedValue({
         projectId,
         userId,
         tenantId,
         role: ProjectRole.MEMBER,
       }),
-      getMemberRole: jest.fn(),
+      getMemberRole: vi.fn(),
     };
 
     usersService = {
-      findActiveById: jest.fn().mockResolvedValue({
+      findActiveById: vi.fn().mockResolvedValue({
         id: userId,
         status: UserStatus.ACTIVE,
       }),
     };
 
     eventEmitter = {
-      emit: jest.fn(),
+      emit: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({

@@ -25,7 +25,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message =
         typeof exResponse === 'string'
           ? exResponse
-          : (exResponse as Record<string, unknown>).message ?? exResponse;
+          : ((exResponse as Record<string, unknown>).message ?? exResponse);
     } else if (exception instanceof Error) {
       this.logger.error(exception.message, exception.stack);
     }

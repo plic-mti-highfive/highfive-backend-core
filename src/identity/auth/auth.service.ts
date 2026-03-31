@@ -30,10 +30,7 @@ export class AuthService {
     private readonly refreshTokenRepo: Repository<RefreshToken>,
   ) {}
 
-  async register(
-    tenantId: string,
-    dto: RegisterDto,
-  ): Promise<AuthResponseDto> {
+  async register(tenantId: string, dto: RegisterDto): Promise<AuthResponseDto> {
     const passwordHash = await argon2.hash(dto.password);
     const user = await this.usersService.create(
       tenantId,
@@ -88,11 +85,7 @@ export class AuthService {
     stored.revoked = true;
     await this.refreshTokenRepo.save(stored);
 
-    return this.generateTokens(
-      stored.user.id,
-      stored.user.email,
-      tenantId,
-    );
+    return this.generateTokens(stored.user.id, stored.user.email, tenantId);
   }
 
   async logout(tenantId: string, refreshTokenRaw: string): Promise<void> {
@@ -110,10 +103,15 @@ export class AuthService {
   ): Promise<AuthResponseDto> {
     const payload: JwtPayload = { sub: userId, email, tenantId };
 
-    const accessToken = this.jwtService.sign({ ...payload }, {
-      secret: this.configService.get<string>('jwt.accessSecret'),
-      expiresIn: this.configService.get<string>('jwt.accessExpiration') as any,
-    });
+    const accessToken = this.jwtService.sign(
+      { ...payload },
+      {
+        secret: this.configService.get<string>('jwt.accessSecret'),
+        expiresIn: this.configService.get<string>(
+          'jwt.accessExpiration',
+        ) as any,
+      },
+    );
 
     // Generate opaque refresh token
     const refreshTokenRaw = randomBytes(64).toString('hex');

@@ -1,0 +1,52 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: highfive_db
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: highfive
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend_core:
+    build: .
+    container_name: highfive_backend_core
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      DB_HOST: highfive_db
+      DB_PORT: 5432
+      DB_USERNAME: admin
+      DB_PASSWORD: admin
+      DB_DATABASE: highfive
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_ACCESS_SECRET: dev-access-secret
+      JWT_ACCESS_EXPIRATION: 15m
+      JWT_REFRESH_SECRET: dev-refresh-secret
+      JWT_REFRESH_EXPIRATION: 7d
+    volumes:
+      - ./src:/app/src
+      - ./test:/app/test
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

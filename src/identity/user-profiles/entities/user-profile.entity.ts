@@ -1,10 +1,4 @@
-import {
-  Entity,
-  PrimaryColumn,
-  Column,
-  OneToOne,
-  JoinColumn,
-} from 'typeorm';
+import { Entity, PrimaryColumn, Column, OneToOne, JoinColumn } from 'typeorm';
 import { User } from '../../users/entities/user.entity.js';
 
 @Entity('user_profiles')
@@ -22,7 +16,7 @@ export class UserProfile {
   @Column({ type: 'text', nullable: true })
   bio: string | null;
 
-  @Column({ name: 'avatar_path', nullable: true })
+  @Column({ type: 'varchar', name: 'avatar_path', nullable: true })
   avatarPath: string | null;
 
   @Column({ name: 'theme_preference', default: 'light' })

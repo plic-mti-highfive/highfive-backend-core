@@ -22,10 +22,7 @@ export class ProjectMembersController {
 
   @Get()
   @ApiOperation({ summary: 'List project members' })
-  findAll(
-    @TenantId() tenantId: string,
-    @Param('projectId') projectId: string,
-  ) {
+  findAll(@TenantId() tenantId: string, @Param('projectId') projectId: string) {
     return this.membersService.findMembers(tenantId, projectId);
   }
 

@@ -26,7 +26,7 @@ export class ProjectMessage {
   @Column({ type: 'text' })
   content: string;
 
-  @Column({ name: 'attachment_path', nullable: true })
+  @Column({ type: 'varchar', name: 'attachment_path', nullable: true })
   attachmentPath: string | null;
 
   @ManyToOne(() => Project)

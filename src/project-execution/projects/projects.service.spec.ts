@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -13,28 +14,24 @@ import {
 describe('ProjectsService', () => {
   let service: ProjectsService;
   let projectRepo: any;
-  let membersService: jest.Mocked<Partial<ProjectMembersService>>;
-  let eventEmitter: jest.Mocked<Partial<EventEmitter2>>;
+  let membersService: Partial<ProjectMembersService>;
+  let eventEmitter: Partial<EventEmitter2>;
 
   const tenantId = 'tenant-1';
   const userId = 'user-1';
 
   beforeEach(async () => {
     projectRepo = {
-      create: jest
-        .fn()
-        .mockImplementation((data) => ({ id: 'proj-1', ...data })),
-      save: jest
-        .fn()
-        .mockImplementation((data) => ({ id: 'proj-1', ...data })),
-      findOne: jest.fn(),
-      findAndCount: jest.fn().mockResolvedValue([[], 0]),
-      softDelete: jest.fn().mockResolvedValue({ affected: 1 }),
+      create: vi.fn().mockImplementation((data) => ({ id: 'proj-1', ...data })),
+      save: vi.fn().mockImplementation((data) => ({ id: 'proj-1', ...data })),
+      findOne: vi.fn(),
+      findAndCount: vi.fn().mockResolvedValue([[], 0]),
+      softDelete: vi.fn().mockResolvedValue({ affected: 1 }),
     };
 
     membersService = {
-      addOwner: jest.fn().mockResolvedValue({}),
-      assertRole: jest.fn().mockResolvedValue({
+      addOwner: vi.fn().mockResolvedValue({}),
+      assertRole: vi.fn().mockResolvedValue({
         projectId: 'proj-1',
         userId,
         tenantId,
@@ -42,7 +39,7 @@ describe('ProjectsService', () => {
       }),
     };
 
-    eventEmitter = { emit: jest.fn() };
+    eventEmitter = { emit: vi.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

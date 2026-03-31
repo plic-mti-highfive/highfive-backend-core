@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -16,9 +17,9 @@ import { UserStatus } from '../../shared/enums/index.js';
 
 describe('AuthService', () => {
   let service: AuthService;
-  let usersService: jest.Mocked<Partial<UsersService>>;
-  let userProfilesService: jest.Mocked<Partial<UserProfilesService>>;
-  let jwtService: jest.Mocked<Partial<JwtService>>;
+  let usersService: Partial<UsersService>;
+  let userProfilesService: Partial<UserProfilesService>;
+  let jwtService: Partial<JwtService>;
   let refreshTokenRepo: any;
 
   const tenantId = 'tenant-1';
@@ -34,23 +35,23 @@ describe('AuthService', () => {
     mockUser.passwordHash = await argon2.hash('SecureP@ss123');
 
     usersService = {
-      create: jest.fn().mockResolvedValue(mockUser),
-      findByEmail: jest.fn(),
+      create: vi.fn().mockResolvedValue(mockUser),
+      findByEmail: vi.fn(),
     };
 
     userProfilesService = {
-      createDefault: jest.fn().mockResolvedValue({}),
+      createDefault: vi.fn().mockResolvedValue({}),
     };
 
     jwtService = {
-      sign: jest.fn().mockReturnValue('mock-access-token'),
+      sign: vi.fn().mockReturnValue('mock-access-token'),
     };
 
     refreshTokenRepo = {
-      create: jest.fn().mockImplementation((data) => data),
-      save: jest.fn().mockImplementation((data) => ({ id: 'rt-1', ...data })),
-      findOne: jest.fn(),
-      update: jest.fn(),
+      create: vi.fn().mockImplementation((data) => data),
+      save: vi.fn().mockImplementation((data) => ({ id: 'rt-1', ...data })),
+      findOne: vi.fn(),
+      update: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -62,7 +63,7 @@ describe('AuthService', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn((key: string) => {
+            get: vi.fn((key: string) => {
               const map: Record<string, string> = {
                 'jwt.accessSecret': 'test-secret',
                 'jwt.accessExpiration': '15m',

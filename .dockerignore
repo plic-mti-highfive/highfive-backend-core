@@ -1,0 +1,22 @@
+# Build files
+node_modules
+dist
+
+# Environnement
+.env
+.env.*
+.vscode
+
+# Tests and coverage
+coverage
+junit.xml
+test
+
+# Git
+.git
+.github
+
+# Documentation
+README.md
+CHANGELOG.md
+CLAUDE.md

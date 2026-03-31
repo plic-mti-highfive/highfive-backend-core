@@ -81,7 +81,11 @@ export class UserConnectionsService {
     userId: string,
   ): Promise<UserConnection[]> {
     return this.connectionRepo.find({
-      where: { addresseeId: userId, tenantId, status: ConnectionStatus.PENDING },
+      where: {
+        addresseeId: userId,
+        tenantId,
+        status: ConnectionStatus.PENDING,
+      },
       relations: ['requester'],
     });
   }
