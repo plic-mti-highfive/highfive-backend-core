@@ -6,6 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Repository } from 'typeorm';
 import { UserConnection } from './entities/user-connection.entity.js';
 import { ConnectionStatus } from '@plic-mti-highfive/shared-types';
@@ -17,6 +18,7 @@ export class UserConnectionsService {
   constructor(
     @InjectRepository(UserConnection)
     private readonly connectionRepo: Repository<UserConnection>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(
@@ -43,7 +45,16 @@ export class UserConnectionsService {
       addresseeId: dto.addresseeId,
       tenantId,
     });
-    return this.connectionRepo.save(connection);
+    const saved = await this.connectionRepo.save(connection);
+
+    this.eventEmitter.emit('connection.requested', {
+      connectionId: saved.id,
+      tenantId,
+      requesterId,
+      addresseeId: dto.addresseeId,
+    });
+
+    return saved;
   }
 
   async update(
@@ -62,8 +73,19 @@ export class UserConnectionsService {
       throw new ForbiddenException('Only the addressee can update the status');
     }
 
+    const oldStatus = connection.status;
     connection.status = dto.status;
-    return this.connectionRepo.save(connection);
+    const saved = await this.connectionRepo.save(connection);
+
+    this.eventEmitter.emit('connection.status.updated', {
+      connectionId: saved.id,
+      tenantId,
+      actorId: userId,
+      oldStatus,
+      newStatus: dto.status,
+    });
+
+    return saved;
   }
 
   async findAll(tenantId: string, userId: string): Promise<UserConnection[]> {

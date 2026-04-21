@@ -6,6 +6,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Repository } from 'typeorm';
 import * as argon2 from 'argon2';
 import { randomBytes, createHash } from 'crypto';
@@ -26,6 +27,7 @@ export class AuthService {
     private readonly userProfilesService: UserProfilesService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly eventEmitter: EventEmitter2,
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepo: Repository<RefreshToken>,
   ) {}
@@ -40,6 +42,12 @@ export class AuthService {
 
     // Create empty profile
     await this.userProfilesService.createDefault(user.id, tenantId);
+
+    this.eventEmitter.emit('user.registered', {
+      userId: user.id,
+      email: user.email,
+      tenantId,
+    });
 
     return this.generateTokens(user.id, user.email, tenantId);
   }
@@ -58,6 +66,12 @@ export class AuthService {
     if (!valid) {
       throw new UnauthorizedException('Invalid credentials');
     }
+
+    this.eventEmitter.emit('user.logged_in', {
+      userId: user.id,
+      email: user.email,
+      tenantId,
+    });
 
     return this.generateTokens(user.id, user.email, tenantId);
   }
@@ -94,6 +108,8 @@ export class AuthService {
       { tokenHash, tenantId },
       { revoked: true },
     );
+
+    this.eventEmitter.emit('user.logged_out', { tenantId });
   }
 
   private async generateTokens(

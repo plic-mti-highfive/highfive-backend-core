@@ -3,6 +3,7 @@ import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import * as argon2 from 'argon2';
@@ -33,12 +34,17 @@ type RefreshTokenRepoMock = {
   update: Mock<() => Promise<unknown>>;
 };
 
+type EventEmitterMock = {
+  emit: Mock<(event: string, payload: unknown) => boolean>;
+};
+
 describe('AuthService', () => {
   let service: AuthService;
   let usersService: UsersServiceMock;
   let userProfilesService: UserProfilesServiceMock;
   let jwtService: JwtServiceMock;
   let refreshTokenRepo: RefreshTokenRepoMock;
+  let eventEmitter: EventEmitterMock;
 
   const tenantId = 'tenant-1';
   const mockUser: User = {
@@ -85,12 +91,17 @@ describe('AuthService', () => {
       update: vi.fn<() => Promise<unknown>>(),
     };
 
+    eventEmitter = {
+      emit: vi.fn<(event: string, payload: unknown) => boolean>(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: UsersService, useValue: usersService },
         { provide: UserProfilesService, useValue: userProfilesService },
         { provide: JwtService, useValue: jwtService },
+        { provide: EventEmitter2, useValue: eventEmitter },
         {
           provide: ConfigService,
           useValue: {

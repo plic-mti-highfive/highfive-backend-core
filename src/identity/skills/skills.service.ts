@@ -4,6 +4,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Repository } from 'typeorm';
 import { Skill } from './entities/skill.entity.js';
 import { UserSkill } from './entities/user-skill.entity.js';
@@ -16,6 +17,7 @@ export class SkillsService {
     private readonly skillRepo: Repository<Skill>,
     @InjectRepository(UserSkill)
     private readonly userSkillRepo: Repository<UserSkill>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(tenantId: string, dto: CreateSkillDto): Promise<Skill> {
@@ -25,7 +27,15 @@ export class SkillsService {
     if (existing) throw new ConflictException('Skill already exists');
 
     const skill = this.skillRepo.create({ ...dto, tenantId });
-    return this.skillRepo.save(skill);
+    const saved = await this.skillRepo.save(skill);
+
+    this.eventEmitter.emit('skill.created', {
+      skillId: saved.id,
+      tenantId,
+      name: saved.name,
+    });
+
+    return saved;
   }
 
   async findAll(tenantId: string): Promise<Skill[]> {
@@ -48,7 +58,15 @@ export class SkillsService {
     if (existing) throw new ConflictException('Skill already assigned');
 
     const userSkill = this.userSkillRepo.create({ userId, skillId, tenantId });
-    return this.userSkillRepo.save(userSkill);
+    const saved = await this.userSkillRepo.save(userSkill);
+
+    this.eventEmitter.emit('user.skill.added', {
+      tenantId,
+      userId,
+      skillId,
+    });
+
+    return saved;
   }
 
   async removeSkillFromUser(
@@ -64,6 +82,12 @@ export class SkillsService {
     if (result.affected === 0) {
       throw new NotFoundException('User skill not found');
     }
+
+    this.eventEmitter.emit('user.skill.removed', {
+      tenantId,
+      userId,
+      skillId,
+    });
   }
 
   async findUserSkills(tenantId: string, userId: string): Promise<Skill[]> {

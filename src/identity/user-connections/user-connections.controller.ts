@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Patch, Param, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { UserContext } from '@plic-mti-highfive/shared-types';
+import type { UserContext } from '@plic-mti-highfive/shared-types';
 import { UserConnectionsService } from './user-connections.service.js';
 import { CreateConnectionDto } from './dto/create-connection.dto.js';
 import { UpdateConnectionDto } from './dto/update-connection.dto.js';

@@ -32,6 +32,13 @@ export class ProjectsService {
     // Creator becomes OWNER
     await this.membersService.addOwner(tenantId, saved.id, userId);
 
+    this.eventEmitter.emit('project.created', {
+      projectId: saved.id,
+      tenantId,
+      creatorId: userId,
+      name: saved.name,
+    });
+
     return saved;
   }
 
@@ -78,6 +85,13 @@ export class ProjectsService {
     Object.assign(project, dto);
     const saved = await this.projectRepo.save(project);
 
+    this.eventEmitter.emit('project.updated', {
+      projectId: id,
+      tenantId,
+      actorId: userId,
+      changes: dto,
+    });
+
     if (dto.visibility && dto.visibility !== oldVisibility) {
       this.eventEmitter.emit('project.visibility.changed', {
         projectId: id,
@@ -102,5 +116,11 @@ export class ProjectsService {
     if (result.affected === 0) {
       throw new NotFoundException('Project not found');
     }
+
+    this.eventEmitter.emit('project.deleted', {
+      projectId: id,
+      tenantId,
+      actorId: userId,
+    });
   }
 }

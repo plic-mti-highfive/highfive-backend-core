@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Tenant } from './entities/tenant.entity.js';
 import { CreateTenantDto } from './dto/create-tenant.dto.js';
 
@@ -13,6 +14,7 @@ export class TenantsService {
   constructor(
     @InjectRepository(Tenant)
     private readonly tenantRepo: Repository<Tenant>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(dto: CreateTenantDto): Promise<Tenant> {
@@ -23,7 +25,15 @@ export class TenantsService {
       throw new ConflictException('Tenant name or domain already exists');
     }
     const tenant = this.tenantRepo.create(dto);
-    return this.tenantRepo.save(tenant);
+    const saved = await this.tenantRepo.save(tenant);
+
+    this.eventEmitter.emit('tenant.created', {
+      tenantId: saved.id,
+      name: saved.name,
+      domain: saved.domain,
+    });
+
+    return saved;
   }
 
   async findAll(): Promise<Tenant[]> {

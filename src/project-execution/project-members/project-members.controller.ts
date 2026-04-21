@@ -8,7 +8,7 @@ import {
   Body,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { UserContext } from '@plic-mti-highfive/shared-types';
+import type { UserContext } from '@plic-mti-highfive/shared-types';
 import { ProjectMembersService } from './project-members.service.js';
 import { AddMemberDto } from './dto/add-member.dto.js';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto.js';

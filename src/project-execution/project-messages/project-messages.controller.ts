@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { UserContext } from '@plic-mti-highfive/shared-types';
+import type { UserContext } from '@plic-mti-highfive/shared-types';
 import { ProjectMessagesService } from './project-messages.service.js';
 import { CreateMessageDto } from './dto/create-message.dto.js';
 import { TenantId } from '../../shared/tenant/tenant.decorator.js';

@@ -7,7 +7,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { UserContext } from '@plic-mti-highfive/shared-types';
+import type { UserContext } from '@plic-mti-highfive/shared-types';
 import { UserProfilesService } from './user-profiles.service.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { TenantId } from '../../shared/tenant/tenant.decorator.js';

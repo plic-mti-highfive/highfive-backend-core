@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Repository } from 'typeorm';
 import { ProjectMessage } from './entities/project-message.entity.js';
 import { CreateMessageDto } from './dto/create-message.dto.js';
@@ -11,6 +12,7 @@ export class ProjectMessagesService {
     @InjectRepository(ProjectMessage)
     private readonly messageRepo: Repository<ProjectMessage>,
     private readonly membersService: ProjectMembersService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(
@@ -27,7 +29,16 @@ export class ProjectMessagesService {
       authorId,
       tenantId,
     });
-    return this.messageRepo.save(message);
+    const saved = await this.messageRepo.save(message);
+
+    this.eventEmitter.emit('message.sent', {
+      messageId: saved.id,
+      projectId,
+      tenantId,
+      authorId,
+    });
+
+    return saved;
   }
 
   async findByProject(

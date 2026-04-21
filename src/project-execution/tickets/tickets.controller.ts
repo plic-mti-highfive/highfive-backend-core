@@ -8,7 +8,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { UserContext } from '@plic-mti-highfive/shared-types';
+import type { UserContext } from '@plic-mti-highfive/shared-types';
 import { TicketsService } from './tickets.service.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
 import { UpdateTicketDto } from './dto/update-ticket.dto.js';

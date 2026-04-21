@@ -24,6 +24,7 @@ import { ProjectMessagesModule } from './project-execution/project-messages/proj
 
 import { DiscoveryModule } from './discovery/discovery.module.js';
 import { ShowcaseModule } from './showcase/showcase.module.js';
+import { DomainEventsModule } from './shared/events/domain-events.module.js';
 
 @Module({
   imports: [
@@ -52,6 +53,9 @@ import { ShowcaseModule } from './showcase/showcase.module.js';
     // Stubs
     DiscoveryModule,
     ShowcaseModule,
+
+    // Cross-cutting
+    DomainEventsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: TenantGuard },

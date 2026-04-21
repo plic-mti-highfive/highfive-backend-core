@@ -5,6 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Repository } from 'typeorm';
 import { ProjectMember } from './entities/project-member.entity.js';
 import { ProjectRole } from '@plic-mti-highfive/shared-types';
@@ -20,6 +21,7 @@ export class ProjectMembersService {
     @InjectRepository(ProjectMember)
     private readonly memberRepo: Repository<ProjectMember>,
     private readonly usersService: UsersService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async addOwner(
@@ -33,7 +35,16 @@ export class ProjectMembersService {
       tenantId,
       role: ProjectRole.OWNER,
     });
-    return this.memberRepo.save(member);
+    const saved = await this.memberRepo.save(member);
+
+    this.eventEmitter.emit('project.member.added', {
+      projectId,
+      tenantId,
+      userId,
+      role: ProjectRole.OWNER,
+    });
+
+    return saved;
   }
 
   async addMember(
@@ -56,7 +67,17 @@ export class ProjectMembersService {
       tenantId,
       role: dto.role,
     });
-    return this.memberRepo.save(member);
+    const saved = await this.memberRepo.save(member);
+
+    this.eventEmitter.emit('project.member.added', {
+      projectId,
+      tenantId,
+      userId: dto.userId,
+      role: dto.role,
+      actorId: actorId,
+    });
+
+    return saved;
   }
 
   async updateRole(
@@ -73,8 +94,20 @@ export class ProjectMembersService {
     });
     if (!member) throw new NotFoundException('Member not found');
 
+    const oldRole = member.role;
     member.role = dto.role;
-    return this.memberRepo.save(member);
+    const saved = await this.memberRepo.save(member);
+
+    this.eventEmitter.emit('project.member.role.updated', {
+      projectId,
+      tenantId,
+      userId: targetUserId,
+      actorId,
+      oldRole,
+      newRole: dto.role,
+    });
+
+    return saved;
   }
 
   async removeMember(
@@ -93,6 +126,13 @@ export class ProjectMembersService {
     if (result.affected === 0) {
       throw new NotFoundException('Member not found');
     }
+
+    this.eventEmitter.emit('project.member.removed', {
+      projectId,
+      tenantId,
+      userId: targetUserId,
+      actorId,
+    });
   }
 
   async findMembers(
