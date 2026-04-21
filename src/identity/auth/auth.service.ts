@@ -16,7 +16,7 @@ import { RefreshToken } from './entities/refresh-token.entity.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { AuthResponseDto } from './dto/auth-response.dto.js';
-import { UserStatus } from '../../shared/enums/index.js';
+import { UserStatus } from '@plic-mti-highfive/shared-types';
 import { JwtPayload } from '../../shared/auth/jwt.strategy.js';
 
 @Injectable()
@@ -109,7 +109,7 @@ export class AuthService {
         secret: this.configService.get<string>('jwt.accessSecret'),
         expiresIn: this.configService.get<string>(
           'jwt.accessExpiration',
-        ) as any,
+        ) as unknown as number,
       },
     );
 

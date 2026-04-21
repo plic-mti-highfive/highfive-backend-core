@@ -4,7 +4,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ProjectStatus,
   ProjectVisibility,
-} from '../../../shared/enums/index.js';
+} from '@plic-mti-highfive/shared-types';
 
 export class QueryProjectDto {
   @ApiPropertyOptional({ enum: ProjectStatus })

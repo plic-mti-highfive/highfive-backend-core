@@ -5,7 +5,7 @@ export class CreateTicketDto {
   @ApiProperty({ example: 'Fix login bug' })
   @IsString()
   @IsNotEmpty()
-  title: string;
+  title!: string;
 
   @ApiPropertyOptional()
   @IsString()
@@ -15,5 +15,5 @@ export class CreateTicketDto {
   @ApiPropertyOptional()
   @IsUUID()
   @IsOptional()
-  assigneeId?: string;
+  assigneeId?: string | null;
 }

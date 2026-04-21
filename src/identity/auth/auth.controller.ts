@@ -7,6 +7,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto.js';
 import { Public } from '../../shared/decorators/public.decorator.js';
 import { TenantId } from '../../shared/tenant/tenant.decorator.js';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator.js';
+import { User } from '../users/entities/user.entity.js';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -44,7 +45,7 @@ export class AuthController {
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user info' })
-  me(@CurrentUser() user: any) {
+  me(@CurrentUser() user: User) {
     return user;
   }
 }

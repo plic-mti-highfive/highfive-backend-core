@@ -1,57 +1,88 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import {
-  UnauthorizedException,
-  ConflictException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { AuthService } from './auth.service.js';
 import { UsersService } from '../users/users.service.js';
 import { UserProfilesService } from '../user-profiles/user-profiles.service.js';
 import { RefreshToken } from './entities/refresh-token.entity.js';
-import { UserStatus } from '../../shared/enums/index.js';
+import { User } from '../users/entities/user.entity.js';
+import { UserStatus } from '@plic-mti-highfive/shared-types';
+
+type UsersServiceMock = {
+  create: Mock<UsersService['create']>;
+  findByEmail: Mock<UsersService['findByEmail']>;
+};
+
+type UserProfilesServiceMock = {
+  createDefault: Mock<UserProfilesService['createDefault']>;
+};
+
+type JwtServiceMock = {
+  sign: Mock<(payload: object, options?: object) => string>;
+};
+
+type RefreshTokenRepoMock = {
+  create: Mock<(data: Partial<RefreshToken>) => Partial<RefreshToken>>;
+  save: Mock<(data: Partial<RefreshToken>) => Partial<RefreshToken>>;
+  findOne: Mock<() => Promise<RefreshToken | null>>;
+  update: Mock<() => Promise<unknown>>;
+};
 
 describe('AuthService', () => {
   let service: AuthService;
-  let usersService: Partial<UsersService>;
-  let userProfilesService: Partial<UserProfilesService>;
-  let jwtService: Partial<JwtService>;
-  let refreshTokenRepo: any;
+  let usersService: UsersServiceMock;
+  let userProfilesService: UserProfilesServiceMock;
+  let jwtService: JwtServiceMock;
+  let refreshTokenRepo: RefreshTokenRepoMock;
 
   const tenantId = 'tenant-1';
-  const mockUser = {
+  const mockUser: User = {
     id: 'user-1',
     email: 'test@epita.fr',
     passwordHash: '',
     tenantId,
     status: UserStatus.ACTIVE,
-  };
+  } as User;
 
   beforeEach(async () => {
     mockUser.passwordHash = await argon2.hash('SecureP@ss123');
 
     usersService = {
-      create: vi.fn().mockResolvedValue(mockUser),
-      findByEmail: vi.fn(),
+      create: vi.fn<UsersService['create']>().mockResolvedValue(mockUser),
+      findByEmail: vi.fn<UsersService['findByEmail']>(),
     };
 
     userProfilesService = {
-      createDefault: vi.fn().mockResolvedValue({}),
+      createDefault: vi
+        .fn<UserProfilesService['createDefault']>()
+        .mockResolvedValue(
+          {} as Awaited<ReturnType<UserProfilesService['createDefault']>>,
+        ),
     };
 
     jwtService = {
-      sign: vi.fn().mockReturnValue('mock-access-token'),
+      sign: vi
+        .fn<(payload: object, options?: object) => string>()
+        .mockReturnValue('mock-access-token'),
     };
 
     refreshTokenRepo = {
-      create: vi.fn().mockImplementation((data) => data),
-      save: vi.fn().mockImplementation((data) => ({ id: 'rt-1', ...data })),
-      findOne: vi.fn(),
-      update: vi.fn(),
+      create: vi
+        .fn<(data: Partial<RefreshToken>) => Partial<RefreshToken>>()
+        .mockImplementation((data: Partial<RefreshToken>) => data),
+      save: vi
+        .fn<(data: Partial<RefreshToken>) => Partial<RefreshToken>>()
+        .mockImplementation((data: Partial<RefreshToken>) => ({
+          id: 'rt-1',
+          ...data,
+        })),
+      findOne: vi.fn<() => Promise<RefreshToken | null>>(),
+      update: vi.fn<() => Promise<unknown>>(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -103,7 +134,7 @@ describe('AuthService', () => {
 
   describe('login', () => {
     it('should return tokens for valid credentials', async () => {
-      usersService.findByEmail!.mockResolvedValue(mockUser as any);
+      usersService.findByEmail.mockResolvedValue(mockUser);
 
       const result = await service.login(tenantId, {
         email: 'test@epita.fr',
@@ -115,7 +146,7 @@ describe('AuthService', () => {
     });
 
     it('should throw on invalid email', async () => {
-      usersService.findByEmail!.mockResolvedValue(null);
+      usersService.findByEmail.mockResolvedValue(null);
 
       await expect(
         service.login(tenantId, {
@@ -126,7 +157,7 @@ describe('AuthService', () => {
     });
 
     it('should throw on invalid password', async () => {
-      usersService.findByEmail!.mockResolvedValue(mockUser as any);
+      usersService.findByEmail.mockResolvedValue(mockUser);
 
       await expect(
         service.login(tenantId, {
@@ -137,10 +168,10 @@ describe('AuthService', () => {
     });
 
     it('should throw for suspended user', async () => {
-      usersService.findByEmail!.mockResolvedValue({
+      usersService.findByEmail.mockResolvedValue({
         ...mockUser,
         status: UserStatus.SUSPENDED,
-      } as any);
+      } as User);
 
       await expect(
         service.login(tenantId, {

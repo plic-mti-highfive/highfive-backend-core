@@ -8,6 +8,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { UserContext } from '@plic-mti-highfive/shared-types';
 import { TicketsService } from './tickets.service.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
 import { UpdateTicketDto } from './dto/update-ticket.dto.js';
@@ -25,7 +26,7 @@ export class TicketsController {
   create(
     @TenantId() tenantId: string,
     @Param('projectId') projectId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: UserContext,
     @Body() dto: CreateTicketDto,
   ) {
     return this.ticketsService.create(tenantId, projectId, user.id, dto);
@@ -63,7 +64,7 @@ export class TicketsController {
     @TenantId() tenantId: string,
     @Param('projectId') projectId: string,
     @Param('ticketId') ticketId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: UserContext,
     @Body() dto: UpdateTicketDto,
   ) {
     return this.ticketsService.update(

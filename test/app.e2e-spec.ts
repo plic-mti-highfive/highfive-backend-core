@@ -1,9 +1,46 @@
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module.js';
 import { DataSource } from 'typeorm';
+
+interface TenantResponse {
+  id: string;
+}
+
+interface AuthResponse {
+  accessToken: string;
+  refreshToken: string;
+}
+
+interface UserResponse {
+  id: string;
+  email: string;
+}
+
+interface ProjectResponse {
+  id: string;
+  name: string;
+}
+
+interface ProjectListResponse {
+  total: number;
+  data: ProjectResponse[];
+}
+
+interface TicketResponse {
+  id: string;
+  title: string;
+  status: string;
+  assigneeId: string | null;
+}
+
+interface TicketListResponse {
+  total: number;
+  data: TicketResponse[];
+}
 
 /**
  * E2E tests require a running Postgres instance.
@@ -53,7 +90,8 @@ describe('HighFive! Core API (e2e)', () => {
         .send({ name: 'Test School', domain: 'test.highfive.app' })
         .expect(201);
 
-      tenantId = res.body.id;
+      const body = res.body as TenantResponse;
+      tenantId = body.id;
       expect(tenantId).toBeDefined();
     });
   });
@@ -66,8 +104,9 @@ describe('HighFive! Core API (e2e)', () => {
         .send({ email: 'alice@test.fr', password: 'SecureP@ss123' })
         .expect(201);
 
-      accessToken = res.body.accessToken;
-      refreshToken = res.body.refreshToken;
+      const body = res.body as AuthResponse;
+      accessToken = body.accessToken;
+      refreshToken = body.refreshToken;
       expect(accessToken).toBeDefined();
       expect(refreshToken).toBeDefined();
     });
@@ -79,8 +118,9 @@ describe('HighFive! Core API (e2e)', () => {
         .send({ email: 'alice@test.fr', password: 'SecureP@ss123' })
         .expect(201);
 
-      accessToken = res.body.accessToken;
-      refreshToken = res.body.refreshToken;
+      const body = res.body as AuthResponse;
+      accessToken = body.accessToken;
+      refreshToken = body.refreshToken;
     });
 
     it('GET /auth/me', async () => {
@@ -90,8 +130,9 @@ describe('HighFive! Core API (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      userId = res.body.id;
-      expect(res.body.email).toBe('alice@test.fr');
+      const body = res.body as UserResponse;
+      userId = body.id;
+      expect(body.email).toBe('alice@test.fr');
     });
 
     it('POST /auth/refresh', async () => {
@@ -101,8 +142,9 @@ describe('HighFive! Core API (e2e)', () => {
         .send({ refreshToken })
         .expect(201);
 
-      accessToken = res.body.accessToken;
-      refreshToken = res.body.refreshToken;
+      const body = res.body as AuthResponse;
+      accessToken = body.accessToken;
+      refreshToken = body.refreshToken;
       expect(accessToken).toBeDefined();
     });
 
@@ -123,8 +165,9 @@ describe('HighFive! Core API (e2e)', () => {
         .send({ name: 'E2E Project', description: 'Test project' })
         .expect(201);
 
-      projectId = res.body.id;
-      expect(res.body.name).toBe('E2E Project');
+      const body = res.body as ProjectResponse;
+      projectId = body.id;
+      expect(body.name).toBe('E2E Project');
     });
 
     it('GET /projects — list', async () => {
@@ -134,7 +177,8 @@ describe('HighFive! Core API (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      expect(res.body.total).toBeGreaterThanOrEqual(1);
+      const body = res.body as ProjectListResponse;
+      expect(body.total).toBeGreaterThanOrEqual(1);
     });
 
     it('PATCH /projects/:id — update', async () => {
@@ -145,7 +189,8 @@ describe('HighFive! Core API (e2e)', () => {
         .send({ name: 'Updated Project' })
         .expect(200);
 
-      expect(res.body.name).toBe('Updated Project');
+      const body = res.body as ProjectResponse;
+      expect(body.name).toBe('Updated Project');
     });
   });
 
@@ -160,8 +205,9 @@ describe('HighFive! Core API (e2e)', () => {
         .send({ title: 'E2E Ticket' })
         .expect(201);
 
-      ticketId = res.body.id;
-      expect(res.body.title).toBe('E2E Ticket');
+      const body = res.body as TicketResponse;
+      ticketId = body.id;
+      expect(body.title).toBe('E2E Ticket');
     });
 
     it('PATCH /projects/:id/tickets/:ticketId — assign to self', async () => {
@@ -172,8 +218,9 @@ describe('HighFive! Core API (e2e)', () => {
         .send({ assigneeId: userId, status: 'IN_PROGRESS' })
         .expect(200);
 
-      expect(res.body.assigneeId).toBe(userId);
-      expect(res.body.status).toBe('IN_PROGRESS');
+      const body = res.body as TicketResponse;
+      expect(body.assigneeId).toBe(userId);
+      expect(body.status).toBe('IN_PROGRESS');
     });
 
     it('GET /projects/:id/tickets — list', async () => {
@@ -183,7 +230,8 @@ describe('HighFive! Core API (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      expect(res.body.total).toBeGreaterThanOrEqual(1);
+      const body = res.body as TicketListResponse;
+      expect(body.total).toBeGreaterThanOrEqual(1);
     });
   });
 });

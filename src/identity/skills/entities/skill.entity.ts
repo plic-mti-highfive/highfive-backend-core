@@ -10,15 +10,15 @@ import { Tenant } from '../../tenants/entities/tenant.entity.js';
 @Entity('skills')
 export class Skill {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ name: 'tenant_id' })
-  tenantId: string;
+  tenantId!: string;
 
   @ManyToOne(() => Tenant)
   @JoinColumn({ name: 'tenant_id' })
-  tenant: Tenant;
+  tenant!: Tenant;
 
   @Column()
-  name: string;
+  name!: string;
 }

@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsUUID, IsEnum } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { TicketStatus } from '../../../shared/enums/index.js';
+import { TicketStatus } from '@plic-mti-highfive/shared-types';
 
 export class UpdateTicketDto {
   @ApiPropertyOptional()

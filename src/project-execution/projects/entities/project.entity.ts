@@ -11,7 +11,7 @@ import {
 import {
   ProjectStatus,
   ProjectVisibility,
-} from '../../../shared/enums/index.js';
+} from '@plic-mti-highfive/shared-types';
 import { Tenant } from '../../../identity/tenants/entities/tenant.entity.js';
 
 @Entity('projects')

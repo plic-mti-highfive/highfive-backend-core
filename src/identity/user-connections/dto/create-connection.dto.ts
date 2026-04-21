@@ -4,5 +4,5 @@ import { ApiProperty } from '@nestjs/swagger';
 export class CreateConnectionDto {
   @ApiProperty()
   @IsUUID()
-  addresseeId: string;
+  addresseeId!: string;
 }

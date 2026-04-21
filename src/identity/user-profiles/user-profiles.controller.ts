@@ -7,6 +7,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { UserContext } from '@plic-mti-highfive/shared-types';
 import { UserProfilesService } from './user-profiles.service.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { TenantId } from '../../shared/tenant/tenant.decorator.js';
@@ -30,7 +31,7 @@ export class UserProfilesController {
     @TenantId() tenantId: string,
     @Param('id') id: string,
     @Body() dto: UpdateProfileDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: UserContext,
   ) {
     if (user.id !== id) {
       throw new ForbiddenException('You can only update your own profile');

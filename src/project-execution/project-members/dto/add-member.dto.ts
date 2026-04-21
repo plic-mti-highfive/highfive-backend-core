@@ -1,11 +1,11 @@
 import { IsUUID, IsEnum, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ProjectRole } from '../../../shared/enums/index.js';
+import { ProjectRole } from '@plic-mti-highfive/shared-types';
 
 export class AddMemberDto {
   @ApiProperty()
   @IsUUID()
-  userId: string;
+  userId!: string;
 
   @ApiPropertyOptional({ enum: ProjectRole, default: ProjectRole.MEMBER })
   @IsEnum(ProjectRole)

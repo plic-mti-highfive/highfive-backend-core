@@ -11,27 +11,27 @@ import { User } from '../../users/entities/user.entity.js';
 @Entity('refresh_tokens')
 export class RefreshToken {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ name: 'user_id' })
-  userId: string;
+  userId!: string;
 
   @Column({ name: 'tenant_id' })
-  tenantId: string;
+  tenantId!: string;
 
   @Column({ name: 'token_hash' })
-  tokenHash: string;
+  tokenHash!: string;
 
   @Column({ name: 'expires_at' })
-  expiresAt: Date;
+  expiresAt!: Date;
 
   @Column({ default: false })
-  revoked: boolean;
+  revoked!: boolean;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  createdAt!: Date;
 }

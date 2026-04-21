@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity.js';
-import { UserStatus } from '../../shared/enums/index.js';
+import { UserStatus } from '@plic-mti-highfive/shared-types';
 
 @Injectable()
 export class UsersService {

@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Patch, Param, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { UserContext } from '@plic-mti-highfive/shared-types';
 import { UserConnectionsService } from './user-connections.service.js';
 import { CreateConnectionDto } from './dto/create-connection.dto.js';
 import { UpdateConnectionDto } from './dto/update-connection.dto.js';
@@ -16,7 +17,7 @@ export class UserConnectionsController {
   @ApiOperation({ summary: 'Send connection request' })
   create(
     @TenantId() tenantId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: UserContext,
     @Body() dto: CreateConnectionDto,
   ) {
     return this.connectionsService.create(tenantId, user.id, dto);
@@ -27,7 +28,7 @@ export class UserConnectionsController {
   update(
     @TenantId() tenantId: string,
     @Param('id') id: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: UserContext,
     @Body() dto: UpdateConnectionDto,
   ) {
     return this.connectionsService.update(tenantId, id, user.id, dto);
@@ -35,13 +36,13 @@ export class UserConnectionsController {
 
   @Get()
   @ApiOperation({ summary: 'List accepted connections' })
-  findAll(@TenantId() tenantId: string, @CurrentUser() user: any) {
+  findAll(@TenantId() tenantId: string, @CurrentUser() user: UserContext) {
     return this.connectionsService.findAll(tenantId, user.id);
   }
 
   @Get('pending')
   @ApiOperation({ summary: 'List pending connection requests' })
-  findPending(@TenantId() tenantId: string, @CurrentUser() user: any) {
+  findPending(@TenantId() tenantId: string, @CurrentUser() user: UserContext) {
     return this.connectionsService.findPending(tenantId, user.id);
   }
 }

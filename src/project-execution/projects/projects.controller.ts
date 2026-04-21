@@ -9,6 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { UserContext } from '@plic-mti-highfive/shared-types';
 import { ProjectsService } from './projects.service.js';
 import { CreateProjectDto } from './dto/create-project.dto.js';
 import { UpdateProjectDto } from './dto/update-project.dto.js';
@@ -26,7 +27,7 @@ export class ProjectsController {
   @ApiOperation({ summary: 'Create a project (creator becomes OWNER)' })
   create(
     @TenantId() tenantId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: UserContext,
     @Body() dto: CreateProjectDto,
   ) {
     return this.projectsService.create(tenantId, user.id, dto);
@@ -49,7 +50,7 @@ export class ProjectsController {
   update(
     @TenantId() tenantId: string,
     @Param('id') id: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: UserContext,
     @Body() dto: UpdateProjectDto,
   ) {
     return this.projectsService.update(tenantId, id, user.id, dto);
@@ -60,7 +61,7 @@ export class ProjectsController {
   remove(
     @TenantId() tenantId: string,
     @Param('id') id: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: UserContext,
   ) {
     return this.projectsService.softDelete(tenantId, id, user.id);
   }

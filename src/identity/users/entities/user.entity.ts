@@ -9,40 +9,40 @@ import {
   JoinColumn,
   OneToOne,
 } from 'typeorm';
-import { UserStatus } from '../../../shared/enums/index.js';
+import { UserStatus } from '@plic-mti-highfive/shared-types';
 import { Tenant } from '../../tenants/entities/tenant.entity.js';
 import { UserProfile } from '../../user-profiles/entities/user-profile.entity.js';
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ name: 'tenant_id' })
-  tenantId: string;
+  tenantId!: string;
 
   @ManyToOne(() => Tenant)
   @JoinColumn({ name: 'tenant_id' })
-  tenant: Tenant;
+  tenant!: Tenant;
 
   @Column({ unique: true })
-  email: string;
+  email!: string;
 
   @Column({ name: 'password_hash' })
-  passwordHash: string;
+  passwordHash!: string;
 
   @Column({ type: 'enum', enum: UserStatus, default: UserStatus.PENDING })
-  status: UserStatus;
+  status!: UserStatus;
 
   @OneToOne(() => UserProfile, (profile) => profile.user, { cascade: true })
-  profile: UserProfile;
+  profile!: UserProfile;
 
   @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @DeleteDateColumn({ name: 'deleted_at' })
-  deletedAt: Date | null;
+  deletedAt!: Date | null;
 }

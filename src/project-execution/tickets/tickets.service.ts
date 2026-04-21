@@ -11,7 +11,7 @@ import { CreateTicketDto } from './dto/create-ticket.dto.js';
 import { UpdateTicketDto } from './dto/update-ticket.dto.js';
 import { ProjectMembersService } from '../project-members/project-members.service.js';
 import { UsersService } from '../../identity/users/users.service.js';
-import { ProjectRole } from '../../shared/enums/index.js';
+import { ProjectRole } from '@plic-mti-highfive/shared-types';
 
 const WRITE_ROLES = [ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.MEMBER];
 

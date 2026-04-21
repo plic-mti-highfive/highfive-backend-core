@@ -5,10 +5,10 @@ export class CreateTenantDto {
   @ApiProperty({ example: 'EPITA' })
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name!: string;
 
   @ApiProperty({ example: 'epita.highfive.app' })
   @IsString()
   @IsNotEmpty()
-  domain: string;
+  domain!: string;
 }

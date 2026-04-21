@@ -7,7 +7,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { TicketStatus } from '../../../shared/enums/index.js';
+import { TicketStatus } from '@plic-mti-highfive/shared-types';
 import { Project } from '../../projects/entities/project.entity.js';
 import { User } from '../../../identity/users/entities/user.entity.js';
 

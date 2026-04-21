@@ -1,12 +1,12 @@
 import { IsString, IsNotEmpty, IsOptional, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ProjectVisibility } from '../../../shared/enums/index.js';
+import { ProjectVisibility } from '@plic-mti-highfive/shared-types';
 
 export class CreateProjectDto {
   @ApiProperty({ example: 'My Awesome Project' })
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name!: string;
 
   @ApiPropertyOptional()
   @IsString()

@@ -18,7 +18,9 @@ export class TenantGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
-    const request = context.switchToHttp().getRequest();
+    const request = context
+      .switchToHttp()
+      .getRequest<Request & { tenantId: string }>();
     if (!request.tenantId) {
       throw new BadRequestException('Tenant context not established');
     }

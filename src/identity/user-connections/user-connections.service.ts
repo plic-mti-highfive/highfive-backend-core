@@ -8,7 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserConnection } from './entities/user-connection.entity.js';
-import { ConnectionStatus } from '../../shared/enums/index.js';
+import { ConnectionStatus } from '@plic-mti-highfive/shared-types';
 import { CreateConnectionDto } from './dto/create-connection.dto.js';
 import { UpdateConnectionDto } from './dto/update-connection.dto.js';
 

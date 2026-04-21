@@ -8,6 +8,7 @@ import {
   Body,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { UserContext } from '@plic-mti-highfive/shared-types';
 import { ProjectMembersService } from './project-members.service.js';
 import { AddMemberDto } from './dto/add-member.dto.js';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto.js';
@@ -31,7 +32,7 @@ export class ProjectMembersController {
   add(
     @TenantId() tenantId: string,
     @Param('projectId') projectId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: UserContext,
     @Body() dto: AddMemberDto,
   ) {
     return this.membersService.addMember(tenantId, projectId, user.id, dto);
@@ -43,7 +44,7 @@ export class ProjectMembersController {
     @TenantId() tenantId: string,
     @Param('projectId') projectId: string,
     @Param('userId') userId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: UserContext,
     @Body() dto: UpdateMemberRoleDto,
   ) {
     return this.membersService.updateRole(
@@ -61,7 +62,7 @@ export class ProjectMembersController {
     @TenantId() tenantId: string,
     @Param('projectId') projectId: string,
     @Param('userId') userId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: UserContext,
   ) {
     return this.membersService.removeMember(
       tenantId,

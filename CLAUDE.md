@@ -51,6 +51,7 @@ Plateforme **HighFive!** multi-tenant (une instance par école). Ce repo contien
 - Classes : PascalCase (`UserProfileEntity`, `CreateProjectDto`)
 - Tests unitaires : `*.spec.ts` co-localisés
 - Tests e2e : `test/` à la racine
+- Pas de `any` : interdit d'assigner une valeur de type `any` — le lint (`@typescript-eslint/no-explicit-any` / `no-unsafe-*`) échoue. Typer explicitement (ou à défaut `unknown` + narrowing).
 
 ## Commandes utiles
 
@@ -72,5 +73,4 @@ npm run build        # Build production
 - `connection_status_enum`: PENDING, ACCEPTED, BLOCKED
 
 ### Tables principales
-**Identity & Tenancy**: tenants, users, user_profiles, skills, user_skills, user_connections
-**Project Execution**: projects, project_members, project_followers, tickets, project_messages
+check Database.md

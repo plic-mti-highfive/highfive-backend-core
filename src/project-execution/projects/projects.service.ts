@@ -7,7 +7,7 @@ import { CreateProjectDto } from './dto/create-project.dto.js';
 import { UpdateProjectDto } from './dto/update-project.dto.js';
 import { QueryProjectDto } from './dto/query-project.dto.js';
 import { ProjectMembersService } from '../project-members/project-members.service.js';
-import { ProjectRole } from '../../shared/enums/index.js';
+import { ProjectRole } from '@plic-mti-highfive/shared-types';
 
 @Injectable()
 export class ProjectsService {
