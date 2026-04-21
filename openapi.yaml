@@ -1,0 +1,846 @@
+openapi: 3.0.0
+paths:
+  /tenants:
+    post:
+      operationId: TenantsController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTenantDto'
+      responses:
+        '201':
+          description: ''
+      summary: Create a new tenant
+      tags:
+        - Tenants
+    get:
+      operationId: TenantsController_findAll
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      summary: List all tenants
+      tags:
+        - Tenants
+  /auth/register:
+    post:
+      operationId: AuthController_register
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDto'
+      responses:
+        '201':
+          description: ''
+      summary: Register a new user
+      tags:
+        - Auth
+  /auth/login:
+    post:
+      operationId: AuthController_login
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginDto'
+      responses:
+        '201':
+          description: ''
+      summary: Login with email and password
+      tags:
+        - Auth
+  /auth/refresh:
+    post:
+      operationId: AuthController_refresh
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenDto'
+      responses:
+        '201':
+          description: ''
+      summary: Refresh access token
+      tags:
+        - Auth
+  /auth/logout:
+    post:
+      operationId: AuthController_logout
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenDto'
+      responses:
+        '201':
+          description: ''
+      security:
+        - bearer: []
+      summary: Logout (revoke refresh token)
+      tags:
+        - Auth
+  /auth/me:
+    get:
+      operationId: AuthController_me
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: Get current user info
+      tags:
+        - Auth
+  /users/{id}/profile:
+    get:
+      operationId: UserProfilesController_findOne
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: Get user profile
+      tags:
+        - User Profiles
+    patch:
+      operationId: UserProfilesController_update
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileDto'
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: Update own profile
+      tags:
+        - User Profiles
+  /skills:
+    get:
+      operationId: SkillsController_findAll
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: List all skills for the tenant
+      tags:
+        - Skills
+    post:
+      operationId: SkillsController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSkillDto'
+      responses:
+        '201':
+          description: ''
+      security:
+        - bearer: []
+      summary: Create a skill
+      tags:
+        - Skills
+  /users/{userId}/skills:
+    get:
+      operationId: SkillsController_findUserSkills
+      parameters:
+        - name: userId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: List skills for a user
+      tags:
+        - Skills
+  /users/{userId}/skills/{skillId}:
+    post:
+      operationId: SkillsController_addSkill
+      parameters:
+        - name: userId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: skillId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '201':
+          description: ''
+      security:
+        - bearer: []
+      summary: Add skill to user
+      tags:
+        - Skills
+    delete:
+      operationId: SkillsController_removeSkill
+      parameters:
+        - name: userId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: skillId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: Remove skill from user
+      tags:
+        - Skills
+  /connections:
+    post:
+      operationId: UserConnectionsController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConnectionDto'
+      responses:
+        '201':
+          description: ''
+      security:
+        - bearer: []
+      summary: Send connection request
+      tags:
+        - Connections
+    get:
+      operationId: UserConnectionsController_findAll
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: List accepted connections
+      tags:
+        - Connections
+  /connections/{id}:
+    patch:
+      operationId: UserConnectionsController_update
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateConnectionDto'
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: Accept or block connection
+      tags:
+        - Connections
+  /connections/pending:
+    get:
+      operationId: UserConnectionsController_findPending
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: List pending connection requests
+      tags:
+        - Connections
+  /projects:
+    post:
+      operationId: ProjectsController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectDto'
+      responses:
+        '201':
+          description: ''
+      security:
+        - bearer: []
+      summary: Create a project (creator becomes OWNER)
+      tags:
+        - Projects
+    get:
+      operationId: ProjectsController_findAll
+      parameters:
+        - name: status
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - DRAFT
+              - ACTIVE
+              - ARCHIVED
+        - name: visibility
+          required: false
+          in: query
+          schema:
+            type: string
+            enum:
+              - PUBLIC
+              - PRIVATE
+              - INVITATION_ONLY
+        - name: offset
+          required: false
+          in: query
+          schema:
+            default: 0
+            type: number
+        - name: limit
+          required: false
+          in: query
+          schema:
+            default: 20
+            type: number
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: List projects (with filters and pagination)
+      tags:
+        - Projects
+  /projects/{id}:
+    get:
+      operationId: ProjectsController_findOne
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: Get project by ID
+      tags:
+        - Projects
+    patch:
+      operationId: ProjectsController_update
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectDto'
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: Update project (OWNER/ADMIN only)
+      tags:
+        - Projects
+    delete:
+      operationId: ProjectsController_remove
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: Soft delete project (OWNER only)
+      tags:
+        - Projects
+  /projects/{projectId}/members:
+    get:
+      operationId: ProjectMembersController_findAll
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: List project members
+      tags:
+        - Project Members
+    post:
+      operationId: ProjectMembersController_add
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddMemberDto'
+      responses:
+        '201':
+          description: ''
+      security:
+        - bearer: []
+      summary: Add member to project (OWNER/ADMIN)
+      tags:
+        - Project Members
+  /projects/{projectId}/members/{userId}:
+    patch:
+      operationId: ProjectMembersController_updateRole
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: userId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMemberRoleDto'
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: Update member role (OWNER/ADMIN)
+      tags:
+        - Project Members
+    delete:
+      operationId: ProjectMembersController_remove
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: userId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: Remove member from project (OWNER/ADMIN)
+      tags:
+        - Project Members
+  /projects/{projectId}/tickets:
+    post:
+      operationId: TicketsController_create
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTicketDto'
+      responses:
+        '201':
+          description: ''
+      security:
+        - bearer: []
+      summary: Create a ticket (OWNER/ADMIN/MEMBER)
+      tags:
+        - Tickets
+    get:
+      operationId: TicketsController_findAll
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: offset
+          required: true
+          in: query
+          schema:
+            type: number
+        - name: limit
+          required: true
+          in: query
+          schema:
+            type: number
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: List tickets for a project
+      tags:
+        - Tickets
+  /projects/{projectId}/tickets/{ticketId}:
+    get:
+      operationId: TicketsController_findOne
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: ticketId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: Get ticket by ID
+      tags:
+        - Tickets
+    patch:
+      operationId: TicketsController_update
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: ticketId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTicketDto'
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: Update ticket (OWNER/ADMIN/MEMBER)
+      tags:
+        - Tickets
+  /projects/{projectId}/messages:
+    post:
+      operationId: ProjectMessagesController_create
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMessageDto'
+      responses:
+        '201':
+          description: ''
+      security:
+        - bearer: []
+      summary: Send a message in project chat
+      tags:
+        - Project Messages
+    get:
+      operationId: ProjectMessagesController_findAll
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: offset
+          required: true
+          in: query
+          schema:
+            type: number
+        - name: limit
+          required: true
+          in: query
+          schema:
+            type: number
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: List project chat messages
+      tags:
+        - Project Messages
+info:
+  title: HighFive! API
+  description: Core backend API for the HighFive! platform
+  version: '1.0'
+  contact: {}
+tags: []
+servers: []
+components:
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http
+    tenant:
+      type: apiKey
+      in: header
+      name: X-Tenant-ID
+  schemas:
+    CreateTenantDto:
+      type: object
+      properties:
+        name:
+          type: string
+          example: EPITA
+        domain:
+          type: string
+          example: epita.highfive.app
+      required:
+        - name
+        - domain
+    RegisterDto:
+      type: object
+      properties:
+        email:
+          type: string
+          example: user@epita.fr
+        password:
+          type: string
+          example: SecureP@ss123
+          minLength: 8
+      required:
+        - email
+        - password
+    LoginDto:
+      type: object
+      properties:
+        email:
+          type: string
+          example: user@epita.fr
+        password:
+          type: string
+          example: SecureP@ss123
+      required:
+        - email
+        - password
+    RefreshTokenDto:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+      required:
+        - refreshToken
+    UpdateProfileDto:
+      type: object
+      properties:
+        bio:
+          type: string
+        avatarPath:
+          type: string
+        themePreference:
+          type: string
+        emailNotifications:
+          type: boolean
+    CreateSkillDto:
+      type: object
+      properties:
+        name:
+          type: string
+          example: TypeScript
+      required:
+        - name
+    CreateConnectionDto:
+      type: object
+      properties:
+        addresseeId:
+          type: string
+      required:
+        - addresseeId
+    UpdateConnectionDto:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - PENDING
+            - ACCEPTED
+            - BLOCKED
+      required:
+        - status
+    CreateProjectDto:
+      type: object
+      properties:
+        name:
+          type: string
+          example: My Awesome Project
+        description:
+          type: string
+        visibility:
+          type: string
+          enum:
+            - PUBLIC
+            - PRIVATE
+            - INVITATION_ONLY
+      required:
+        - name
+    UpdateProjectDto:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum:
+            - DRAFT
+            - ACTIVE
+            - ARCHIVED
+        visibility:
+          type: string
+          enum:
+            - PUBLIC
+            - PRIVATE
+            - INVITATION_ONLY
+    AddMemberDto:
+      type: object
+      properties:
+        userId:
+          type: string
+        role:
+          type: string
+          enum:
+            - OWNER
+            - ADMIN
+            - MEMBER
+            - VIEWER
+          default: MEMBER
+      required:
+        - userId
+    UpdateMemberRoleDto:
+      type: object
+      properties:
+        role:
+          type: string
+          enum:
+            - OWNER
+            - ADMIN
+            - MEMBER
+            - VIEWER
+      required:
+        - role
+    CreateTicketDto:
+      type: object
+      properties:
+        title:
+          type: string
+          example: Fix login bug
+        description:
+          type: string
+        assigneeId:
+          type: object
+      required:
+        - title
+    UpdateTicketDto:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum:
+            - TODO
+            - IN_PROGRESS
+            - IN_REVIEW
+            - DONE
+        assigneeId:
+          type: object
+          description: Set to null to unassign
+    CreateMessageDto:
+      type: object
+      properties:
+        content:
+          type: string
+          example: Hey team, check this out!
+        attachmentPath:
+          type: string
+      required:
+        - content
