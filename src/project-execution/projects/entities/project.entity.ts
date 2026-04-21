@@ -17,41 +17,41 @@ import { Tenant } from '../../../identity/tenants/entities/tenant.entity.js';
 @Entity('projects')
 export class Project {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ name: 'tenant_id' })
-  tenantId: string;
+  tenantId!: string;
 
   @ManyToOne(() => Tenant)
   @JoinColumn({ name: 'tenant_id' })
-  tenant: Tenant;
+  tenant!: Tenant;
 
   @Column()
-  name: string;
+  name!: string;
 
   @Column({ type: 'text', nullable: true })
-  description: string | null;
+  description!: string | null;
 
   @Column({
     type: 'enum',
     enum: ProjectStatus,
     default: ProjectStatus.DRAFT,
   })
-  status: ProjectStatus;
+  status!: ProjectStatus;
 
   @Column({
     type: 'enum',
     enum: ProjectVisibility,
     default: ProjectVisibility.PRIVATE,
   })
-  visibility: ProjectVisibility;
+  visibility!: ProjectVisibility;
 
   @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @DeleteDateColumn({ name: 'deleted_at' })
-  deletedAt: Date | null;
+  deletedAt!: Date | null;
 }

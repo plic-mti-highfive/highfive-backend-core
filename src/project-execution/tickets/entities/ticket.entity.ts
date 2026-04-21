@@ -14,41 +14,41 @@ import { User } from '../../../identity/users/entities/user.entity.js';
 @Entity('tickets')
 export class Ticket {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ name: 'project_id' })
-  projectId: string;
+  projectId!: string;
 
   @Column({ name: 'tenant_id' })
-  tenantId: string;
+  tenantId!: string;
 
   @Column()
-  title: string;
+  title!: string;
 
   @Column({ type: 'text', nullable: true })
-  description: string | null;
+  description!: string | null;
 
   @Column({
     type: 'enum',
     enum: TicketStatus,
     default: TicketStatus.TODO,
   })
-  status: TicketStatus;
+  status!: TicketStatus;
 
   @Column({ name: 'assignee_id', nullable: true })
-  assigneeId: string | null;
+  assigneeId!: string | null;
 
   @ManyToOne(() => Project)
   @JoinColumn({ name: 'project_id' })
-  project: Project;
+  project!: Project;
 
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'assignee_id' })
-  assignee: User | null;
+  assignee!: User | null;
 
   @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  updatedAt!: Date;
 }
