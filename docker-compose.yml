@@ -4,38 +4,45 @@ services:
     container_name: highfive_db
     restart: unless-stopped
     ports:
-      - "5433:5432"
+      - "${DB_PORT}:5432"
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: highfive
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d highfive"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: highfive_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT}:6379"
 
   backend_core:
     build: .
     container_name: highfive_backend_core
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${PORT}:${PORT}"
     environment:
-      PORT: 3000
+      PORT: ${PORT}
       DB_HOST: highfive_db
       DB_PORT: 5432
-      DB_USERNAME: admin
-      DB_PASSWORD: admin
-      DB_DATABASE: highfive
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE: ${DB_DATABASE}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      JWT_ACCESS_SECRET: dev-access-secret
-      JWT_ACCESS_EXPIRATION: 15m
-      JWT_REFRESH_SECRET: dev-refresh-secret
-      JWT_REFRESH_EXPIRATION: 7d
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION}
     volumes:
       - ./src:/app/src
       - ./test:/app/test
@@ -43,7 +50,7 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT}/health"]
       interval: 10s
       timeout: 5s
       retries: 5
