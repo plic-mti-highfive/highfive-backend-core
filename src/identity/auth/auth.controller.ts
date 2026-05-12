@@ -4,6 +4,7 @@ import { AuthService } from './auth.service.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RefreshTokenDto } from './dto/refresh-token.dto.js';
+import { UserResponseDto } from '../users/dto/user-response.dto.js';
 import { Public } from '../../shared/decorators/public.decorator.js';
 import { TenantId } from '../../shared/tenant/tenant.decorator.js';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator.js';
@@ -45,7 +46,7 @@ export class AuthController {
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user info' })
-  me(@CurrentUser() user: User) {
-    return user;
+  me(@CurrentUser() user: User): UserResponseDto {
+    return UserResponseDto.fromUser(user);
   }
 }

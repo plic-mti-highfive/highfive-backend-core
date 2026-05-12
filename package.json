@@ -17,6 +17,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "seed": "ts-node --project tsconfig.seed.json src/database/seed.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage"
@@ -34,7 +35,7 @@
     "@nestjs/swagger": "^11.2.6",
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/typeorm": "^11.0.0",
-    "@plic-mti-highfive/shared-types": "link:../highfive-shared-types",
+    "@plic-mti-highfive/shared-types": "^1.0.1",
     "argon2": "^0.44.0",
     "bullmq": "^5.71.1",
     "class-transformer": "^0.5.1",
@@ -59,6 +60,7 @@
     "@types/supertest": "^7.2.0",
     "@vitest/coverage-v8": "^4.1.0",
     "@vitest/ui": "^4.1.0",
+    "dotenv": "^17.4.2",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
@@ -69,6 +71,7 @@
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0",
     "vitest": "^4.1.0"

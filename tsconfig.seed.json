@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "resolvePackageJsonExports": false,
+    "esModuleInterop": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2023",
+    "sourceMap": false,
+    "outDir": "./dist",
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "baseUrl": ".",
+    "paths": {
+      "@plic-mti-highfive/shared-types": ["../highfive-shared-types/dist/index.js"]
+    }
+  },
+  "ts-node": {
+    "experimentalResolver": true,
+    "transpileOnly": true
+  }
+}

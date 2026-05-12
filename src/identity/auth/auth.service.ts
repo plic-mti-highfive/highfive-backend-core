@@ -17,6 +17,8 @@ import { RefreshToken } from './entities/refresh-token.entity.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { AuthResponseDto } from './dto/auth-response.dto.js';
+import { UserResponseDto } from '../users/dto/user-response.dto.js';
+import { User } from '../users/entities/user.entity.js';
 import { UserStatus } from '@plic-mti-highfive/shared-types';
 import { JwtPayload } from '../../shared/auth/jwt.strategy.js';
 
@@ -40,7 +42,6 @@ export class AuthService {
       passwordHash,
     );
 
-    // Create empty profile
     await this.userProfilesService.createDefault(user.id, tenantId);
 
     this.eventEmitter.emit('user.registered', {
@@ -49,7 +50,7 @@ export class AuthService {
       tenantId,
     });
 
-    return this.generateTokens(user.id, user.email, tenantId);
+    return this.generateTokens(user);
   }
 
   async login(tenantId: string, dto: LoginDto): Promise<AuthResponseDto> {
@@ -73,7 +74,7 @@ export class AuthService {
       tenantId,
     });
 
-    return this.generateTokens(user.id, user.email, tenantId);
+    return this.generateTokens(user);
   }
 
   async refresh(
@@ -95,11 +96,10 @@ export class AuthService {
       throw new ForbiddenException('Account is suspended');
     }
 
-    // Rotate: revoke old, issue new
     stored.revoked = true;
     await this.refreshTokenRepo.save(stored);
 
-    return this.generateTokens(stored.user.id, stored.user.email, tenantId);
+    return this.generateTokens(stored.user);
   }
 
   async logout(tenantId: string, refreshTokenRaw: string): Promise<void> {
@@ -112,12 +112,12 @@ export class AuthService {
     this.eventEmitter.emit('user.logged_out', { tenantId });
   }
 
-  private async generateTokens(
-    userId: string,
-    email: string,
-    tenantId: string,
-  ): Promise<AuthResponseDto> {
-    const payload: JwtPayload = { sub: userId, email, tenantId };
+  private async generateTokens(user: User): Promise<AuthResponseDto> {
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+      tenantId: user.tenantId,
+    };
 
     const accessToken = this.jwtService.sign(
       { ...payload },
@@ -129,7 +129,6 @@ export class AuthService {
       },
     );
 
-    // Generate opaque refresh token
     const refreshTokenRaw = randomBytes(64).toString('hex');
     const tokenHash = this.hashToken(refreshTokenRaw);
 
@@ -140,14 +139,18 @@ export class AuthService {
     expiresAt.setDate(expiresAt.getDate() + days);
 
     const refreshEntity = this.refreshTokenRepo.create({
-      userId,
-      tenantId,
+      userId: user.id,
+      tenantId: user.tenantId,
       tokenHash,
       expiresAt,
     });
     await this.refreshTokenRepo.save(refreshEntity);
 
-    return { accessToken, refreshToken: refreshTokenRaw };
+    return {
+      accessToken,
+      refreshToken: refreshTokenRaw,
+      user: UserResponseDto.fromUser(user),
+    };
   }
 
   private hashToken(token: string): string {

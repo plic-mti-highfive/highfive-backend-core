@@ -45,19 +45,28 @@ export class ProjectsService {
   async findAll(
     tenantId: string,
     query: QueryProjectDto,
-  ): Promise<{ data: Project[]; total: number }> {
+  ): Promise<{ data: Project[]; total: number; page: number; limit: number; totalPages: number }> {
     const where: FindOptionsWhere<Project> = { tenantId };
     if (query.status) where.status = query.status;
     if (query.visibility) where.visibility = query.visibility;
 
+    const limit = query.limit ?? 20;
+    const offset = query.offset ?? 0;
+
     const [data, total] = await this.projectRepo.findAndCount({
       where,
-      skip: query.offset,
-      take: query.limit,
+      skip: offset,
+      take: limit,
       order: { createdAt: 'DESC' },
     });
 
-    return { data, total };
+    return {
+      data,
+      total,
+      page: Math.floor(offset / limit) + 1,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findById(tenantId: string, id: string): Promise<Project> {
