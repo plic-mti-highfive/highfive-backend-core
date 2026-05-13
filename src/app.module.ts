@@ -25,6 +25,7 @@ import { ProjectMessagesModule } from './project-execution/project-messages/proj
 import { DiscoveryModule } from './discovery/discovery.module.js';
 import { ShowcaseModule } from './showcase/showcase.module.js';
 import { DomainEventsModule } from './shared/events/domain-events.module.js';
+import { QueueModule } from './shared/queues/queue.module.js';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { DomainEventsModule } from './shared/events/domain-events.module.js';
 
     // Cross-cutting
     DomainEventsModule,
+    QueueModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: TenantGuard },

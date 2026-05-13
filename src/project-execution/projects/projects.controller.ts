@@ -65,4 +65,26 @@ export class ProjectsController {
   ) {
     return this.projectsService.softDelete(tenantId, id, user.id);
   }
+
+  @Post(':id/like')
+  @ApiOperation({ summary: 'Like a project' })
+  async likeProject(
+    @TenantId() tenantId: string,
+    @Param('id') id: string,
+    @CurrentUser() user: UserContext,
+  ) {
+    await this.projectsService.likeProject(tenantId, id, user.id);
+    return { success: true, message: 'Project liked' };
+  }
+
+  @Post(':id/apply')
+  @ApiOperation({ summary: 'Apply to a project' })
+  async submitApplication(
+    @TenantId() tenantId: string,
+    @Param('id') id: string,
+    @CurrentUser() user: UserContext,
+  ) {
+    await this.projectsService.submitApplication(tenantId, id, user.id);
+    return { success: true, message: 'Application submitted' };
+  }
 }

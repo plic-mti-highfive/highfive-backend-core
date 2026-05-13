@@ -18,6 +18,11 @@ export default () => ({
     refreshExpiration: process.env.JWT_REFRESH_EXPIRATION ?? '7d',
   },
 
+  redis: {
+    host: process.env.REDIS_HOST ?? 'localhost',
+    port: parseInt(process.env.REDIS_PORT ?? '6379', 10),
+  },
+
   rabbitmq: {
     host: process.env.RABBITMQ_HOST ?? 'localhost',
     port: parseInt(process.env.RABBITMQ_PORT ?? '5672', 10),

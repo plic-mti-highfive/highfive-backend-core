@@ -45,7 +45,13 @@ export class ProjectsService {
   async findAll(
     tenantId: string,
     query: QueryProjectDto,
-  ): Promise<{ data: Project[]; total: number; page: number; limit: number; totalPages: number }> {
+  ): Promise<{
+    data: Project[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     const where: FindOptionsWhere<Project> = { tenantId };
     if (query.status) where.status = query.status;
     if (query.visibility) where.visibility = query.visibility;
@@ -130,6 +136,48 @@ export class ProjectsService {
       projectId: id,
       tenantId,
       actorId: userId,
+    });
+  }
+
+  /**
+   * Record a user liking a project and emit event for AI processing
+   */
+  async likeProject(
+    tenantId: string,
+    projectId: string,
+    userId: string,
+  ): Promise<void> {
+    // Verify project exists
+    await this.findById(tenantId, projectId);
+
+    // TODO: Persist like relationship in database (create Likes table if needed)
+    // For now, just emit the event to trigger AI job queueing
+
+    this.eventEmitter.emit('project.liked', {
+      projectId,
+      tenantId,
+      userId,
+    });
+  }
+
+  /**
+   * Record a user applying to a project and emit event for AI processing
+   */
+  async submitApplication(
+    tenantId: string,
+    projectId: string,
+    userId: string,
+  ): Promise<void> {
+    // Verify project exists
+    await this.findById(tenantId, projectId);
+
+    // TODO: Create Application entity and persist application record
+    // For now, just emit the event to trigger AI job queueing
+
+    this.eventEmitter.emit('project.application.submitted', {
+      projectId,
+      tenantId,
+      userId,
     });
   }
 }
