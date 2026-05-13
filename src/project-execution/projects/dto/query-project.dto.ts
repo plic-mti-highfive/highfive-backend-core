@@ -1,4 +1,4 @@
-import { IsOptional, IsEnum, IsInt, Min, Max } from 'class-validator';
+import { IsOptional, IsEnum, IsInt, Min, Max, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
@@ -16,6 +16,11 @@ export class QueryProjectDto {
   @IsEnum(ProjectVisibility)
   @IsOptional()
   visibility?: ProjectVisibility;
+
+  @ApiPropertyOptional({ description: 'Filter by tag name (exact match)' })
+  @IsString()
+  @IsOptional()
+  tag?: string;
 
   @ApiPropertyOptional({ default: 0 })
   @Type(() => Number)

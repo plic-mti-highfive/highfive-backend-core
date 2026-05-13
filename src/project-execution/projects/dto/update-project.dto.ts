@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsArray, IsUUID } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ProjectStatus,
@@ -25,4 +25,10 @@ export class UpdateProjectDto {
   @IsEnum(ProjectVisibility)
   @IsOptional()
   visibility?: ProjectVisibility;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsArray()
+  @IsUUID('all', { each: true })
+  @IsOptional()
+  tagIds?: string[];
 }

@@ -21,8 +21,11 @@ import { ProjectsModule } from './project-execution/projects/projects.module.js'
 import { ProjectMembersModule } from './project-execution/project-members/project-members.module.js';
 import { TicketsModule } from './project-execution/tickets/tickets.module.js';
 import { ProjectMessagesModule } from './project-execution/project-messages/project-messages.module.js';
+import { TagsModule } from './project-execution/tags/tags.module.js';
+import { ProjectHighfivesModule } from './project-execution/project-highfives/project-highfives.module.js';
 
 import { DiscoveryModule } from './discovery/discovery.module.js';
+import { SearchModule } from './discovery/search/search.module.js';
 import { ShowcaseModule } from './showcase/showcase.module.js';
 import { DomainEventsModule } from './shared/events/domain-events.module.js';
 
@@ -49,9 +52,12 @@ import { DomainEventsModule } from './shared/events/domain-events.module.js';
     ProjectMembersModule,
     TicketsModule,
     ProjectMessagesModule,
+    TagsModule,
+    ProjectHighfivesModule,
 
     // Stubs
     DiscoveryModule,
+    SearchModule,
     ShowcaseModule,
 
     // Cross-cutting

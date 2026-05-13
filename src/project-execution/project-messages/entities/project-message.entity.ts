@@ -29,6 +29,9 @@ export class ProjectMessage {
   @Column({ type: 'varchar', name: 'attachment_path', nullable: true })
   attachmentPath: string | null;
 
+  @Column({ type: 'uuid', name: 'reply_to_id', nullable: true })
+  replyToId: string | null;
+
   @ManyToOne(() => Project)
   @JoinColumn({ name: 'project_id' })
   project: Project;
@@ -36,6 +39,10 @@ export class ProjectMessage {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'author_id' })
   author: User;
+
+  @ManyToOne(() => ProjectMessage, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'reply_to_id' })
+  replyTo: ProjectMessage | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

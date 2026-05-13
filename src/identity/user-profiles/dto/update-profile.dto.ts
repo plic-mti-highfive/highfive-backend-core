@@ -5,6 +5,11 @@ export class UpdateProfileDto {
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
+  displayName?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
   bio?: string;
 
   @ApiPropertyOptional()
