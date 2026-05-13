@@ -1,4 +1,6 @@
-import { IsOptional, IsEnum, IsInt, Min, Max, IsString } from 'class-validator';
+import { IsOptional, IsEnum, IsInt, IsUUID, Min, Max } from 'class-validator';
+
+import { IsOptional, IsEnum, IsInt, IsUUID, Min, Max, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
@@ -17,6 +19,10 @@ export class QueryProjectDto {
   @IsOptional()
   visibility?: ProjectVisibility;
 
+  @ApiPropertyOptional({ description: 'Filter projects where this user is a member' })
+  @IsUUID()
+  @IsOptional()
+  userId?: string;
   @ApiPropertyOptional({ description: 'Filter by tag name (exact match)' })
   @IsString()
   @IsOptional()
