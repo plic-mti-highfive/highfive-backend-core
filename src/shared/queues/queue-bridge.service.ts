@@ -31,15 +31,15 @@ export class QueueBridgeService {
   async handleProfileUpdated(payload: {
     userId: string;
     tenantId: string;
-    changes: Record<string, any>;
+    changes: Record<string, unknown>;
   }) {
     try {
       const jobData: UpdateUserIdentityJobData = {
         tenant_id: payload.tenantId,
         user_id: payload.userId,
         payload: {
-          bio: payload.changes.bio,
-          skills: payload.changes.skills,
+          bio: payload.changes.bio as string | undefined,
+          skills: payload.changes.skills as string[] | undefined,
         },
       };
 
@@ -100,7 +100,7 @@ export class QueueBridgeService {
     projectId: string;
     tenantId: string;
     actorId: string;
-    changes: Record<string, any>;
+    changes: Record<string, unknown>;
   }) {
     try {
       // Only enqueue if the changes are relevant for AI processing
@@ -119,10 +119,10 @@ export class QueueBridgeService {
         tenant_id: payload.tenantId,
         project_id: payload.projectId,
         payload: {
-          name: payload.changes.name,
-          description: payload.changes.description,
-          tags: payload.changes.tags,
-          visibility: payload.changes.visibility,
+          name: payload.changes.name as string,
+          description: payload.changes.description as string | undefined,
+          tags: payload.changes.tags as string[] | undefined,
+          visibility: payload.changes.visibility as string | undefined,
         },
       };
 
