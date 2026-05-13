@@ -141,7 +141,7 @@ export class ProjectMembersService {
   ): Promise<ProjectMember[]> {
     return this.memberRepo.find({
       where: { projectId, tenantId },
-      relations: ['user'],
+      relations: ['user', 'user.profile'],
     });
   }
 

@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateMessageDto {
@@ -11,4 +11,9 @@ export class CreateMessageDto {
   @IsString()
   @IsOptional()
   attachmentPath?: string;
+
+  @ApiPropertyOptional({ description: 'ID of the message being replied to' })
+  @IsUUID()
+  @IsOptional()
+  replyToId?: string;
 }
