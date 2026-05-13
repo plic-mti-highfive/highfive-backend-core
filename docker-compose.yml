@@ -25,7 +25,10 @@ services:
       - "${REDIS_PORT}:6379"
 
   backend_core:
-    build: .
+    build:
+      context: .
+      secrets:
+        - github_token
     container_name: highfive_backend_core
     restart: unless-stopped
     ports:
@@ -57,3 +60,7 @@ services:
 
 volumes:
   pgdata:
+
+secrets:
+  github_token:
+    environment: "GITHUB_TOKEN"
