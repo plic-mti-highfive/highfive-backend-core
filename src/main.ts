@@ -20,9 +20,11 @@ async function bootstrap() {
   });
 
   // Security — disable CORP header that would block cross-origin fetches in dev
-  app.use(helmet({
-    crossOriginResourcePolicy: false,
-  }));
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: false,
+    }),
+  );
 
   // Global pipes
   app.useGlobalPipes(

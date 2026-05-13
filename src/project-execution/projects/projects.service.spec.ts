@@ -26,7 +26,7 @@ type ProjectRepoMock = {
 
 type SimpleRepoMock = {
   find: Mock<() => Promise<unknown[]>>;
-  findOne: Mock<() => Promise<unknown | null>>;
+  findOne: Mock<() => Promise<unknown>>;
   count: Mock<() => Promise<number>>;
 };
 
@@ -78,21 +78,21 @@ describe('ProjectsService', () => {
 
     tagRepo = {
       find: vi.fn<() => Promise<unknown[]>>().mockResolvedValue([]),
-      findOne: vi.fn<() => Promise<unknown | null>>().mockResolvedValue(null),
+      findOne: vi.fn<() => Promise<unknown>>().mockResolvedValue(null),
       count: vi.fn<() => Promise<number>>().mockResolvedValue(0),
     };
 
     memberRepo = {
       find: vi.fn<() => Promise<unknown[]>>().mockResolvedValue([]),
       findOne: vi
-        .fn<() => Promise<unknown | null>>()
+        .fn<() => Promise<unknown>>()
         .mockResolvedValue({ userId, role: ProjectRole.OWNER }),
       count: vi.fn<() => Promise<number>>().mockResolvedValue(1),
     };
 
     highfiveRepo = {
       find: vi.fn<() => Promise<unknown[]>>().mockResolvedValue([]),
-      findOne: vi.fn<() => Promise<unknown | null>>().mockResolvedValue(null),
+      findOne: vi.fn<() => Promise<unknown>>().mockResolvedValue(null),
       count: vi.fn<() => Promise<number>>().mockResolvedValue(0),
     };
 
