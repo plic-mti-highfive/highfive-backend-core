@@ -7,7 +7,7 @@ RUN corepack enable pnpm
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 RUN --mount=type=secret,id=github_token \
     echo "@plic-mti-highfive:registry=https://npm.pkg.github.com/" > .npmrc && \
@@ -28,7 +28,7 @@ RUN corepack enable pnpm
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 RUN --mount=type=secret,id=github_token \
     echo "@plic-mti-highfive:registry=https://npm.pkg.github.com/" > .npmrc && \
