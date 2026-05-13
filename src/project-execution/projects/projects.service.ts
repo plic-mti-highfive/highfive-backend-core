@@ -46,12 +46,32 @@ export class ProjectsService {
     tenantId: string,
     query: QueryProjectDto,
   ): Promise<{ data: Project[]; total: number; page: number; limit: number; totalPages: number }> {
+    const limit = query.limit ?? 20;
+    const offset = query.offset ?? 0;
+
+    if (query.userId) {
+      const qb = this.projectRepo
+        .createQueryBuilder('project')
+        .innerJoin(
+          'project_members',
+          'pm',
+          'pm.project_id = project.id AND pm.user_id = :userId AND pm.tenant_id = :tenantId',
+          { userId: query.userId, tenantId },
+        )
+        .where('project.tenant_id = :tenantId', { tenantId });
+
+      if (query.status) qb.andWhere('project.status = :status', { status: query.status });
+      if (query.visibility) qb.andWhere('project.visibility = :visibility', { visibility: query.visibility });
+
+      qb.orderBy('project.created_at', 'DESC').skip(offset).take(limit);
+
+      const [data, total] = await qb.getManyAndCount();
+      return { data, total, page: Math.floor(offset / limit) + 1, limit, totalPages: Math.ceil(total / limit) };
+    }
+
     const where: FindOptionsWhere<Project> = { tenantId };
     if (query.status) where.status = query.status;
     if (query.visibility) where.visibility = query.visibility;
-
-    const limit = query.limit ?? 20;
-    const offset = query.offset ?? 0;
 
     const [data, total] = await this.projectRepo.findAndCount({
       where,

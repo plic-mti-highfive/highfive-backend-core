@@ -11,9 +11,18 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   const port = config.get<number>('port', 3000);
 
-  // Security
-  app.use(helmet());
-  app.enableCors();
+  // CORS must be configured before other middleware
+  app.enableCors({
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID'],
+  });
+
+  // Security — disable CORP header that would block cross-origin fetches in dev
+  app.use(helmet({
+    crossOriginResourcePolicy: false,
+  }));
 
   // Global pipes
   app.useGlobalPipes(
