@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere } from 'typeorm';
+import { Repository, FindOptionsWhere, In } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Project } from './entities/project.entity.js';
 import { CreateProjectDto } from './dto/create-project.dto.js';
@@ -81,6 +81,17 @@ export class ProjectsService {
     });
     if (!project) throw new NotFoundException('Project not found');
     return project;
+  }
+
+  async findByIds(tenantId: string, ids: string[]): Promise<Project[]> {
+    if (ids.length === 0) return [];
+    return this.projectRepo.find({
+      where: {
+        id: In(ids),
+        tenantId,
+      },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async update(

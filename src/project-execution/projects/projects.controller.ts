@@ -45,6 +45,15 @@ export class ProjectsController {
     return this.projectsService.findById(tenantId, id);
   }
 
+  @Post('/batch')
+  @ApiOperation({ summary: 'Get projects by IDs' })
+  async getBatchByIds(
+    @TenantId() tenantId: string,
+    @Body() dto: { ids: string[] },
+  ) {
+    return this.projectsService.findByIds(tenantId, dto.ids);
+  }
+
   @Patch(':id')
   @ApiOperation({ summary: 'Update project (OWNER/ADMIN only)' })
   update(
