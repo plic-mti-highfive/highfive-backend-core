@@ -10,6 +10,7 @@ import {
   OneToOne,
 } from 'typeorm';
 import { UserStatus } from '@plic-mti-highfive/shared-types';
+import { SystemRole } from '../../../shared/auth/system-role.enum.js';
 import { Tenant } from '../../tenants/entities/tenant.entity.js';
 import { UserProfile } from '../../user-profiles/entities/user-profile.entity.js';
 
@@ -33,6 +34,14 @@ export class User {
 
   @Column({ type: 'enum', enum: UserStatus, default: UserStatus.PENDING })
   status!: UserStatus;
+
+  @Column({
+    name: 'system_role',
+    type: 'enum',
+    enum: SystemRole,
+    default: SystemRole.USER,
+  })
+  systemRole!: SystemRole;
 
   @OneToOne(() => UserProfile, (profile) => profile.user, { cascade: true })
   profile!: UserProfile;

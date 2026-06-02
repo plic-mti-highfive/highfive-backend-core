@@ -66,6 +66,7 @@ npm run build        # Build production
 
 ### Enums
 - `user_status_enum`: PENDING, ACTIVE, SUSPENDED
+- `system_role_enum` (rôle plateforme global, sur `users.system_role`): USER, ADMIN — défini localement dans le backend (`src/shared/auth/system-role.enum.ts`), pas dans shared-types
 - `project_status_enum`: DRAFT, ACTIVE, ARCHIVED
 - `project_visibility_enum`: PUBLIC, PRIVATE, INVITATION_ONLY
 - `project_role_enum`: OWNER, ADMIN, MEMBER, VIEWER

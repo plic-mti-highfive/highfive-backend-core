@@ -102,6 +102,11 @@ export class AuthService {
     return this.generateTokens(stored.user);
   }
 
+  async getProfile(tenantId: string, userId: string): Promise<UserResponseDto> {
+    const user = await this.usersService.findById(tenantId, userId);
+    return UserResponseDto.fromUser(user);
+  }
+
   async logout(tenantId: string, refreshTokenRaw: string): Promise<void> {
     const tokenHash = this.hashToken(refreshTokenRaw);
     await this.refreshTokenRepo.update(
@@ -117,6 +122,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       tenantId: user.tenantId,
+      role: user.systemRole,
     };
 
     const accessToken = this.jwtService.sign(

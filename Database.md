@@ -12,6 +12,7 @@ Table users {
   email varchar(255) [unique, not null]
   password_hash varchar(255) [not null]
   status user_status_enum [default: 'PENDING']
+  system_role system_role_enum [default: 'USER']
 }
 
 Table user_profiles {
