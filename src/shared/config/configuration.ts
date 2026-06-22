@@ -22,12 +22,4 @@ export default () => ({
     host: process.env.REDIS_HOST ?? 'localhost',
     port: parseInt(process.env.REDIS_PORT ?? '6379', 10),
   },
-
-  rabbitmq: {
-    host: process.env.RABBITMQ_HOST ?? 'localhost',
-    port: parseInt(process.env.RABBITMQ_PORT ?? '5672', 10),
-    username: process.env.RABBITMQ_USERNAME ?? 'guest',
-    password: process.env.RABBITMQ_PASSWORD ?? 'guest',
-    vhost: process.env.RABBITMQ_VHOST ?? '/',
-  },
 });

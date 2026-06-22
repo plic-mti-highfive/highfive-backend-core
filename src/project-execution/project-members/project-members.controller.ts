@@ -7,7 +7,12 @@ import {
   Param,
   Body,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiSecurity,
+} from '@nestjs/swagger';
 import type { UserContext } from '@plic-mti-highfive/shared-types';
 import { ProjectMembersService } from './project-members.service.js';
 import { AddMemberDto } from './dto/add-member.dto.js';
@@ -17,6 +22,7 @@ import { CurrentUser } from '../../shared/decorators/current-user.decorator.js';
 
 @ApiTags('Project Members')
 @ApiBearerAuth()
+@ApiSecurity('tenant')
 @Controller('projects/:projectId/members')
 export class ProjectMembersController {
   constructor(private readonly membersService: ProjectMembersService) {}

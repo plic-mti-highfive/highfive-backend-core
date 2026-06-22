@@ -7,7 +7,12 @@ import {
   Body,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiSecurity,
+} from '@nestjs/swagger';
 import type { UserContext } from '@plic-mti-highfive/shared-types';
 import { TicketsService } from './tickets.service.js';
 import { CreateTicketDto } from './dto/create-ticket.dto.js';
@@ -17,6 +22,7 @@ import { CurrentUser } from '../../shared/decorators/current-user.decorator.js';
 
 @ApiTags('Tickets')
 @ApiBearerAuth()
+@ApiSecurity('tenant')
 @Controller('projects/:projectId/tickets')
 export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}

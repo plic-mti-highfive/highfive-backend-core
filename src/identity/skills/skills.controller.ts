@@ -1,11 +1,17 @@
 import { Controller, Get, Post, Delete, Param, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiSecurity,
+} from '@nestjs/swagger';
 import { SkillsService } from './skills.service.js';
 import { CreateSkillDto } from './dto/create-skill.dto.js';
 import { TenantId } from '../../shared/tenant/tenant.decorator.js';
 
 @ApiTags('Skills')
 @ApiBearerAuth()
+@ApiSecurity('tenant')
 @Controller()
 export class SkillsController {
   constructor(private readonly skillsService: SkillsService) {}
