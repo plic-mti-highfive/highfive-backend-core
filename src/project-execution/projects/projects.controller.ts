@@ -7,6 +7,7 @@ import {
   Param,
   Body,
   Query,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -47,7 +48,10 @@ export class ProjectsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get project by ID' })
-  findOne(@TenantId() tenantId: string, @Param('id') id: string) {
+  findOne(
+    @TenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.projectsService.findById(tenantId, id);
   }
 
@@ -64,7 +68,7 @@ export class ProjectsController {
   @ApiOperation({ summary: 'Update project (OWNER/ADMIN only)' })
   update(
     @TenantId() tenantId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: UserContext,
     @Body() dto: UpdateProjectDto,
   ) {
@@ -75,7 +79,7 @@ export class ProjectsController {
   @ApiOperation({ summary: 'Soft delete project (OWNER only)' })
   remove(
     @TenantId() tenantId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: UserContext,
   ) {
     return this.projectsService.softDelete(tenantId, id, user.id);
@@ -85,7 +89,7 @@ export class ProjectsController {
   @ApiOperation({ summary: 'Like a project' })
   async likeProject(
     @TenantId() tenantId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: UserContext,
   ) {
     await this.projectsService.likeProject(tenantId, id, user.id);
@@ -96,7 +100,7 @@ export class ProjectsController {
   @ApiOperation({ summary: 'Apply to a project' })
   async submitApplication(
     @TenantId() tenantId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: UserContext,
   ) {
     await this.projectsService.submitApplication(tenantId, id, user.id);

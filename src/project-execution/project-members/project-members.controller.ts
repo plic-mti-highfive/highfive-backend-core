@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -29,7 +30,10 @@ export class ProjectMembersController {
 
   @Get()
   @ApiOperation({ summary: 'List project members' })
-  findAll(@TenantId() tenantId: string, @Param('projectId') projectId: string) {
+  findAll(
+    @TenantId() tenantId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+  ) {
     return this.membersService.findMembers(tenantId, projectId);
   }
 
@@ -37,7 +41,7 @@ export class ProjectMembersController {
   @ApiOperation({ summary: 'Add member to project (OWNER/ADMIN)' })
   add(
     @TenantId() tenantId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
     @CurrentUser() user: UserContext,
     @Body() dto: AddMemberDto,
   ) {
@@ -48,8 +52,8 @@ export class ProjectMembersController {
   @ApiOperation({ summary: 'Update member role (OWNER/ADMIN)' })
   updateRole(
     @TenantId() tenantId: string,
-    @Param('projectId') projectId: string,
-    @Param('userId') userId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
     @CurrentUser() user: UserContext,
     @Body() dto: UpdateMemberRoleDto,
   ) {
@@ -66,8 +70,8 @@ export class ProjectMembersController {
   @ApiOperation({ summary: 'Remove member from project (OWNER/ADMIN)' })
   remove(
     @TenantId() tenantId: string,
-    @Param('projectId') projectId: string,
-    @Param('userId') userId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
     @CurrentUser() user: UserContext,
   ) {
     return this.membersService.removeMember(

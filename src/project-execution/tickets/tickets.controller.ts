@@ -6,6 +6,7 @@ import {
   Param,
   Body,
   Query,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -31,7 +32,7 @@ export class TicketsController {
   @ApiOperation({ summary: 'Create a ticket (OWNER/ADMIN/MEMBER)' })
   create(
     @TenantId() tenantId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
     @CurrentUser() user: UserContext,
     @Body() dto: CreateTicketDto,
   ) {
@@ -42,7 +43,7 @@ export class TicketsController {
   @ApiOperation({ summary: 'List tickets for a project' })
   findAll(
     @TenantId() tenantId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
     @Query('offset') offset?: number,
     @Query('limit') limit?: number,
   ) {
@@ -58,7 +59,7 @@ export class TicketsController {
   @ApiOperation({ summary: 'Get ticket by ID' })
   findOne(
     @TenantId() tenantId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
     @Param('ticketId') ticketId: string,
   ) {
     return this.ticketsService.findById(tenantId, projectId, ticketId);
@@ -68,7 +69,7 @@ export class TicketsController {
   @ApiOperation({ summary: 'Update ticket (OWNER/ADMIN/MEMBER)' })
   update(
     @TenantId() tenantId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
     @Param('ticketId') ticketId: string,
     @CurrentUser() user: UserContext,
     @Body() dto: UpdateTicketDto,

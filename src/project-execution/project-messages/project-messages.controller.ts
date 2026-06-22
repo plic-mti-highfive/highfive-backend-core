@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  Query,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -22,7 +30,7 @@ export class ProjectMessagesController {
   @ApiOperation({ summary: 'Send a message in project chat' })
   create(
     @TenantId() tenantId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
     @CurrentUser() user: UserContext,
     @Body() dto: CreateMessageDto,
   ) {
@@ -33,7 +41,7 @@ export class ProjectMessagesController {
   @ApiOperation({ summary: 'List project chat messages' })
   findAll(
     @TenantId() tenantId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
     @Query('offset') offset?: number,
     @Query('limit') limit?: number,
   ) {

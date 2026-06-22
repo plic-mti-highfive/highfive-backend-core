@@ -5,6 +5,7 @@ import {
   Param,
   Body,
   ForbiddenException,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -31,7 +32,7 @@ export class UserProfilesController {
   @ApiOperation({ summary: 'Get user profile' })
   findOne(
     @TenantId() tenantId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ): Promise<UserProfileResponseDto> {
     return this.profilesService.getEnrichedProfile(tenantId, id);
   }
@@ -42,7 +43,7 @@ export class UserProfilesController {
   })
   getUserProjects(
     @TenantId() tenantId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ): Promise<UserProjectsResponseDto> {
     return this.profilesService.getUserProjects(tenantId, id);
   }
@@ -51,7 +52,7 @@ export class UserProfilesController {
   @ApiOperation({ summary: 'Update own profile' })
   update(
     @TenantId() tenantId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateProfileDto,
     @CurrentUser() user: UserContext,
   ) {

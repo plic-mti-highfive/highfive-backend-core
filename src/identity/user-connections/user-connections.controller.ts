@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Patch, Param, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -33,7 +41,7 @@ export class UserConnectionsController {
   @ApiOperation({ summary: 'Accept or block connection' })
   update(
     @TenantId() tenantId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: UserContext,
     @Body() dto: UpdateConnectionDto,
   ) {

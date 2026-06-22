@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Delete, Param, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -32,7 +40,7 @@ export class SkillsController {
   @ApiOperation({ summary: 'List skills for a user' })
   findUserSkills(
     @TenantId() tenantId: string,
-    @Param('userId') userId: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
   ) {
     return this.skillsService.findUserSkills(tenantId, userId);
   }
@@ -41,7 +49,7 @@ export class SkillsController {
   @ApiOperation({ summary: 'Add skill to user' })
   addSkill(
     @TenantId() tenantId: string,
-    @Param('userId') userId: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
     @Param('skillId') skillId: string,
   ) {
     return this.skillsService.addSkillToUser(tenantId, userId, skillId);
@@ -51,7 +59,7 @@ export class SkillsController {
   @ApiOperation({ summary: 'Remove skill from user' })
   removeSkill(
     @TenantId() tenantId: string,
-    @Param('userId') userId: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
     @Param('skillId') skillId: string,
   ) {
     return this.skillsService.removeSkillFromUser(tenantId, userId, skillId);
