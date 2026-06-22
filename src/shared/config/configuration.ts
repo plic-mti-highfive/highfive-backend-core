@@ -22,4 +22,14 @@ export default () => ({
     host: process.env.REDIS_HOST ?? 'localhost',
     port: parseInt(process.env.REDIS_PORT ?? '6379', 10),
   },
+
+  minio: {
+    region: process.env.MINIO_REGION ?? 'eu-west-3',
+    endpoint: process.env.MINIO_ENDPOINT ?? 'http://localhost:9000',
+    credentials: {
+      accessKeyId: process.env.MINIO_ACCESS_KEY ?? 'minioadmin',
+      secretAccessKey: process.env.MINIO_SECRET_KEY ?? 'minioadmin',
+    },
+    forcePathStyle: true,
+  },
 });
