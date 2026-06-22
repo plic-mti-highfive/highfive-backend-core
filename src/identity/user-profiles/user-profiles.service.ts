@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -10,7 +10,6 @@ import { User } from '../users/entities/user.entity.js';
 import { UserConnection } from '../user-connections/entities/user-connection.entity.js';
 import { ProjectMember } from '../../project-execution/project-members/entities/project-member.entity.js';
 import { ProjectFollower } from '../../project-execution/project-members/entities/project-follower.entity.js';
-import { SkillsService } from '../skills/skills.service.js';
 import { ConnectionStatus, ProjectRole } from '@plic-mti-highfive/shared-types';
 
 @Injectable()
@@ -26,8 +25,6 @@ export class UserProfilesService {
     private readonly projectMemberRepo: Repository<ProjectMember>,
     @InjectRepository(ProjectFollower)
     private readonly projectFollowerRepo: Repository<ProjectFollower>,
-    @Inject(SkillsService)
-    private readonly skillsService: SkillsService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -50,6 +47,7 @@ export class UserProfilesService {
     dto: UpdateProfileDto,
   ): Promise<UserProfile> {
     const profile = await this.findByUserId(tenantId, userId);
+
     Object.assign(profile, dto);
     const saved = await this.profileRepo.save(profile);
 
@@ -74,27 +72,45 @@ export class UserProfilesService {
 
     if (!user) throw new NotFoundException('User not found');
 
-    // Get skills/tags
-    const skills = await this.skillsService.findUserSkills(tenantId, userId);
-    const tags = skills.map((skill) => skill.name);
-
-    // Count followers (addressee=userId, status=ACCEPTED)
-    const followersCount = await this.userConnectionRepo.count({
+    // Get followers (addressee=userId, status=ACCEPTED)
+    const followerConnections = await this.userConnectionRepo.find({
       where: {
         addresseeId: userId,
         tenantId,
         status: ConnectionStatus.ACCEPTED,
       },
+      relations: ['requester', 'requester.profile'],
     });
 
-    // Count following (requester=userId, status=ACCEPTED)
-    const followingCount = await this.userConnectionRepo.count({
+    const followers = followerConnections.map((c) => ({
+      userId: c.requester.id,
+      username: c.requester.email.split('@')[0],
+      displayName:
+        c.requester.profile?.displayName || c.requester.email.split('@')[0],
+      avatar:
+        c.requester.profile?.avatarPath ||
+        `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.requester.id}`,
+    }));
+
+    // Get following (requester=userId, status=ACCEPTED)
+    const followingConnections = await this.userConnectionRepo.find({
       where: {
         requesterId: userId,
         tenantId,
         status: ConnectionStatus.ACCEPTED,
       },
+      relations: ['addressee', 'addressee.profile'],
     });
+
+    const following = followingConnections.map((c) => ({
+      userId: c.addressee.id,
+      username: c.addressee.email.split('@')[0],
+      displayName:
+        c.addressee.profile?.displayName || c.addressee.email.split('@')[0],
+      avatar:
+        c.addressee.profile?.avatarPath ||
+        `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.addressee.id}`,
+    }));
 
     // Extract username from email
     const username = user.email.split('@')[0];
@@ -102,18 +118,30 @@ export class UserProfilesService {
     return {
       userId,
       username,
-      displayName: username,
+      displayName: profile?.displayName || username,
       avatar:
-        profile.avatarPath ||
+        profile?.avatarPath ||
         `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
-      bio: profile.bio,
+      bio: profile?.bio || null,
       createdAt: user.createdAt.toISOString(),
-      tags,
-      stats: {
-        followers: followersCount,
-        following: followingCount,
-      },
+      skills: profile?.skills || [],
+      stats: { followers: followers.length, following: following.length },
+      followers,
+      following,
     };
+  }
+
+  async getSkillSuggestions(tenantId: string): Promise<string[]> {
+    const rows = await this.profileRepo
+      .createQueryBuilder('profile')
+      .select('DISTINCT unnest(profile.skills)', 'skill')
+      .where('profile.tenant_id = :tenantId', { tenantId })
+      .andWhere(
+        'profile.skills IS NOT NULL AND array_length(profile.skills, 1) > 0',
+      )
+      .getRawMany<{ skill: string }>();
+
+    return rows.map((r) => r.skill).filter(Boolean);
   }
 
   async getUserProjects(

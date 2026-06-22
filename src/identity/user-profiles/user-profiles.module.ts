@@ -7,7 +7,6 @@ import { ProjectMember } from '../../project-execution/project-members/entities/
 import { ProjectFollower } from '../../project-execution/project-members/entities/project-follower.entity.js';
 import { UserProfilesService } from './user-profiles.service.js';
 import { UserProfilesController } from './user-profiles.controller.js';
-import { SkillsModule } from '../skills/skills.module.js';
 
 @Module({
   imports: [
@@ -18,7 +17,6 @@ import { SkillsModule } from '../skills/skills.module.js';
       ProjectMember,
       ProjectFollower,
     ]),
-    SkillsModule,
   ],
   controllers: [UserProfilesController],
   providers: [UserProfilesService],

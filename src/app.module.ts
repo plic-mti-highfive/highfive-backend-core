@@ -14,7 +14,6 @@ import { TenantsModule } from './identity/tenants/tenants.module.js';
 import { UsersModule } from './identity/users/users.module.js';
 import { AuthModule } from './identity/auth/auth.module.js';
 import { UserProfilesModule } from './identity/user-profiles/user-profiles.module.js';
-import { SkillsModule } from './identity/skills/skills.module.js';
 import { UserConnectionsModule } from './identity/user-connections/user-connections.module.js';
 
 import { ProjectsModule } from './project-execution/projects/projects.module.js';
@@ -42,7 +41,6 @@ import { QueueModule } from './shared/queues/queue.module.js';
     UsersModule,
     AuthModule,
     UserProfilesModule,
-    SkillsModule,
     UserConnectionsModule,
 
     // Project Execution

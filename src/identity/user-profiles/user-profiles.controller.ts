@@ -61,4 +61,10 @@ export class UserProfilesController {
     }
     return this.profilesService.update(tenantId, id, dto);
   }
+
+  @Get('skills-suggestions')
+  @ApiOperation({ summary: 'Récupère la liste de tous les tags existants' })
+  getSkillSuggestions(@TenantId() tenantId: string) {
+    return this.profilesService.getSkillSuggestions(tenantId);
+  }
 }
