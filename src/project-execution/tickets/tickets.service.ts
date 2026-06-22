@@ -74,11 +74,12 @@ export class TicketsService {
   ): Promise<{ data: Ticket[]; total: number }> {
     const [data, total] = await this.ticketRepo.findAndCount({
       where: { projectId, tenantId },
-      relations: ['assignee'],
+      relations: ['assignee', 'checklistItems', 'comments', 'comments.author'],
       skip: offset,
       take: limit,
       order: { createdAt: 'DESC' },
     });
+
     return { data, total };
   }
 
@@ -89,9 +90,10 @@ export class TicketsService {
   ): Promise<Ticket> {
     const ticket = await this.ticketRepo.findOne({
       where: { id: ticketId, projectId, tenantId },
-      relations: ['assignee'],
+      relations: ['assignee', 'checklistItems', 'comments', 'comments.author'],
     });
     if (!ticket) throw new NotFoundException('Ticket not found');
+
     return ticket;
   }
 
