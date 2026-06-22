@@ -20,6 +20,9 @@ import { CreateTicketDto } from './dto/create-ticket.dto.js';
 import { UpdateTicketDto } from './dto/update-ticket.dto.js';
 import { TenantId } from '../../shared/tenant/tenant.decorator.js';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator.js';
+import { CreateTicketCommentDto } from './dto/create-ticket-comment.dto.js';
+import { CreateChecklistItemDto } from './dto/create-checklist-item.dto.js';
+import { ToggleChecklistItemDto } from './dto/toggle-checklist-item.dto.js';
 
 @ApiTags('Tickets')
 @ApiBearerAuth()
@@ -81,5 +84,48 @@ export class TicketsController {
       user.id,
       dto,
     );
+  }
+
+  // ---------- Checklist and comments management ----------
+  @Post(':ticketId/checklists')
+  @ApiOperation({ summary: 'Add checklist item to ticket' })
+  addChecklistItem(
+    @TenantId() tenantId: string,
+    @Param('ticketId', ParseUUIDPipe) ticketId: string,
+    @CurrentUser() user: UserContext,
+    @Body() dto: CreateChecklistItemDto,
+  ) {
+    return this.ticketsService.addChecklistItem(
+      tenantId,
+      ticketId,
+      user.id,
+      dto,
+    );
+  }
+
+  @Patch('checklists/:itemId')
+  @ApiOperation({ summary: 'Toggle checklist item completion' })
+  toggleChecklistItem(
+    @TenantId() tenantId: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
+    @CurrentUser() user: UserContext,
+    @Body() dto: ToggleChecklistItemDto,
+  ) {
+    return this.ticketsService.toggleChecklistItem(
+      tenantId,
+      itemId,
+      dto.isCompleted,
+    );
+  }
+
+  @Post(':ticketId/comments')
+  @ApiOperation({ summary: 'Add comment to ticket' })
+  addComment(
+    @TenantId() tenantId: string,
+    @Param('ticketId', ParseUUIDPipe) ticketId: string,
+    @CurrentUser() user: UserContext,
+    @Body() dto: CreateTicketCommentDto,
+  ) {
+    return this.ticketsService.addComment(tenantId, ticketId, user.id, dto);
   }
 }
