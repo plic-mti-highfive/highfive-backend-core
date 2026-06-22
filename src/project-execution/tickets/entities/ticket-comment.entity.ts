@@ -18,6 +18,9 @@ export class TicketComment {
   @Column({ name: 'ticket_id' })
   ticketId!: string;
 
+  @Column({ name: 'tenant_id' })
+  tenantId!: string;
+
   @ManyToOne(() => Ticket, (ticket) => ticket.comments, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'ticket_id' })
   ticket!: Ticket;

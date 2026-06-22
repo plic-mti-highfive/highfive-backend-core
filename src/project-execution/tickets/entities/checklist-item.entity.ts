@@ -17,6 +17,9 @@ export class ChecklistItem {
   @Column({ name: 'ticket_id' })
   ticketId!: string;
 
+  @Column({ name: 'tenant_id' })
+  tenantId!: string;
+
   @ManyToOne(() => Ticket, (ticket) => ticket.checklistItems, {
     onDelete: 'CASCADE',
   })
