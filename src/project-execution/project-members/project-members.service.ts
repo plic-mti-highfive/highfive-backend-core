@@ -12,6 +12,7 @@ import { ProjectRole } from '@plic-mti-highfive/shared-types';
 import { AddMemberDto } from './dto/add-member.dto.js';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto.js';
 import { UsersService } from '../../identity/users/users.service.js';
+import { Ticket } from '../tickets/entities/ticket.entity.js';
 
 const MANAGE_ROLES = [ProjectRole.OWNER, ProjectRole.ADMIN];
 
@@ -20,6 +21,8 @@ export class ProjectMembersService {
   constructor(
     @InjectRepository(ProjectMember)
     private readonly memberRepo: Repository<ProjectMember>,
+    @InjectRepository(Ticket)
+    private readonly ticketsRepo: Repository<Ticket>,
     private readonly usersService: UsersService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -126,6 +129,11 @@ export class ProjectMembersService {
     if (result.affected === 0) {
       throw new NotFoundException('Member not found');
     }
+
+    await this.ticketsRepo.update(
+      { projectId: projectId, assigneeId: targetUserId, tenantId: tenantId },
+      { assigneeId: null },
+    );
 
     this.eventEmitter.emit('project.member.removed', {
       projectId,
