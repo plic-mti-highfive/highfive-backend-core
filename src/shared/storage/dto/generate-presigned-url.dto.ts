@@ -1,11 +1,6 @@
 import { IsEnum, IsString, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-
-export enum StorageFolder {
-  AVATARS = 'avatars',
-  BANNERS = 'banners',
-  PROJECTS = 'projects',
-}
+import { StorageFolder } from '@plic-mti-highfive/shared-types';
 
 export class GeneratePresignedUrlDto {
   @ApiProperty({ description: 'File name' })

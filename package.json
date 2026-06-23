@@ -36,7 +36,7 @@
     "@nestjs/swagger": "^11.2.6",
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/typeorm": "^11.0.0",
-    "@plic-mti-highfive/shared-types": "^1.0.1",
+    "@plic-mti-highfive/shared-types": "^1.1.2",
     "argon2": "^0.44.0",
     "bullmq": "^5.71.1",
     "class-transformer": "^0.5.1",
