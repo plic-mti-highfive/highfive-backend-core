@@ -13,6 +13,8 @@ import {
   TicketStatus,
   UserStatus,
 } from '@plic-mti-highfive/shared-types';
+import { TicketComment } from './entities/ticket-comment.entity.js';
+import { ChecklistItem } from './entities/checklist-item.entity.js';
 
 type TicketRepoMock = {
   create: Mock<(data: Partial<Ticket>) => Partial<Ticket>>;
@@ -94,6 +96,8 @@ describe('TicketsService', () => {
       providers: [
         TicketsService,
         { provide: getRepositoryToken(Ticket), useValue: ticketRepo },
+        { provide: getRepositoryToken(ChecklistItem), useValue: {} },
+        { provide: getRepositoryToken(TicketComment), useValue: {} },
         { provide: ProjectMembersService, useValue: membersService },
         { provide: UsersService, useValue: usersService },
         { provide: EventEmitter2, useValue: eventEmitter },
