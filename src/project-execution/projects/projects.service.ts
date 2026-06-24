@@ -8,6 +8,7 @@ import { UpdateProjectDto } from './dto/update-project.dto.js';
 import { QueryProjectDto } from './dto/query-project.dto.js';
 import { ProjectMembersService } from '../project-members/project-members.service.js';
 import { ProjectRole } from '@plic-mti-highfive/shared-types';
+import { ProjectResponseDto } from './dto/project-response.dto.js';
 
 @Injectable()
 export class ProjectsService {
@@ -18,11 +19,24 @@ export class ProjectsService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
+  private toResponseDto(project: Project): ProjectResponseDto {
+    return {
+      id: project.id,
+      name: project.name,
+      description: project.description,
+      status: project.status,
+      visibility: project.visibility,
+      tags: project.tags,
+      highfiveCount: 0, // TODO: calculate actual highfive count
+      createdAt: project.createdAt,
+    };
+  }
+
   async create(
     tenantId: string,
     userId: string,
     dto: CreateProjectDto,
-  ): Promise<Project> {
+  ): Promise<ProjectResponseDto> {
     const project = this.projectRepo.create({
       ...dto,
       tenantId,
@@ -39,14 +53,14 @@ export class ProjectsService {
       name: saved.name,
     });
 
-    return saved;
+    return this.toResponseDto(saved);
   }
 
   async findAll(
     tenantId: string,
     query: QueryProjectDto,
   ): Promise<{
-    data: Project[];
+    data: ProjectResponseDto[];
     total: number;
     page: number;
     limit: number;
@@ -101,7 +115,7 @@ export class ProjectsService {
     const [data, total] = await db.skip(offset).take(limit).getManyAndCount();
 
     return {
-      data,
+      data: data.map((project) => this.toResponseDto(project)),
       total,
       page: Math.floor(offset / limit) + 1,
       limit,
@@ -109,23 +123,27 @@ export class ProjectsService {
     };
   }
 
-  async findById(tenantId: string, id: string): Promise<Project> {
+  async findById(tenantId: string, id: string): Promise<ProjectResponseDto> {
     const project = await this.projectRepo.findOne({
       where: { id, tenantId },
     });
     if (!project) throw new NotFoundException('Project not found');
-    return project;
+    return this.toResponseDto(project);
   }
 
-  async findByIds(tenantId: string, ids: string[]): Promise<Project[]> {
+  async findByIds(
+    tenantId: string,
+    ids: string[],
+  ): Promise<ProjectResponseDto[]> {
     if (ids.length === 0) return [];
-    return this.projectRepo.find({
+    const projects = await this.projectRepo.find({
       where: {
         id: In(ids),
         tenantId,
       },
       order: { createdAt: 'DESC' },
     });
+    return projects.map((project) => this.toResponseDto(project));
   }
 
   async update(
@@ -133,7 +151,7 @@ export class ProjectsService {
     id: string,
     userId: string,
     dto: UpdateProjectDto,
-  ): Promise<Project> {
+  ): Promise<ProjectResponseDto> {
     await this.membersService.assertRole(tenantId, id, userId, [
       ProjectRole.OWNER,
       ProjectRole.ADMIN,
@@ -161,7 +179,7 @@ export class ProjectsService {
       });
     }
 
-    return saved;
+    return this.toResponseDto(saved);
   }
 
   async softDelete(
