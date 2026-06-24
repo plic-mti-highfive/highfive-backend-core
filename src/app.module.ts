@@ -26,6 +26,8 @@ import { ShowcaseModule } from './showcase/showcase.module.js';
 import { DomainEventsModule } from './shared/events/domain-events.module.js';
 import { QueueModule } from './shared/queues/queue.module.js';
 import { StorageModule } from './shared/storage/storage.module.js';
+import { SearchModule } from './shared/search/search.module.js';
+import { TagsModule } from './shared/tags/tags.module.js';
 
 @Module({
   imports: [
@@ -58,6 +60,7 @@ import { StorageModule } from './shared/storage/storage.module.js';
     DomainEventsModule,
     QueueModule,
     StorageModule,
+    SearchModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: TenantGuard },
