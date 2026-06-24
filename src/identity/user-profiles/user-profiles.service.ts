@@ -4,13 +4,17 @@ import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UserProfile } from './entities/user-profile.entity.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
-import { UserProfileResponseDto } from './dto/user-profile-response.dto.js';
+import {
+  MinimalProfileDto,
+  UserProfileResponseDto,
+} from './dto/user-profile-response.dto.js';
 import { UserProjectsResponseDto } from './dto/user-projects-response.dto.js';
 import { User } from '../users/entities/user.entity.js';
 import { UserConnection } from '../user-connections/entities/user-connection.entity.js';
 import { ProjectMember } from '../../project-execution/project-members/entities/project-member.entity.js';
 import { ProjectFollower } from '../../project-execution/project-members/entities/project-follower.entity.js';
 import { ConnectionStatus, ProjectRole } from '@plic-mti-highfive/shared-types';
+import { QueryProfileDto } from './dto/query-profile.dto.js';
 
 @Injectable()
 export class UserProfilesService {
@@ -28,8 +32,16 @@ export class UserProfilesService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  async createDefault(userId: string, tenantId: string): Promise<UserProfile> {
-    const profile = this.profileRepo.create({ userId, tenantId });
+  async createDefault(
+    userId: string,
+    tenantId: string,
+    defaultDisplayName: string,
+  ): Promise<UserProfile> {
+    const profile = this.profileRepo.create({
+      userId,
+      tenantId,
+      displayName: defaultDisplayName,
+    });
     return this.profileRepo.save(profile);
   }
 
@@ -193,6 +205,76 @@ export class UserProfilesService {
       created,
       collaborations,
       liked,
+    };
+  }
+
+  async findAll(
+    tenantId: string,
+    query: QueryProfileDto,
+  ): Promise<{
+    data: MinimalProfileDto[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const limit = query.limit ?? 20;
+    const offset = query.offset ?? 0;
+
+    const qb = this.profileRepo
+      .createQueryBuilder('profile')
+      .leftJoinAndSelect('profile.user', 'user')
+      .where('profile.tenantId = :tenantId', { tenantId });
+
+    if (query.search) {
+      qb.andWhere(
+        '(profile.displayName ILIKE :search OR user.email ILIKE :search)',
+        {
+          search: `%${query.search}%`,
+        },
+      );
+    }
+
+    if (query.tags && query.tags.length > 0) {
+      qb.andWhere('profile.skills && ARRAY[:...skills]::varchar[]', {
+        skills: query.tags,
+      });
+    }
+
+    const order = query.sortOrder === 'ASC' ? 'ASC' : 'DESC';
+    switch (query.sortBy) {
+      case 'name':
+        qb.orderBy('profile.displayName', order);
+        break;
+      case 'popularity':
+        // TODO: Implement popularity sorting based on followers count
+        break;
+      case 'date':
+      default:
+        qb.orderBy('user.createdAt', order);
+        break;
+    }
+
+    const [data, total] = await qb.skip(offset).take(limit).getManyAndCount();
+
+    const mappedData: MinimalProfileDto[] = data.map((p) => {
+      const emailPrefix = p.user?.email.split('@')[0] ?? 'unknown';
+      return {
+        userId: p.userId,
+        username: emailPrefix,
+        displayName: p.displayName || emailPrefix,
+        avatar:
+          p.avatarPath ||
+          `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.userId}`,
+      };
+    });
+
+    return {
+      data: mappedData,
+      total,
+      page: Math.floor(offset / limit) + 1,
+      limit,
+      totalPages: Math.ceil(total / limit),
     };
   }
 }

@@ -6,6 +6,7 @@ import {
   Body,
   ForbiddenException,
   ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -20,6 +21,7 @@ import { UserProfileResponseDto } from './dto/user-profile-response.dto.js';
 import { UserProjectsResponseDto } from './dto/user-projects-response.dto.js';
 import { TenantId } from '../../shared/tenant/tenant.decorator.js';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator.js';
+import { QueryProfileDto } from './dto/query-profile.dto.js';
 
 @ApiTags('User Profiles')
 @ApiBearerAuth()
@@ -60,6 +62,14 @@ export class UserProfilesController {
       throw new ForbiddenException('You can only update your own profile');
     }
     return this.profilesService.update(tenantId, id, dto);
+  }
+
+  @Get()
+  @ApiOperation({
+    summary: 'List user profiles (with filters, sorting and pagination)',
+  })
+  findAll(@TenantId() tenantId: string, @Query() query: QueryProfileDto) {
+    return this.profilesService.findAll(tenantId, query);
   }
 
   @Get('skills-suggestions')
