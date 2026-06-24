@@ -13,7 +13,7 @@ export class StorageService {
   constructor(private configService: ConfigService) {
     this.bucketName = this.configService.get<string>(
       'MINIO_BUCKET',
-      'highfive-bucket',
+      'highfive-core-bucket',
     );
 
     this.s3Client = new S3Client({
