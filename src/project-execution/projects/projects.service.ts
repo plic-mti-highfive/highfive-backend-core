@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere, In } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Project } from './entities/project.entity.js';
 import { CreateProjectDto } from './dto/create-project.dto.js';
@@ -52,19 +52,53 @@ export class ProjectsService {
     limit: number;
     totalPages: number;
   }> {
-    const where: FindOptionsWhere<Project> = { tenantId };
-    if (query.status) where.status = query.status;
-    if (query.visibility) where.visibility = query.visibility;
-
     const limit = query.limit ?? 20;
     const offset = query.offset ?? 0;
 
-    const [data, total] = await this.projectRepo.findAndCount({
-      where,
-      skip: offset,
-      take: limit,
-      order: { createdAt: 'DESC' },
-    });
+    const db = this.projectRepo
+      .createQueryBuilder('project')
+      .where('project.tenantId = :tenantId', { tenantId });
+
+    if (query.status) {
+      db.andWhere('project.status = :status', { status: query.status });
+    }
+
+    if (query.visibility) {
+      db.andWhere('project.visibility = :visibility', {
+        visibility: query.visibility,
+      });
+    }
+
+    if (query.search) {
+      db.andWhere(
+        'project.name ILIKE :search OR project.description ILIKE :search',
+        {
+          search: `%${query.search}%`,
+        },
+      );
+    }
+
+    if (query.tags && query.tags.length > 0) {
+      db.andWhere('project.tags && ARRAY[:...tags]::varchar[]', {
+        tags: query.tags,
+      });
+    }
+
+    const order = query.sortOrder === 'ASC' ? 'ASC' : 'DESC';
+    switch (query.sortBy) {
+      case 'name':
+        db.orderBy('project.name', order);
+        break;
+      case 'popularity':
+        // TODO: sort by popularity like highfive or members count
+        break;
+      case 'date':
+      default:
+        db.orderBy('project.createdAt', order);
+        break;
+    }
+
+    const [data, total] = await db.skip(offset).take(limit).getManyAndCount();
 
     return {
       data,
