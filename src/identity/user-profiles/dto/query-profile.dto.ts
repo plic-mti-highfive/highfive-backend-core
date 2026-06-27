@@ -7,7 +7,7 @@ import {
   Max,
   IsIn,
 } from 'class-validator';
-import { Type, Transform } from 'class-transformer';
+import { Type, Transform, TransformFnParams } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class QueryProfileDto {
@@ -36,9 +36,10 @@ export class QueryProfileDto {
   @IsArray()
   @IsString({ each: true })
   @Type(() => String)
-  @Transform(({ value }) => {
-    if (value === undefined) return value;
-    return Array.isArray(value) ? value : [value];
+  @Transform(({ value }: TransformFnParams) => {
+    if (value === undefined) return undefined;
+    const arr = Array.isArray(value) ? value : [value];
+    return arr.map((v) => String(v));
   })
   tags?: string[];
 

@@ -8,7 +8,7 @@ import {
   IsString,
   IsArray,
 } from 'class-validator';
-import { Transform, Type } from 'class-transformer';
+import { Transform, Type, TransformFnParams } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ProjectStatus,
@@ -51,9 +51,10 @@ export class QueryProjectDto {
   @IsArray()
   @IsString({ each: true })
   @Type(() => String)
-  @Transform(({ value }) => {
-    if (value === undefined) return value;
-    return Array.isArray(value) ? value : [value];
+  @Transform(({ value }: TransformFnParams) => {
+    if (value === undefined) return undefined;
+    const arr = Array.isArray(value) ? value : [value];
+    return arr.map((v) => String(v));
   })
   tags?: string[];
 

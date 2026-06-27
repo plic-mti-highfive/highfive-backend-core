@@ -4,42 +4,42 @@ import { MinimalProfileDto } from '../../../identity/user-profiles/dto/user-prof
 
 class PaginatedProjectsResult {
   @ApiProperty({ type: [ProjectResponseDto] })
-  data: ProjectResponseDto[];
+  data!: ProjectResponseDto[];
 
   @ApiProperty()
-  total: number;
+  total!: number;
 
   @ApiProperty()
-  page: number;
+  page!: number;
 
   @ApiProperty()
-  limit: number;
+  limit!: number;
 
   @ApiProperty()
-  totalPages: number;
+  totalPages!: number;
 }
 
 class PaginatedUsersResult {
   @ApiProperty({ type: [MinimalProfileDto] })
-  data: MinimalProfileDto[];
+  data!: MinimalProfileDto[];
 
   @ApiProperty()
-  total: number;
+  total!: number;
 
   @ApiProperty()
-  page: number;
+  page!: number;
 
   @ApiProperty()
-  limit: number;
+  limit!: number;
 
   @ApiProperty()
-  totalPages: number;
+  totalPages!: number;
 }
 
 // TODO
 class PaginatedProgressResult {
   @ApiProperty({ type: [Object] })
-  data: any[];
+  data!: any[];
 }
 
 export class GlobalSearchResponseDto {
