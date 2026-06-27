@@ -162,4 +162,9 @@ export class AuthService {
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
   }
+
+  async me(tenantId: string, userId: string): Promise<UserResponseDto> {
+    const user = await this.usersService.findById(tenantId, userId);
+    return UserResponseDto.fromUser(user);
+  }
 }
