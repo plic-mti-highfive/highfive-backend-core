@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { User } from '../../users/entities/user.entity';
 
 export class MinimalProfileDto {
   @ApiProperty({ description: 'User ID (UUID)' })
@@ -12,6 +13,18 @@ export class MinimalProfileDto {
 
   @ApiProperty({ description: 'Avatar URL or path' })
   avatar!: string;
+
+  static fromUser(user: User): MinimalProfileDto {
+    const username = user.email.split('@')[0];
+    return {
+      userId: user.id,
+      username,
+      displayName: user.profile?.displayName || username,
+      avatar:
+        user.profile?.avatarPath ||
+        `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
+    };
+  }
 }
 
 export class UserProfileResponseDto {

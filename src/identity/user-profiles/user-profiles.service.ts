@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UserProfile } from './entities/user-profile.entity.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
@@ -15,6 +15,7 @@ import { ProjectMember } from '../../project-execution/project-members/entities/
 import { ProjectFollower } from '../../project-execution/project-members/entities/project-follower.entity.js';
 import { ConnectionStatus, ProjectRole } from '@plic-mti-highfive/shared-types';
 import { QueryProfileDto } from './dto/query-profile.dto.js';
+import { ProjectResponseDto } from '../../project-execution/projects/dto/project-response.dto.js';
 
 @Injectable()
 export class UserProfilesService {
@@ -201,10 +202,35 @@ export class UserProfilesService {
       .map((pf) => pf.project)
       .filter((p) => p && !p.deletedAt);
 
+    // Get owners for all projects
+    const allProjects = [...created, ...collaborations, ...liked];
+    const uniqueProjectIds = [...new Set(allProjects.map((p) => p.id))];
+
+    const ownersMap = new Map<string, User>();
+    if (uniqueProjectIds.length > 0) {
+      const owners = await this.projectMemberRepo.find({
+        where: {
+          projectId: In(uniqueProjectIds),
+          tenantId,
+          role: ProjectRole.OWNER,
+        },
+        relations: ['user', 'user.profile'],
+      });
+      owners.forEach((o) => {
+        if (!ownersMap.has(o.projectId)) ownersMap.set(o.projectId, o.user);
+      });
+    }
+
     return {
-      created,
-      collaborations,
-      liked,
+      created: created.map((p) =>
+        ProjectResponseDto.fromEntity(p, ownersMap.get(p.id)!),
+      ),
+      collaborations: collaborations.map((p) =>
+        ProjectResponseDto.fromEntity(p, ownersMap.get(p.id)!),
+      ),
+      liked: liked.map((p) =>
+        ProjectResponseDto.fromEntity(p, ownersMap.get(p.id)!),
+      ),
     };
   }
 

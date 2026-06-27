@@ -19,19 +19,6 @@ export class ProjectsService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  private toResponseDto(project: Project): ProjectResponseDto {
-    return {
-      id: project.id,
-      name: project.name,
-      description: project.description,
-      status: project.status,
-      visibility: project.visibility,
-      tags: project.tags,
-      highfiveCount: 0, // TODO: calculate actual highfive count
-      createdAt: project.createdAt,
-    };
-  }
-
   async create(
     tenantId: string,
     userId: string,
@@ -46,6 +33,10 @@ export class ProjectsService {
     // Creator becomes OWNER
     await this.membersService.addOwner(tenantId, saved.id, userId);
 
+    const ownersMap = await this.membersService.getOwnersForProjects(tenantId, [
+      saved.id,
+    ]);
+
     this.eventEmitter.emit('project.created', {
       projectId: saved.id,
       tenantId,
@@ -53,7 +44,7 @@ export class ProjectsService {
       name: saved.name,
     });
 
-    return this.toResponseDto(saved);
+    return ProjectResponseDto.fromEntity(saved, ownersMap.get(saved.id)!);
   }
 
   async findAll(
@@ -114,8 +105,17 @@ export class ProjectsService {
 
     const [data, total] = await db.skip(offset).take(limit).getManyAndCount();
 
+    // Fetch owners for the projects
+    const projectIds = data.map((p) => p.id);
+    const ownersMap = await this.membersService.getOwnersForProjects(
+      tenantId,
+      projectIds,
+    );
+
     return {
-      data: data.map((project) => this.toResponseDto(project)),
+      data: data.map((p) =>
+        ProjectResponseDto.fromEntity(p, ownersMap.get(p.id)!),
+      ),
       total,
       page: Math.floor(offset / limit) + 1,
       limit,
@@ -128,7 +128,12 @@ export class ProjectsService {
       where: { id, tenantId },
     });
     if (!project) throw new NotFoundException('Project not found');
-    return this.toResponseDto(project);
+
+    const ownersMap = await this.membersService.getOwnersForProjects(tenantId, [
+      id,
+    ]);
+
+    return ProjectResponseDto.fromEntity(project, ownersMap.get(id)!);
   }
 
   async findByIds(
@@ -143,7 +148,14 @@ export class ProjectsService {
       },
       order: { createdAt: 'DESC' },
     });
-    return projects.map((project) => this.toResponseDto(project));
+
+    const ownersMap = await this.membersService.getOwnersForProjects(
+      tenantId,
+      ids,
+    );
+    return projects.map((p) =>
+      ProjectResponseDto.fromEntity(p, ownersMap.get(p.id)!),
+    );
   }
 
   async update(
@@ -179,7 +191,11 @@ export class ProjectsService {
       });
     }
 
-    return this.toResponseDto(saved);
+    const ownersMap = await this.membersService.getOwnersForProjects(tenantId, [
+      id,
+    ]);
+
+    return ProjectResponseDto.fromEntity(saved, ownersMap.get(saved.id)!);
   }
 
   async softDelete(
