@@ -3,18 +3,27 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Project } from './entities/project.entity.js';
+import { Tag } from '../tags/entities/tag.entity.js';
+import { ProjectMember } from '../project-members/entities/project-member.entity.js';
+import { ProjectHighfive } from '../project-highfives/entities/project-highfive.entity.js';
 import { CreateProjectDto } from './dto/create-project.dto.js';
 import { UpdateProjectDto } from './dto/update-project.dto.js';
 import { QueryProjectDto } from './dto/query-project.dto.js';
+import { ProjectResponseDto } from './dto/project-response.dto.js';
 import { ProjectMembersService } from '../project-members/project-members.service.js';
 import { ProjectRole } from '@plic-mti-highfive/shared-types';
-import { ProjectResponseDto } from './dto/project-response.dto.js';
 
 @Injectable()
 export class ProjectsService {
   constructor(
     @InjectRepository(Project)
     private readonly projectRepo: Repository<Project>,
+    @InjectRepository(Tag)
+    private readonly tagRepo: Repository<Tag>,
+    @InjectRepository(ProjectMember)
+    private readonly memberRepo: Repository<ProjectMember>,
+    @InjectRepository(ProjectHighfive)
+    private readonly highfiveRepo: Repository<ProjectHighfive>,
     private readonly membersService: ProjectMembersService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -24,13 +33,11 @@ export class ProjectsService {
     userId: string,
     dto: CreateProjectDto,
   ): Promise<ProjectResponseDto> {
-    const project = this.projectRepo.create({
-      ...dto,
-      tenantId,
-    });
+    const { tags, ...rest } = dto;
+    const project = this.projectRepo.create({ ...rest, tenantId });
+    project.tags = await this.resolveTags(tenantId, tags);
     const saved = await this.projectRepo.save(project);
 
-    // Creator becomes OWNER
     await this.membersService.addOwner(tenantId, saved.id, userId);
 
     const ownersMap = await this.membersService.getOwnersForProjects(tenantId, [
@@ -44,7 +51,7 @@ export class ProjectsService {
       name: saved.name,
     });
 
-    return ProjectResponseDto.fromEntity(saved, ownersMap.get(saved.id)!);
+    return ProjectResponseDto.fromEntity(saved, ownersMap.get(saved.id));
   }
 
   async findAll(
@@ -60,61 +67,72 @@ export class ProjectsService {
     const limit = query.limit ?? 20;
     const offset = query.offset ?? 0;
 
-    const db = this.projectRepo
+    const qb = this.projectRepo
       .createQueryBuilder('project')
-      .where('project.tenantId = :tenantId', { tenantId });
+      .leftJoinAndSelect('project.tags', 'tag')
+      .where('project.tenant_id = :tenantId', { tenantId });
 
-    if (query.status) {
-      db.andWhere('project.status = :status', { status: query.status });
+    if (query.userId) {
+      qb.innerJoin(
+        'project_members',
+        'pm',
+        'pm.project_id = project.id AND pm.user_id = :userId AND pm.tenant_id = :tenantId',
+        { userId: query.userId, tenantId },
+      );
     }
-
+    if (query.status) {
+      qb.andWhere('project.status = :status', { status: query.status });
+    }
     if (query.visibility) {
-      db.andWhere('project.visibility = :visibility', {
+      qb.andWhere('project.visibility = :visibility', {
         visibility: query.visibility,
       });
     }
-
     if (query.search) {
-      db.andWhere(
-        'project.name ILIKE :search OR project.description ILIKE :search',
-        {
-          search: `%${query.search}%`,
-        },
+      qb.andWhere(
+        '(project.name ILIKE :search OR project.description ILIKE :search)',
+        { search: `%${query.search}%` },
       );
     }
-
     if (query.tags && query.tags.length > 0) {
-      db.andWhere('project.tags && ARRAY[:...tags]::varchar[]', {
-        tags: query.tags,
-      });
+      qb.andWhere(
+        'project.id IN (SELECT pt.project_id FROM project_tags pt JOIN tags t ON t.id = pt.tag_id WHERE t.name IN (:...tagNames) AND t.tenant_id = :tenantId)',
+        { tagNames: query.tags, tenantId },
+      );
     }
 
     const order = query.sortOrder === 'ASC' ? 'ASC' : 'DESC';
     switch (query.sortBy) {
       case 'name':
-        db.orderBy('project.name', order);
+        qb.orderBy('project.name', order);
         break;
       case 'popularity':
-        // TODO: sort by popularity like highfive or members count
+        // TODO: sort by popularity (highfive or members count)
+        qb.orderBy('project.createdAt', order);
         break;
       case 'date':
       default:
-        db.orderBy('project.createdAt', order);
+        qb.orderBy('project.createdAt', order);
         break;
     }
 
-    const [data, total] = await db.skip(offset).take(limit).getManyAndCount();
+    qb.skip(offset).take(limit);
 
-    // Fetch owners for the projects
+    const [data, total] = await qb.getManyAndCount();
+
     const projectIds = data.map((p) => p.id);
-    const ownersMap = await this.membersService.getOwnersForProjects(
-      tenantId,
-      projectIds,
-    );
+    const [ownersMap, highfiveCounts] = await Promise.all([
+      this.membersService.getOwnersForProjects(tenantId, projectIds),
+      this.getHighfiveCounts(tenantId, projectIds),
+    ]);
 
     return {
       data: data.map((p) =>
-        ProjectResponseDto.fromEntity(p, ownersMap.get(p.id)!),
+        ProjectResponseDto.fromEntity(
+          p,
+          ownersMap.get(p.id),
+          highfiveCounts.get(p.id) ?? 0,
+        ),
       ),
       total,
       page: Math.floor(offset / limit) + 1,
@@ -124,37 +142,49 @@ export class ProjectsService {
   }
 
   async findById(tenantId: string, id: string): Promise<ProjectResponseDto> {
-    const project = await this.projectRepo.findOne({
-      where: { id, tenantId },
-    });
-    if (!project) throw new NotFoundException('Project not found');
+    const project = await this.loadProject(tenantId, id);
 
-    const ownersMap = await this.membersService.getOwnersForProjects(tenantId, [
-      id,
+    const [ownersMap, highfiveCounts] = await Promise.all([
+      this.membersService.getOwnersForProjects(tenantId, [id]),
+      this.getHighfiveCounts(tenantId, [id]),
     ]);
 
-    return ProjectResponseDto.fromEntity(project, ownersMap.get(id)!);
+    return ProjectResponseDto.fromEntity(
+      project,
+      ownersMap.get(id),
+      highfiveCounts.get(id) ?? 0,
+    );
   }
 
   async findByIds(
     tenantId: string,
     ids: string[],
   ): Promise<ProjectResponseDto[]> {
-    if (ids.length === 0) return [];
+    return this.findManyByIds(tenantId, ids);
+  }
+
+  async findManyByIds(
+    tenantId: string,
+    ids: string[],
+  ): Promise<ProjectResponseDto[]> {
+    if (!ids.length) return [];
     const projects = await this.projectRepo.find({
-      where: {
-        id: In(ids),
-        tenantId,
-      },
+      where: { id: In(ids), tenantId },
+      relations: ['tags'],
       order: { createdAt: 'DESC' },
     });
 
-    const ownersMap = await this.membersService.getOwnersForProjects(
-      tenantId,
-      ids,
-    );
+    const [ownersMap, highfiveCounts] = await Promise.all([
+      this.membersService.getOwnersForProjects(tenantId, ids),
+      this.getHighfiveCounts(tenantId, ids),
+    ]);
+
     return projects.map((p) =>
-      ProjectResponseDto.fromEntity(p, ownersMap.get(p.id)!),
+      ProjectResponseDto.fromEntity(
+        p,
+        ownersMap.get(p.id),
+        highfiveCounts.get(p.id) ?? 0,
+      ),
     );
   }
 
@@ -169,10 +199,14 @@ export class ProjectsService {
       ProjectRole.ADMIN,
     ]);
 
-    const project = await this.findById(tenantId, id);
+    const project = await this.loadProject(tenantId, id);
     const oldVisibility = project.visibility;
 
-    Object.assign(project, dto);
+    const { tags, ...rest } = dto;
+    Object.assign(project, rest);
+    if (tags !== undefined) {
+      project.tags = await this.resolveTags(tenantId, tags);
+    }
     const saved = await this.projectRepo.save(project);
 
     this.eventEmitter.emit('project.updated', {
@@ -191,11 +225,16 @@ export class ProjectsService {
       });
     }
 
-    const ownersMap = await this.membersService.getOwnersForProjects(tenantId, [
-      id,
+    const [ownersMap, highfiveCounts] = await Promise.all([
+      this.membersService.getOwnersForProjects(tenantId, [id]),
+      this.getHighfiveCounts(tenantId, [id]),
     ]);
 
-    return ProjectResponseDto.fromEntity(saved, ownersMap.get(saved.id)!);
+    return ProjectResponseDto.fromEntity(
+      saved,
+      ownersMap.get(id),
+      highfiveCounts.get(id) ?? 0,
+    );
   }
 
   async softDelete(
@@ -258,5 +297,59 @@ export class ProjectsService {
       tenantId,
       userId,
     });
+  }
+
+  private async loadProject(tenantId: string, id: string): Promise<Project> {
+    const project = await this.projectRepo.findOne({
+      where: { id, tenantId },
+      relations: ['tags'],
+    });
+    if (!project) throw new NotFoundException('Project not found');
+    return project;
+  }
+
+  private async resolveTags(
+    tenantId: string,
+    tagNames: string[] | undefined,
+  ): Promise<Tag[]> {
+    if (!tagNames?.length) return [];
+
+    const uniqueNames = [...new Set(tagNames.map((n) => n.trim()))].filter(
+      Boolean,
+    );
+    const existing = await this.tagRepo.find({
+      where: { name: In(uniqueNames), tenantId },
+    });
+    const existingNames = new Set(existing.map((t) => t.name));
+    const missingNames = uniqueNames.filter((n) => !existingNames.has(n));
+
+    if (missingNames.length === 0) return existing;
+
+    const created = await this.tagRepo.save(
+      missingNames.map((name) => this.tagRepo.create({ name, tenantId })),
+    );
+    return [...existing, ...created];
+  }
+
+  private async getHighfiveCounts(
+    tenantId: string,
+    projectIds: string[],
+  ): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    if (projectIds.length === 0) return counts;
+
+    const rows = await this.highfiveRepo
+      .createQueryBuilder('highfive')
+      .select('highfive.projectId', 'projectId')
+      .addSelect('COUNT(*)', 'count')
+      .where('highfive.tenantId = :tenantId', { tenantId })
+      .andWhere('highfive.projectId IN (:...projectIds)', { projectIds })
+      .groupBy('highfive.projectId')
+      .getRawMany<{ projectId: string; count: string }>();
+
+    for (const row of rows) {
+      counts.set(row.projectId, Number(row.count));
+    }
+    return counts;
   }
 }

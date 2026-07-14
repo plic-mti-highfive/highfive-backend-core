@@ -23,6 +23,7 @@ RUN pnpm build
 # ================
 FROM node:22-alpine AS runner
 
+RUN apk add --no-cache curl
 RUN corepack enable pnpm
 
 WORKDIR /app

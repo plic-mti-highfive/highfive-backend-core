@@ -223,13 +223,13 @@ export class UserProfilesService {
 
     return {
       created: created.map((p) =>
-        ProjectResponseDto.fromEntity(p, ownersMap.get(p.id)!),
+        ProjectResponseDto.fromEntity(p, ownersMap.get(p.id)),
       ),
       collaborations: collaborations.map((p) =>
-        ProjectResponseDto.fromEntity(p, ownersMap.get(p.id)!),
+        ProjectResponseDto.fromEntity(p, ownersMap.get(p.id)),
       ),
       liked: liked.map((p) =>
-        ProjectResponseDto.fromEntity(p, ownersMap.get(p.id)!),
+        ProjectResponseDto.fromEntity(p, ownersMap.get(p.id)),
       ),
     };
   }

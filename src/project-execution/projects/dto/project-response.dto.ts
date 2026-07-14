@@ -12,9 +12,12 @@ export class ProjectResponseDto {
   id!: string;
 
   @ApiProperty()
+  tenantId!: string;
+
+  @ApiProperty()
   name!: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: String, nullable: true })
   description!: string | null;
 
   @ApiProperty({ enum: ProjectStatus })
@@ -35,19 +38,29 @@ export class ProjectResponseDto {
   @ApiProperty()
   updatedAt!: Date;
 
-  @ApiProperty({ type: () => MinimalProfileDto })
+  @ApiPropertyOptional({ type: Date, nullable: true })
+  deletedAt!: Date | null;
+
+  @ApiProperty({ type: () => MinimalProfileDto, nullable: true })
   owner!: MinimalProfileDto | null;
 
-  static fromEntity(project: Project, ownerUser: User): ProjectResponseDto {
+  static fromEntity(
+    project: Project,
+    ownerUser: User | undefined,
+    highfiveCount = 0,
+  ): ProjectResponseDto {
     const dto = new ProjectResponseDto();
     dto.id = project.id;
+    dto.tenantId = project.tenantId;
     dto.name = project.name;
     dto.description = project.description;
-    dto.tags = project.tags;
+    dto.tags = (project.tags ?? []).map((t) => t.name);
     dto.status = project.status;
     dto.visibility = project.visibility;
+    dto.highfiveCount = highfiveCount;
     dto.createdAt = project.createdAt;
     dto.updatedAt = project.updatedAt;
+    dto.deletedAt = project.deletedAt;
 
     dto.owner = ownerUser ? MinimalProfileDto.fromUser(ownerUser) : null;
     return dto;

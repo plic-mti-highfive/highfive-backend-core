@@ -2,6 +2,7 @@ import {
   IsOptional,
   IsEnum,
   IsInt,
+  IsUUID,
   Min,
   Max,
   IsIn,
@@ -26,6 +27,13 @@ export class QueryProjectDto {
   @IsOptional()
   visibility?: ProjectVisibility;
 
+  @ApiPropertyOptional({
+    description: 'Filter projects where this user is a member',
+  })
+  @IsUUID()
+  @IsOptional()
+  userId?: string;
+
   @ApiPropertyOptional({ default: 0 })
   @Type(() => Number)
   @IsInt()
@@ -46,7 +54,7 @@ export class QueryProjectDto {
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Filter by tag names' })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
