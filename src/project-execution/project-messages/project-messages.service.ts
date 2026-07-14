@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { ProjectMessage } from './entities/project-message.entity.js';
 import { CreateMessageDto } from './dto/create-message.dto.js';
 import { ProjectMembersService } from '../project-members/project-members.service.js';
+import { MinimalProfileDto } from '../../identity/user-profiles/dto/user-profile-response.dto.js';
 
 @Injectable()
 export class ProjectMessagesService {
@@ -66,6 +67,16 @@ export class ProjectMessagesService {
       take: limit,
       order: { createdAt: 'ASC' },
     });
-    return { data, total };
+
+    const sanitized = data.map((message) => ({
+      ...message,
+      author: message.author
+        ? (MinimalProfileDto.fromUser(
+            message.author,
+          ) as unknown as ProjectMessage['author'])
+        : message.author,
+    }));
+
+    return { data: sanitized, total };
   }
 }

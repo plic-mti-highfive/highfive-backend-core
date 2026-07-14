@@ -16,6 +16,7 @@ import { TicketComment } from './entities/ticket-comment.entity.js';
 import { ChecklistItem } from './entities/checklist-item.entity.js';
 import { CreateTicketCommentDto } from './dto/create-ticket-comment.dto.js';
 import { CreateChecklistItemDto } from './dto/create-checklist-item.dto.js';
+import { MinimalProfileDto } from '../../identity/user-profiles/dto/user-profile-response.dto.js';
 
 const WRITE_ROLES = [ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.MEMBER];
 
@@ -80,13 +81,14 @@ export class TicketsService {
         'checklistItems',
         'comments',
         'comments.author',
+        'comments.author.profile',
       ],
       skip: offset,
       take: limit,
       order: { createdAt: 'DESC' },
     });
 
-    return { data, total };
+    return { data: data.map((t) => this.sanitizeCommentAuthors(t)), total };
   }
 
   async findById(
@@ -102,11 +104,12 @@ export class TicketsService {
         'checklistItems',
         'comments',
         'comments.author',
+        'comments.author.profile',
       ],
     });
     if (!ticket) throw new NotFoundException('Ticket not found');
 
-    return ticket;
+    return this.sanitizeCommentAuthors(ticket);
   }
 
   async update(
@@ -232,5 +235,25 @@ export class TicketsService {
       content: dto.content,
     });
     return this.commentsRepo.save(comment);
+  }
+
+  /**
+   * TicketComment.author is a full User entity at the ORM level, but the
+   * frontend only expects the minimal profile shape (userId/username/
+   * displayName/avatar) used everywhere else (project owner, message
+   * author, etc). Map it down before returning.
+   */
+  private sanitizeCommentAuthors(ticket: Ticket): Ticket {
+    if (ticket.comments?.length) {
+      ticket.comments = ticket.comments.map((comment) => ({
+        ...comment,
+        author: comment.author
+          ? (MinimalProfileDto.fromUser(
+              comment.author,
+            ) as unknown as Ticket['comments'][number]['author'])
+          : comment.author,
+      }));
+    }
+    return ticket;
   }
 }
