@@ -4,7 +4,6 @@ import {
   IsOptional,
   IsEnum,
   IsArray,
-  IsUUID,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ProjectVisibility } from '@plic-mti-highfive/shared-types';
@@ -20,14 +19,14 @@ export class CreateProjectDto {
   @IsOptional()
   description?: string;
 
+  @ApiPropertyOptional({ type: [String], example: ['React', 'Node.js'] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  tags?: string[];
+
   @ApiPropertyOptional({ enum: ProjectVisibility })
   @IsEnum(ProjectVisibility)
   @IsOptional()
   visibility?: ProjectVisibility;
-
-  @ApiPropertyOptional({ type: [String] })
-  @IsArray()
-  @IsUUID('all', { each: true })
-  @IsOptional()
-  tagIds?: string[];
 }

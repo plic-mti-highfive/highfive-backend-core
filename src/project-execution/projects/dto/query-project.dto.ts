@@ -5,9 +5,11 @@ import {
   IsUUID,
   Min,
   Max,
+  IsIn,
   IsString,
+  IsArray,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type, TransformFnParams } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ProjectStatus,
@@ -32,11 +34,6 @@ export class QueryProjectDto {
   @IsOptional()
   userId?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by tag name (exact match)' })
-  @IsString()
-  @IsOptional()
-  tag?: string;
-
   @ApiPropertyOptional({ default: 0 })
   @Type(() => Number)
   @IsInt()
@@ -51,4 +48,31 @@ export class QueryProjectDto {
   @Max(100)
   @IsOptional()
   limit?: number = 20;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by tag names' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @Type(() => String)
+  @Transform(({ value }: TransformFnParams) => {
+    if (value === undefined) return undefined;
+    const arr = Array.isArray(value) ? value : [value];
+    return arr.map((v) => String(v));
+  })
+  tags?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsIn(['date', 'name', 'popularity'])
+  sortBy?: 'date' | 'name' | 'popularity' = 'date';
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsIn(['ASC', 'DESC'])
+  sortOrder?: 'ASC' | 'DESC' = 'DESC';
 }

@@ -38,12 +38,16 @@ export class UsersService {
   }
 
   async findByEmail(tenantId: string, email: string): Promise<User | null> {
-    return this.userRepo.findOne({ where: { email, tenantId } });
+    return this.userRepo.findOne({
+      where: { email, tenantId },
+      relations: ['profile'],
+    });
   }
 
   async findById(tenantId: string, id: string): Promise<User> {
     const user = await this.userRepo.findOne({
       where: { id, tenantId },
+      relations: ['profile'],
     });
     if (!user) throw new NotFoundException('User not found');
     return user;

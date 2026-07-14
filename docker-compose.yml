@@ -1,7 +1,46 @@
 services:
+  backend_core:
+    build:
+      context: .
+      secrets:
+        - github_token
+    container_name: dev_highfive_backend_core
+    restart: unless-stopped
+    ports:
+      - "${PORT}:${PORT}"
+    env_file:
+      - .env
+    environment:
+      PORT: ${PORT}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE: ${DB_DATABASE}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION}
+    volumes:
+      - ./src:/app/src
+      - ./test:/app/test
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Utils
   db:
     image: pgvector/pgvector:pg16
-    container_name: highfive_db
+    container_name: dev_highfive_db
     restart: unless-stopped
     ports:
       - "${DB_PORT}:5432"
@@ -19,41 +58,42 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: highfive_redis
+    container_name: dev_highfive_redis
     restart: unless-stopped
     ports:
       - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  backend_core:
-    build: .
-    container_name: highfive_backend_core
+  minio:
+    image: quay.io/minio/minio
+    container_name: dev_highfive_minio
     restart: unless-stopped
     ports:
-      - "${PORT}:${PORT}"
+      - '9000:9000'
+      - '9001:9001'
     environment:
-      PORT: ${PORT}
-      DB_HOST: highfive_db
-      DB_PORT: 5432
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_DATABASE: ${DB_DATABASE}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
-      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION}
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
     volumes:
-      - ./src:/app/src
-      - ./test:/app/test
-    depends_on:
-      db:
-        condition: service_healthy
+      - minio_data:/data
+    command: server /data --console-address ":9001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${PORT}/health"]
-      interval: 10s
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 5s
       timeout: 5s
       retries: 5
 
 volumes:
   pgdata:
+  redis_data:
+  minio_data:
+
+secrets:
+  github_token:
+    environment: "GITHUB_TOKEN"

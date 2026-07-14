@@ -33,12 +33,16 @@ export class ProjectsService {
     userId: string,
     dto: CreateProjectDto,
   ): Promise<ProjectResponseDto> {
-    const { tagIds, ...rest } = dto;
+    const { tags, ...rest } = dto;
     const project = this.projectRepo.create({ ...rest, tenantId });
-    project.tags = await this.resolveTags(tenantId, tagIds);
+    project.tags = await this.resolveTags(tenantId, tags);
     const saved = await this.projectRepo.save(project);
 
     await this.membersService.addOwner(tenantId, saved.id, userId);
+
+    const ownersMap = await this.membersService.getOwnersForProjects(tenantId, [
+      saved.id,
+    ]);
 
     this.eventEmitter.emit('project.created', {
       projectId: saved.id,
@@ -47,7 +51,7 @@ export class ProjectsService {
       name: saved.name,
     });
 
-    return this.toResponse(saved);
+    return ProjectResponseDto.fromEntity(saved, ownersMap.get(saved.id));
   }
 
   async findAll(
@@ -84,20 +88,52 @@ export class ProjectsService {
         visibility: query.visibility,
       });
     }
-    if (query.tag) {
+    if (query.search) {
       qb.andWhere(
-        'project.id IN (SELECT pt.project_id FROM project_tags pt JOIN tags t ON t.id = pt.tag_id WHERE t.name = :tagName AND t.tenant_id = :tenantId)',
-        { tagName: query.tag, tenantId },
+        '(project.name ILIKE :search OR project.description ILIKE :search)',
+        { search: `%${query.search}%` },
+      );
+    }
+    if (query.tags && query.tags.length > 0) {
+      qb.andWhere(
+        'project.id IN (SELECT pt.project_id FROM project_tags pt JOIN tags t ON t.id = pt.tag_id WHERE t.name IN (:...tagNames) AND t.tenant_id = :tenantId)',
+        { tagNames: query.tags, tenantId },
       );
     }
 
-    qb.orderBy('project.createdAt', 'DESC').skip(offset).take(limit);
+    const order = query.sortOrder === 'ASC' ? 'ASC' : 'DESC';
+    switch (query.sortBy) {
+      case 'name':
+        qb.orderBy('project.name', order);
+        break;
+      case 'popularity':
+        // TODO: sort by popularity (highfive or members count)
+        qb.orderBy('project.createdAt', order);
+        break;
+      case 'date':
+      default:
+        qb.orderBy('project.createdAt', order);
+        break;
+    }
+
+    qb.skip(offset).take(limit);
 
     const [data, total] = await qb.getManyAndCount();
-    const enriched = await Promise.all(data.map((p) => this.toResponse(p)));
+
+    const projectIds = data.map((p) => p.id);
+    const [ownersMap, highfiveCounts] = await Promise.all([
+      this.membersService.getOwnersForProjects(tenantId, projectIds),
+      this.getHighfiveCounts(tenantId, projectIds),
+    ]);
 
     return {
-      data: enriched,
+      data: data.map((p) =>
+        ProjectResponseDto.fromEntity(
+          p,
+          ownersMap.get(p.id),
+          highfiveCounts.get(p.id) ?? 0,
+        ),
+      ),
       total,
       page: Math.floor(offset / limit) + 1,
       limit,
@@ -107,7 +143,49 @@ export class ProjectsService {
 
   async findById(tenantId: string, id: string): Promise<ProjectResponseDto> {
     const project = await this.loadProject(tenantId, id);
-    return this.toResponse(project);
+
+    const [ownersMap, highfiveCounts] = await Promise.all([
+      this.membersService.getOwnersForProjects(tenantId, [id]),
+      this.getHighfiveCounts(tenantId, [id]),
+    ]);
+
+    return ProjectResponseDto.fromEntity(
+      project,
+      ownersMap.get(id),
+      highfiveCounts.get(id) ?? 0,
+    );
+  }
+
+  async findByIds(
+    tenantId: string,
+    ids: string[],
+  ): Promise<ProjectResponseDto[]> {
+    return this.findManyByIds(tenantId, ids);
+  }
+
+  async findManyByIds(
+    tenantId: string,
+    ids: string[],
+  ): Promise<ProjectResponseDto[]> {
+    if (!ids.length) return [];
+    const projects = await this.projectRepo.find({
+      where: { id: In(ids), tenantId },
+      relations: ['tags'],
+      order: { createdAt: 'DESC' },
+    });
+
+    const [ownersMap, highfiveCounts] = await Promise.all([
+      this.membersService.getOwnersForProjects(tenantId, ids),
+      this.getHighfiveCounts(tenantId, ids),
+    ]);
+
+    return projects.map((p) =>
+      ProjectResponseDto.fromEntity(
+        p,
+        ownersMap.get(p.id),
+        highfiveCounts.get(p.id) ?? 0,
+      ),
+    );
   }
 
   async update(
@@ -124,10 +202,10 @@ export class ProjectsService {
     const project = await this.loadProject(tenantId, id);
     const oldVisibility = project.visibility;
 
-    const { tagIds, ...rest } = dto;
+    const { tags, ...rest } = dto;
     Object.assign(project, rest);
-    if (tagIds !== undefined) {
-      project.tags = await this.resolveTags(tenantId, tagIds);
+    if (tags !== undefined) {
+      project.tags = await this.resolveTags(tenantId, tags);
     }
     const saved = await this.projectRepo.save(project);
 
@@ -147,7 +225,16 @@ export class ProjectsService {
       });
     }
 
-    return this.toResponse(saved);
+    const [ownersMap, highfiveCounts] = await Promise.all([
+      this.membersService.getOwnersForProjects(tenantId, [id]),
+      this.getHighfiveCounts(tenantId, [id]),
+    ]);
+
+    return ProjectResponseDto.fromEntity(
+      saved,
+      ownersMap.get(id),
+      highfiveCounts.get(id) ?? 0,
+    );
   }
 
   async softDelete(
@@ -170,48 +257,46 @@ export class ProjectsService {
     });
   }
 
-  async findByOwner(
+  /**
+   * Record a user liking a project and emit event for AI processing
+   */
+  async likeProject(
     tenantId: string,
+    projectId: string,
     userId: string,
-  ): Promise<ProjectResponseDto[]> {
-    return this.findByMemberRole(tenantId, userId, ProjectRole.OWNER);
+  ): Promise<void> {
+    // Verify project exists
+    await this.findById(tenantId, projectId);
+
+    // TODO: Persist like relationship in database (create Likes table if needed)
+    // For now, just emit the event to trigger AI job queueing
+
+    this.eventEmitter.emit('project.liked', {
+      projectId,
+      tenantId,
+      userId,
+    });
   }
 
-  async findByContributor(
+  /**
+   * Record a user applying to a project and emit event for AI processing
+   */
+  async submitApplication(
     tenantId: string,
+    projectId: string,
     userId: string,
-  ): Promise<ProjectResponseDto[]> {
-    const memberships = await this.memberRepo.find({
-      where: { userId, tenantId },
-    });
-    const ids = memberships
-      .filter((m) => m.role !== ProjectRole.OWNER)
-      .map((m) => m.projectId);
-    return this.findManyByIds(tenantId, ids);
-  }
+  ): Promise<void> {
+    // Verify project exists
+    await this.findById(tenantId, projectId);
 
-  async findManyByIds(
-    tenantId: string,
-    ids: string[],
-  ): Promise<ProjectResponseDto[]> {
-    if (!ids.length) return [];
-    const projects = await this.projectRepo.find({
-      where: { id: In(ids), tenantId },
-      relations: ['tags'],
-    });
-    return Promise.all(projects.map((p) => this.toResponse(p)));
-  }
+    // TODO: Create Application entity and persist application record
+    // For now, just emit the event to trigger AI job queueing
 
-  private async findByMemberRole(
-    tenantId: string,
-    userId: string,
-    role: ProjectRole,
-  ): Promise<ProjectResponseDto[]> {
-    const memberships = await this.memberRepo.find({
-      where: { userId, tenantId, role },
+    this.eventEmitter.emit('project.application.submitted', {
+      projectId,
+      tenantId,
+      userId,
     });
-    const ids = memberships.map((m) => m.projectId);
-    return this.findManyByIds(tenantId, ids);
   }
 
   private async loadProject(tenantId: string, id: string): Promise<Project> {
@@ -225,43 +310,46 @@ export class ProjectsService {
 
   private async resolveTags(
     tenantId: string,
-    tagIds: string[] | undefined,
+    tagNames: string[] | undefined,
   ): Promise<Tag[]> {
-    if (!tagIds?.length) return [];
-    return this.tagRepo.find({ where: { id: In(tagIds), tenantId } });
+    if (!tagNames?.length) return [];
+
+    const uniqueNames = [...new Set(tagNames.map((n) => n.trim()))].filter(
+      Boolean,
+    );
+    const existing = await this.tagRepo.find({
+      where: { name: In(uniqueNames), tenantId },
+    });
+    const existingNames = new Set(existing.map((t) => t.name));
+    const missingNames = uniqueNames.filter((n) => !existingNames.has(n));
+
+    if (missingNames.length === 0) return existing;
+
+    const created = await this.tagRepo.save(
+      missingNames.map((name) => this.tagRepo.create({ name, tenantId })),
+    );
+    return [...existing, ...created];
   }
 
-  private async toResponse(project: Project): Promise<ProjectResponseDto> {
-    const [owner, contributorsCount, highfiveCount] = await Promise.all([
-      this.memberRepo.findOne({
-        where: {
-          projectId: project.id,
-          tenantId: project.tenantId,
-          role: ProjectRole.OWNER,
-        },
-      }),
-      this.memberRepo.count({
-        where: { projectId: project.id, tenantId: project.tenantId },
-      }),
-      this.highfiveRepo.count({
-        where: { projectId: project.id, tenantId: project.tenantId },
-      }),
-    ]);
+  private async getHighfiveCounts(
+    tenantId: string,
+    projectIds: string[],
+  ): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    if (projectIds.length === 0) return counts;
 
-    return {
-      id: project.id,
-      tenantId: project.tenantId,
-      name: project.name,
-      description: project.description,
-      status: project.status,
-      visibility: project.visibility,
-      tags: (project.tags ?? []).map((t) => t.name),
-      ownerId: owner?.userId ?? null,
-      contributorsCount,
-      highfiveCount,
-      createdAt: project.createdAt,
-      updatedAt: project.updatedAt,
-      deletedAt: project.deletedAt,
-    };
+    const rows = await this.highfiveRepo
+      .createQueryBuilder('highfive')
+      .select('highfive.projectId', 'projectId')
+      .addSelect('COUNT(*)', 'count')
+      .where('highfive.tenantId = :tenantId', { tenantId })
+      .andWhere('highfive.projectId IN (:...projectIds)', { projectIds })
+      .groupBy('highfive.projectId')
+      .getRawMany<{ projectId: string; count: string }>();
+
+    for (const row of rows) {
+      counts.set(row.projectId, Number(row.count));
+    }
+    return counts;
   }
 }

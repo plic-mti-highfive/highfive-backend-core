@@ -1,5 +1,12 @@
-import { IsString, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsUUID,
+  IsEnum,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { TicketStatus } from '@plic-mti-highfive/shared-types';
 
 export class CreateTicketDto {
   @ApiProperty({ example: 'Fix login bug' })
@@ -16,4 +23,9 @@ export class CreateTicketDto {
   @IsUUID()
   @IsOptional()
   assigneeId?: string | null;
+
+  @ApiPropertyOptional({ enum: TicketStatus })
+  @IsEnum(TicketStatus)
+  @IsOptional()
+  status?: TicketStatus;
 }

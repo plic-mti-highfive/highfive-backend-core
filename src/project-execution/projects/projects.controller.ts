@@ -7,8 +7,14 @@ import {
   Param,
   Body,
   Query,
+  ParseUUIDPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiSecurity,
+} from '@nestjs/swagger';
 import type { UserContext } from '@plic-mti-highfive/shared-types';
 import { ProjectsService } from './projects.service.js';
 import { CreateProjectDto } from './dto/create-project.dto.js';
@@ -19,6 +25,7 @@ import { CurrentUser } from '../../shared/decorators/current-user.decorator.js';
 
 @ApiTags('Projects')
 @ApiBearerAuth()
+@ApiSecurity('tenant')
 @Controller('projects')
 export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
@@ -41,15 +48,27 @@ export class ProjectsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get project by ID' })
-  findOne(@TenantId() tenantId: string, @Param('id') id: string) {
+  findOne(
+    @TenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.projectsService.findById(tenantId, id);
+  }
+
+  @Post('/batch')
+  @ApiOperation({ summary: 'Get projects by IDs' })
+  async getBatchByIds(
+    @TenantId() tenantId: string,
+    @Body() dto: { ids: string[] },
+  ) {
+    return this.projectsService.findByIds(tenantId, dto.ids);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update project (OWNER/ADMIN only)' })
   update(
     @TenantId() tenantId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: UserContext,
     @Body() dto: UpdateProjectDto,
   ) {
@@ -60,9 +79,31 @@ export class ProjectsController {
   @ApiOperation({ summary: 'Soft delete project (OWNER only)' })
   remove(
     @TenantId() tenantId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: UserContext,
   ) {
     return this.projectsService.softDelete(tenantId, id, user.id);
+  }
+
+  @Post(':id/like')
+  @ApiOperation({ summary: 'Like a project' })
+  async likeProject(
+    @TenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: UserContext,
+  ) {
+    await this.projectsService.likeProject(tenantId, id, user.id);
+    return { success: true, message: 'Project liked' };
+  }
+
+  @Post(':id/apply')
+  @ApiOperation({ summary: 'Apply to a project' })
+  async submitApplication(
+    @TenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: UserContext,
+  ) {
+    await this.projectsService.submitApplication(tenantId, id, user.id);
+    return { success: true, message: 'Application submitted' };
   }
 }

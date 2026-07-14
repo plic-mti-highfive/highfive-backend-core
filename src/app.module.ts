@@ -26,10 +26,12 @@ import { TagsModule } from './project-execution/tags/tags.module.js';
 import { ProjectHighfivesModule } from './project-execution/project-highfives/project-highfives.module.js';
 
 import { DiscoveryModule } from './discovery/discovery.module.js';
-import { SearchModule } from './discovery/search/search.module.js';
 import { ShowcaseModule } from './showcase/showcase.module.js';
 import { DomainEventsModule } from './shared/events/domain-events.module.js';
 import { AdminModule } from './admin/admin.module.js';
+import { QueueModule } from './shared/queues/queue.module.js';
+import { StorageModule } from './shared/storage/storage.module.js';
+import { SearchModule } from './shared/search/search.module.js';
 
 @Module({
   imports: [
@@ -59,7 +61,6 @@ import { AdminModule } from './admin/admin.module.js';
 
     // Stubs
     DiscoveryModule,
-    SearchModule,
     ShowcaseModule,
 
     // Admin (dashboard plateforme)
@@ -67,6 +68,9 @@ import { AdminModule } from './admin/admin.module.js';
 
     // Cross-cutting
     DomainEventsModule,
+    QueueModule,
+    StorageModule,
+    SearchModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: TenantGuard },
