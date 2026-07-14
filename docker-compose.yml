@@ -23,6 +23,7 @@ services:
       JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION}
+      NODE_ENV: ${NODE_ENV}
     volumes:
       - ./src:/app/src
       - ./test:/app/test
@@ -89,6 +90,19 @@ services:
       timeout: 5s
       retries: 5
 
+  seeder:
+    image: node:22-alpine
+    container_name: highfive_seeder
+    depends_on:
+      backend_core:
+        condition: service_healthy
+    volumes:
+      - ./scripts:/scripts
+    environment:
+      API_URL: http://backend_core:${PORT}
+    command: node /scripts/seed.mjs
+    restart: "no"
+
 volumes:
   pgdata:
   redis_data:
@@ -96,4 +110,4 @@ volumes:
 
 secrets:
   github_token:
-    environment: "GITHUB_TOKEN"
+    environment: GITHUB_TOKEN

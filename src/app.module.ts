@@ -32,6 +32,7 @@ import { AdminModule } from './admin/admin.module.js';
 import { QueueModule } from './shared/queues/queue.module.js';
 import { StorageModule } from './shared/storage/storage.module.js';
 import { SearchModule } from './shared/search/search.module.js';
+import { HealthModule } from './shared/health/health.module.js';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { SearchModule } from './shared/search/search.module.js';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     EventEmitterModule.forRoot(),
     DatabaseModule,
+    HealthModule,
 
     // Identity & Tenancy
     TenantsModule,
