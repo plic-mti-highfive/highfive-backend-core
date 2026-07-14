@@ -32,4 +32,23 @@ export default () => ({
     },
     forcePathStyle: true,
   },
+
+  canvas: {
+    /** URL HTTP interne du service canvas (export du document). */
+    url: process.env.CANVAS_URL ?? 'http://localhost:8585',
+    /** URL WebSocket transmise au navigateur pour le provider Hocuspocus. */
+    websocketUrl: process.env.CANVAS_WS_URL ?? 'ws://localhost:8585',
+    /** Doit valoir exactement le JWT_SECRET du service canvas, qui verifie ce token. */
+    jwtSecret: process.env.CANVAS_JWT_SECRET ?? 'change-me-canvas',
+    tokenExpiration: process.env.CANVAS_TOKEN_EXPIRATION ?? '1h',
+    /** Doit valoir exactement l'INTERNAL_SECRET du service canvas. */
+    internalSecret: process.env.CANVAS_INTERNAL_SECRET ?? 'dev-internal-secret',
+  },
+
+  openai: {
+    // Pas de valeur par defaut : sans token, la generation de taches echoue
+    // explicitement plutot que d'appeler l'API avec une cle bidon.
+    token: process.env.OPENAI_TOKEN,
+    model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
+  },
 });
