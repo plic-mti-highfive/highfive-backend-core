@@ -3,7 +3,11 @@
 # =================
 FROM node:22-alpine AS builder
 
-RUN corepack enable pnpm
+# Meme version de pnpm que la CI (pnpm/action-setup version: 9). Sans epingle,
+# corepack tire la derniere version, dont la politique minimumReleaseAge rejette
+# toute dependance publiee depuis moins de 24h — ce qui casse le build juste
+# apres la publication d'une nouvelle version de shared-types.
+RUN corepack enable pnpm && corepack prepare pnpm@9.15.9 --activate
 
 WORKDIR /app
 
@@ -24,7 +28,7 @@ RUN pnpm build
 FROM node:22-alpine AS runner
 
 RUN apk add --no-cache curl
-RUN corepack enable pnpm
+RUN corepack enable pnpm && corepack prepare pnpm@9.15.9 --activate
 
 WORKDIR /app
 ENV NODE_ENV=production
