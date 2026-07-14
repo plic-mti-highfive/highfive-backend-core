@@ -8,7 +8,7 @@ import { UserResponseDto } from '../users/dto/user-response.dto.js';
 import { Public } from '../../shared/decorators/public.decorator.js';
 import { TenantId } from '../../shared/tenant/tenant.decorator.js';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator.js';
-import { User } from '../users/entities/user.entity.js';
+import type { AuthUser } from '../../shared/auth/authenticated-user.interface.js';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -46,7 +46,10 @@ export class AuthController {
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user info' })
-  me(@CurrentUser() user: User): UserResponseDto {
-    return UserResponseDto.fromUser(user);
+  me(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: AuthUser,
+  ): Promise<UserResponseDto> {
+    return this.authService.getProfile(tenantId, user.id);
   }
 }

@@ -91,7 +91,7 @@ export class ProjectsService {
       );
     }
 
-    qb.orderBy('project.created_at', 'DESC').skip(offset).take(limit);
+    qb.orderBy('project.createdAt', 'DESC').skip(offset).take(limit);
 
     const [data, total] = await qb.getManyAndCount();
     const enriched = await Promise.all(data.map((p) => this.toResponse(p)));

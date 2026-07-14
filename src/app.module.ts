@@ -9,6 +9,7 @@ import { DatabaseModule } from './shared/database/database.module.js';
 import { TenantMiddleware } from './shared/tenant/tenant.middleware.js';
 import { TenantGuard } from './shared/tenant/tenant.guard.js';
 import { JwtAuthGuard } from './shared/auth/jwt-auth.guard.js';
+import { SystemRolesGuard } from './shared/auth/system-roles.guard.js';
 
 import { TenantsModule } from './identity/tenants/tenants.module.js';
 import { UsersModule } from './identity/users/users.module.js';
@@ -28,6 +29,7 @@ import { DiscoveryModule } from './discovery/discovery.module.js';
 import { SearchModule } from './discovery/search/search.module.js';
 import { ShowcaseModule } from './showcase/showcase.module.js';
 import { DomainEventsModule } from './shared/events/domain-events.module.js';
+import { AdminModule } from './admin/admin.module.js';
 
 @Module({
   imports: [
@@ -60,12 +62,16 @@ import { DomainEventsModule } from './shared/events/domain-events.module.js';
     SearchModule,
     ShowcaseModule,
 
+    // Admin (dashboard plateforme)
+    AdminModule,
+
     // Cross-cutting
     DomainEventsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: TenantGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: SystemRolesGuard },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
