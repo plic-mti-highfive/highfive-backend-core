@@ -32,6 +32,9 @@ export class Project {
   @Column({ type: 'text', nullable: true })
   description!: string | null;
 
+  @Column({ type: 'varchar', array: true, default: [] })
+  tags!: string[];
+
   @Column({
     type: 'enum',
     enum: ProjectStatus,

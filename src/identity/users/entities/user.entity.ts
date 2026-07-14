@@ -12,6 +12,7 @@ import {
 import { UserStatus } from '@plic-mti-highfive/shared-types';
 import { Tenant } from '../../tenants/entities/tenant.entity.js';
 import { UserProfile } from '../../user-profiles/entities/user-profile.entity.js';
+import { Exclude } from 'class-transformer';
 
 @Entity('users')
 export class User {
@@ -29,6 +30,7 @@ export class User {
   email!: string;
 
   @Column({ name: 'password_hash' })
+  @Exclude()
   passwordHash!: string;
 
   @Column({ type: 'enum', enum: UserStatus, default: UserStatus.PENDING })

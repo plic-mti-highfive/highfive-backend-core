@@ -6,12 +6,14 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { ProjectMember } from './entities/project-member.entity.js';
 import { ProjectRole } from '@plic-mti-highfive/shared-types';
 import { AddMemberDto } from './dto/add-member.dto.js';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto.js';
 import { UsersService } from '../../identity/users/users.service.js';
+import { Ticket } from '../tickets/entities/ticket.entity.js';
+import { User } from '../../identity/users/entities/user.entity.js';
 
 const MANAGE_ROLES = [ProjectRole.OWNER, ProjectRole.ADMIN];
 
@@ -20,6 +22,8 @@ export class ProjectMembersService {
   constructor(
     @InjectRepository(ProjectMember)
     private readonly memberRepo: Repository<ProjectMember>,
+    @InjectRepository(Ticket)
+    private readonly ticketsRepo: Repository<Ticket>,
     private readonly usersService: UsersService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -127,6 +131,11 @@ export class ProjectMembersService {
       throw new NotFoundException('Member not found');
     }
 
+    await this.ticketsRepo.update(
+      { projectId: projectId, assigneeId: targetUserId, tenantId: tenantId },
+      { assigneeId: null },
+    );
+
     this.eventEmitter.emit('project.member.removed', {
       projectId,
       tenantId,
@@ -178,5 +187,25 @@ export class ProjectMembersService {
       throw new ForbiddenException('Not a member of this project');
     }
     return member;
+  }
+
+  async getOwnersForProjects(
+    tenantId: string,
+    projectIds: string[],
+  ): Promise<Map<string, User>> {
+    if (projectIds.length === 0) return new Map();
+
+    const members = await this.memberRepo.find({
+      where: { projectId: In(projectIds), tenantId, role: ProjectRole.OWNER },
+      relations: ['user', 'user.profile'],
+    });
+
+    const ownersMap = new Map<string, User>();
+    for (const member of members) {
+      if (!ownersMap.has(member.projectId)) {
+        ownersMap.set(member.projectId, member.user);
+      }
+    }
+    return ownersMap;
   }
 }

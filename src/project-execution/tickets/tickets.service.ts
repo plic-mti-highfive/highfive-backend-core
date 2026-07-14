@@ -12,6 +12,10 @@ import { UpdateTicketDto } from './dto/update-ticket.dto.js';
 import { ProjectMembersService } from '../project-members/project-members.service.js';
 import { UsersService } from '../../identity/users/users.service.js';
 import { ProjectRole } from '@plic-mti-highfive/shared-types';
+import { TicketComment } from './entities/ticket-comment.entity.js';
+import { ChecklistItem } from './entities/checklist-item.entity.js';
+import { CreateTicketCommentDto } from './dto/create-ticket-comment.dto.js';
+import { CreateChecklistItemDto } from './dto/create-checklist-item.dto.js';
 
 const WRITE_ROLES = [ProjectRole.OWNER, ProjectRole.ADMIN, ProjectRole.MEMBER];
 
@@ -20,6 +24,10 @@ export class TicketsService {
   constructor(
     @InjectRepository(Ticket)
     private readonly ticketRepo: Repository<Ticket>,
+    @InjectRepository(ChecklistItem)
+    private checklistRepo: Repository<ChecklistItem>,
+    @InjectRepository(TicketComment)
+    private commentsRepo: Repository<TicketComment>,
     private readonly membersService: ProjectMembersService,
     private readonly usersService: UsersService,
     private readonly eventEmitter: EventEmitter2,
@@ -66,11 +74,12 @@ export class TicketsService {
   ): Promise<{ data: Ticket[]; total: number }> {
     const [data, total] = await this.ticketRepo.findAndCount({
       where: { projectId, tenantId },
-      relations: ['assignee'],
+      relations: ['assignee', 'checklistItems', 'comments', 'comments.author'],
       skip: offset,
       take: limit,
       order: { createdAt: 'DESC' },
     });
+
     return { data, total };
   }
 
@@ -81,9 +90,10 @@ export class TicketsService {
   ): Promise<Ticket> {
     const ticket = await this.ticketRepo.findOne({
       where: { id: ticketId, projectId, tenantId },
-      relations: ['assignee'],
+      relations: ['assignee', 'checklistItems', 'comments', 'comments.author'],
     });
     if (!ticket) throw new NotFoundException('Ticket not found');
+
     return ticket;
   }
 
@@ -138,5 +148,77 @@ export class TicketsService {
         'Assignee must be an active member of the project',
       );
     }
+  }
+
+  // ---------- Checklist and comments management ----------
+  async addChecklistItem(
+    tenantId: string,
+    ticketId: string,
+    authorId: string,
+    dto: CreateChecklistItemDto,
+  ) {
+    const ticket = await this.ticketRepo.findOne({
+      where: { id: ticketId, tenantId },
+    });
+    if (!ticket) throw new NotFoundException('Ticket not found');
+
+    await this.membersService.assertRole(
+      tenantId,
+      ticket.projectId,
+      authorId,
+      WRITE_ROLES,
+    );
+
+    const item = this.checklistRepo.create({
+      tenantId,
+      ticketId,
+      content: dto.content,
+      isCompleted: dto.isCompleted ?? false,
+    });
+    return this.checklistRepo.save(item);
+  }
+
+  async toggleChecklistItem(
+    tenantId: string,
+    itemId: string,
+    isCompleted: boolean,
+  ) {
+    const result = await this.checklistRepo.update(
+      { id: itemId, tenantId },
+      { isCompleted },
+    );
+
+    if (result.affected === 0) {
+      throw new NotFoundException('Checklist item not found');
+    }
+
+    return this.checklistRepo.findOneBy({ id: itemId, tenantId });
+  }
+
+  async addComment(
+    tenantId: string,
+    ticketId: string,
+    authorId: string,
+    dto: CreateTicketCommentDto,
+  ) {
+    const ticket = await this.ticketRepo.findOne({
+      where: { id: ticketId, tenantId },
+    });
+    if (!ticket) throw new NotFoundException('Ticket not found');
+
+    await this.membersService.assertRole(
+      tenantId,
+      ticket.projectId,
+      authorId,
+      WRITE_ROLES,
+    );
+
+    const comment = this.commentsRepo.create({
+      tenantId,
+      ticketId,
+      authorId,
+      content: dto.content,
+    });
+    return this.commentsRepo.save(comment);
   }
 }

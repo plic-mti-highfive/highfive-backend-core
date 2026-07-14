@@ -18,11 +18,18 @@ export default () => ({
     refreshExpiration: process.env.JWT_REFRESH_EXPIRATION ?? '7d',
   },
 
-  rabbitmq: {
-    host: process.env.RABBITMQ_HOST ?? 'localhost',
-    port: parseInt(process.env.RABBITMQ_PORT ?? '5672', 10),
-    username: process.env.RABBITMQ_USERNAME ?? 'guest',
-    password: process.env.RABBITMQ_PASSWORD ?? 'guest',
-    vhost: process.env.RABBITMQ_VHOST ?? '/',
+  redis: {
+    host: process.env.REDIS_HOST ?? 'localhost',
+    port: parseInt(process.env.REDIS_PORT ?? '6379', 10),
+  },
+
+  minio: {
+    region: process.env.MINIO_REGION ?? 'eu-west-3',
+    endpoint: process.env.MINIO_ENDPOINT ?? 'http://localhost:9000',
+    credentials: {
+      accessKeyId: process.env.MINIO_ACCESS_KEY ?? 'minioadmin',
+      secretAccessKey: process.env.MINIO_SECRET_KEY ?? 'minioadmin',
+    },
+    forcePathStyle: true,
   },
 });

@@ -11,10 +11,9 @@ export class DiscoveryService {
     tenantId: string;
     changes: Record<string, any>;
   }) {
-    this.logger.log(
-      `[STUB] ProfileUpdated — user=${payload.userId} tenant=${payload.tenantId}`,
+    this.logger.debug(
+      `ProfileUpdated event received — user=${payload.userId} tenant=${payload.tenantId}`,
     );
-    // TODO: push BullMQ job "RecomputeRecommendations" when ML service is ready
   }
 
   @OnEvent('ticket.created')
@@ -23,8 +22,8 @@ export class DiscoveryService {
     projectId: string;
     tenantId: string;
   }) {
-    this.logger.log(
-      `[STUB] TicketCreated — ticket=${payload.ticketId} project=${payload.projectId}`,
+    this.logger.debug(
+      `TicketCreated event received — ticket=${payload.ticketId} project=${payload.projectId}`,
     );
   }
 
@@ -35,8 +34,8 @@ export class DiscoveryService {
     tenantId: string;
     changes: Record<string, any>;
   }) {
-    this.logger.log(
-      `[STUB] TicketUpdated — ticket=${payload.ticketId} project=${payload.projectId}`,
+    this.logger.debug(
+      `TicketUpdated event received — ticket=${payload.ticketId} project=${payload.projectId}`,
     );
   }
 
@@ -47,8 +46,8 @@ export class DiscoveryService {
     oldVisibility: string;
     newVisibility: string;
   }) {
-    this.logger.log(
-      `[STUB] ProjectVisibilityChanged — project=${payload.projectId} ${payload.oldVisibility} -> ${payload.newVisibility}`,
+    this.logger.debug(
+      `ProjectVisibilityChanged event received — project=${payload.projectId} ${payload.oldVisibility} -> ${payload.newVisibility}`,
     );
   }
 }

@@ -6,8 +6,14 @@ import {
   Delete,
   Param,
   Body,
+  ParseUUIDPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiSecurity,
+} from '@nestjs/swagger';
 import type { UserContext } from '@plic-mti-highfive/shared-types';
 import { ProjectMembersService } from './project-members.service.js';
 import { AddMemberDto } from './dto/add-member.dto.js';
@@ -17,13 +23,17 @@ import { CurrentUser } from '../../shared/decorators/current-user.decorator.js';
 
 @ApiTags('Project Members')
 @ApiBearerAuth()
+@ApiSecurity('tenant')
 @Controller('projects/:projectId/members')
 export class ProjectMembersController {
   constructor(private readonly membersService: ProjectMembersService) {}
 
   @Get()
   @ApiOperation({ summary: 'List project members' })
-  findAll(@TenantId() tenantId: string, @Param('projectId') projectId: string) {
+  findAll(
+    @TenantId() tenantId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+  ) {
     return this.membersService.findMembers(tenantId, projectId);
   }
 
@@ -31,7 +41,7 @@ export class ProjectMembersController {
   @ApiOperation({ summary: 'Add member to project (OWNER/ADMIN)' })
   add(
     @TenantId() tenantId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
     @CurrentUser() user: UserContext,
     @Body() dto: AddMemberDto,
   ) {
@@ -42,8 +52,8 @@ export class ProjectMembersController {
   @ApiOperation({ summary: 'Update member role (OWNER/ADMIN)' })
   updateRole(
     @TenantId() tenantId: string,
-    @Param('projectId') projectId: string,
-    @Param('userId') userId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
     @CurrentUser() user: UserContext,
     @Body() dto: UpdateMemberRoleDto,
   ) {
@@ -60,8 +70,8 @@ export class ProjectMembersController {
   @ApiOperation({ summary: 'Remove member from project (OWNER/ADMIN)' })
   remove(
     @TenantId() tenantId: string,
-    @Param('projectId') projectId: string,
-    @Param('userId') userId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
     @CurrentUser() user: UserContext,
   ) {
     return this.membersService.removeMember(

@@ -14,7 +14,6 @@ import { TenantsModule } from './identity/tenants/tenants.module.js';
 import { UsersModule } from './identity/users/users.module.js';
 import { AuthModule } from './identity/auth/auth.module.js';
 import { UserProfilesModule } from './identity/user-profiles/user-profiles.module.js';
-import { SkillsModule } from './identity/skills/skills.module.js';
 import { UserConnectionsModule } from './identity/user-connections/user-connections.module.js';
 
 import { ProjectsModule } from './project-execution/projects/projects.module.js';
@@ -25,6 +24,9 @@ import { ProjectMessagesModule } from './project-execution/project-messages/proj
 import { DiscoveryModule } from './discovery/discovery.module.js';
 import { ShowcaseModule } from './showcase/showcase.module.js';
 import { DomainEventsModule } from './shared/events/domain-events.module.js';
+import { QueueModule } from './shared/queues/queue.module.js';
+import { StorageModule } from './shared/storage/storage.module.js';
+import { SearchModule } from './shared/search/search.module.js';
 
 @Module({
   imports: [
@@ -41,7 +43,6 @@ import { DomainEventsModule } from './shared/events/domain-events.module.js';
     UsersModule,
     AuthModule,
     UserProfilesModule,
-    SkillsModule,
     UserConnectionsModule,
 
     // Project Execution
@@ -56,6 +57,9 @@ import { DomainEventsModule } from './shared/events/domain-events.module.js';
 
     // Cross-cutting
     DomainEventsModule,
+    QueueModule,
+    StorageModule,
+    SearchModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: TenantGuard },

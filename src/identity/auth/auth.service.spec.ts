@@ -182,7 +182,7 @@ describe('AuthService', () => {
       usersService.findByEmail.mockResolvedValue({
         ...mockUser,
         status: UserStatus.SUSPENDED,
-      } as User);
+      });
 
       await expect(
         service.login(tenantId, {

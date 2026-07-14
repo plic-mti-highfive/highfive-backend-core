@@ -43,6 +43,36 @@ pnpm build
 pnpm start:prod
 ```
 
+### 4. MinIO setup
+
+You need to setup a MinIO bucket and lauch some command to setup it.
+
+### Create Bucket
+
+First, access the MinIO admin panel at `http://localhost:9001` and login (`minioadmin` by default).
+Then, click on `Create Bucket` and enter `highfive-core-bucket`, or the name specified in yout .env if you changed it.
+
+### Change Security Access
+
+By default, every bucket are PRIVATE. You need to give anonymous read access to allow the lecture from it. Follow these commands :
+
+```bash
+docker exec -it dev_highfive_minio bash
+mc alias set mon-minio http://localhost:9000 minioadmin minioadmin
+mc anonymous set download mon-minio/highfive-core-bucket
+```
+
+Change the bucket name if needed. You should have something like that :
+
+```bash
+bash-5.1# mc alias set mon-minio http://localhost:9000 minioadmin minioadmin
+Added `mon-minio` successfully.
+
+bash-5.1# mc anonymous set download mon-minio/highfive-core-bucket
+Access permission for `mon-minio/highfive-core-bucket` is set to `download`
+```
+
+
 ## npm Scripts
 
 | Command            | Description                    |
