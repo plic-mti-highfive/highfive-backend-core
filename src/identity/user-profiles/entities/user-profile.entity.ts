@@ -13,6 +13,9 @@ export class UserProfile {
   @Column({ name: 'tenant_id' })
   tenantId: string;
 
+  @Column({ type: 'varchar', name: 'display_name', nullable: true })
+  displayName: string | null;
+
   @Column({ type: 'text', nullable: true })
   bio: string | null;
 
