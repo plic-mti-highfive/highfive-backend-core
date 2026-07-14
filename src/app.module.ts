@@ -29,6 +29,7 @@ import { DiscoveryModule } from './discovery/discovery.module.js';
 import { ShowcaseModule } from './showcase/showcase.module.js';
 import { DomainEventsModule } from './shared/events/domain-events.module.js';
 import { AdminModule } from './admin/admin.module.js';
+import { CanvasModule } from './canvas/canvas.module.js';
 import { QueueModule } from './shared/queues/queue.module.js';
 import { StorageModule } from './shared/storage/storage.module.js';
 import { SearchModule } from './shared/search/search.module.js';
@@ -67,6 +68,9 @@ import { HealthModule } from './shared/health/health.module.js';
 
     // Admin (dashboard plateforme)
     AdminModule,
+
+    // Canvas de brainstorming + generation de taches
+    CanvasModule,
 
     // Cross-cutting
     DomainEventsModule,
