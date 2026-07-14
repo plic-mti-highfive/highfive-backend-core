@@ -3,18 +3,18 @@ import {
   ProjectStatus,
   ProjectVisibility,
 } from '@plic-mti-highfive/shared-types';
+import { MinimalProfileDto } from '../../../identity/user-profiles/dto/user-profile-response.dto';
+import { Project } from '../entities/project.entity';
+import { User } from '../../../identity/users/entities/user.entity';
 
 export class ProjectResponseDto {
   @ApiProperty()
   id!: string;
 
   @ApiProperty()
-  tenantId!: string;
-
-  @ApiProperty()
   name!: string;
 
-  @ApiPropertyOptional({ type: String, nullable: true })
+  @ApiPropertyOptional()
   description!: string | null;
 
   @ApiProperty({ enum: ProjectStatus })
@@ -26,12 +26,6 @@ export class ProjectResponseDto {
   @ApiProperty({ type: [String] })
   tags!: string[];
 
-  @ApiPropertyOptional({ type: String, nullable: true })
-  ownerId!: string | null;
-
-  @ApiProperty()
-  contributorsCount!: number;
-
   @ApiProperty()
   highfiveCount!: number;
 
@@ -41,6 +35,21 @@ export class ProjectResponseDto {
   @ApiProperty()
   updatedAt!: Date;
 
-  @ApiPropertyOptional({ type: Date, nullable: true })
-  deletedAt!: Date | null;
+  @ApiProperty({ type: () => MinimalProfileDto })
+  owner!: MinimalProfileDto | null;
+
+  static fromEntity(project: Project, ownerUser: User): ProjectResponseDto {
+    const dto = new ProjectResponseDto();
+    dto.id = project.id;
+    dto.name = project.name;
+    dto.description = project.description;
+    dto.tags = project.tags;
+    dto.status = project.status;
+    dto.visibility = project.visibility;
+    dto.createdAt = project.createdAt;
+    dto.updatedAt = project.updatedAt;
+
+    dto.owner = ownerUser ? MinimalProfileDto.fromUser(ownerUser) : null;
+    return dto;
+  }
 }

@@ -5,9 +5,6 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ProjectsService } from './projects.service.js';
 import { Project } from './entities/project.entity.js';
-import { Tag } from '../tags/entities/tag.entity.js';
-import { ProjectMember } from '../project-members/entities/project-member.entity.js';
-import { ProjectHighfive } from '../project-highfives/entities/project-highfive.entity.js';
 import { ProjectMembersService } from '../project-members/project-members.service.js';
 import {
   ProjectVisibility,
@@ -17,17 +14,9 @@ import {
 type ProjectRepoMock = {
   create: Mock<(data: Partial<Project>) => Partial<Project>>;
   save: Mock<(data: Partial<Project>) => Partial<Project>>;
-  find: Mock<() => Promise<Project[]>>;
   findOne: Mock<() => Promise<Project | null>>;
   findAndCount: Mock<() => Promise<[Project[], number]>>;
   softDelete: Mock<() => Promise<{ affected: number }>>;
-  createQueryBuilder: Mock<() => unknown>;
-};
-
-type SimpleRepoMock = {
-  find: Mock<() => Promise<unknown[]>>;
-  findOne: Mock<() => Promise<unknown>>;
-  count: Mock<() => Promise<number>>;
 };
 
 type MembersServiceMock = {
@@ -42,9 +31,6 @@ type EventEmitterMock = {
 describe('ProjectsService', () => {
   let service: ProjectsService;
   let projectRepo: ProjectRepoMock;
-  let tagRepo: SimpleRepoMock;
-  let memberRepo: SimpleRepoMock;
-  let highfiveRepo: SimpleRepoMock;
   let membersService: MembersServiceMock;
   let eventEmitter: EventEmitterMock;
 
@@ -65,7 +51,6 @@ describe('ProjectsService', () => {
           id: 'proj-1',
           ...data,
         })),
-      find: vi.fn<() => Promise<Project[]>>().mockResolvedValue([]),
       findOne: vi.fn<() => Promise<Project | null>>(),
       findAndCount: vi
         .fn<() => Promise<[Project[], number]>>()
@@ -73,27 +58,6 @@ describe('ProjectsService', () => {
       softDelete: vi
         .fn<() => Promise<{ affected: number }>>()
         .mockResolvedValue({ affected: 1 }),
-      createQueryBuilder: vi.fn<() => unknown>(),
-    };
-
-    tagRepo = {
-      find: vi.fn<() => Promise<unknown[]>>().mockResolvedValue([]),
-      findOne: vi.fn<() => Promise<unknown>>().mockResolvedValue(null),
-      count: vi.fn<() => Promise<number>>().mockResolvedValue(0),
-    };
-
-    memberRepo = {
-      find: vi.fn<() => Promise<unknown[]>>().mockResolvedValue([]),
-      findOne: vi
-        .fn<() => Promise<unknown>>()
-        .mockResolvedValue({ userId, role: ProjectRole.OWNER }),
-      count: vi.fn<() => Promise<number>>().mockResolvedValue(1),
-    };
-
-    highfiveRepo = {
-      find: vi.fn<() => Promise<unknown[]>>().mockResolvedValue([]),
-      findOne: vi.fn<() => Promise<unknown>>().mockResolvedValue(null),
-      count: vi.fn<() => Promise<number>>().mockResolvedValue(0),
     };
 
     membersService = {
@@ -120,12 +84,6 @@ describe('ProjectsService', () => {
       providers: [
         ProjectsService,
         { provide: getRepositoryToken(Project), useValue: projectRepo },
-        { provide: getRepositoryToken(Tag), useValue: tagRepo },
-        { provide: getRepositoryToken(ProjectMember), useValue: memberRepo },
-        {
-          provide: getRepositoryToken(ProjectHighfive),
-          useValue: highfiveRepo,
-        },
         { provide: ProjectMembersService, useValue: membersService },
         { provide: EventEmitter2, useValue: eventEmitter },
       ],
@@ -156,8 +114,7 @@ describe('ProjectsService', () => {
         id: 'proj-1',
         tenantId,
         visibility: ProjectVisibility.PRIVATE,
-        tags: [],
-      } as unknown as Project);
+      } as Project);
 
       await service.update(tenantId, 'proj-1', userId, {
         visibility: ProjectVisibility.PUBLIC,

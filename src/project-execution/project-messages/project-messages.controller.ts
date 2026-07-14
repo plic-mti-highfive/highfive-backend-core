@@ -1,5 +1,18 @@
-import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  Query,
+  ParseUUIDPipe,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiSecurity,
+} from '@nestjs/swagger';
 import type { UserContext } from '@plic-mti-highfive/shared-types';
 import { ProjectMessagesService } from './project-messages.service.js';
 import { CreateMessageDto } from './dto/create-message.dto.js';
@@ -8,6 +21,7 @@ import { CurrentUser } from '../../shared/decorators/current-user.decorator.js';
 
 @ApiTags('Project Messages')
 @ApiBearerAuth()
+@ApiSecurity('tenant')
 @Controller('projects/:projectId/messages')
 export class ProjectMessagesController {
   constructor(private readonly messagesService: ProjectMessagesService) {}
@@ -16,7 +30,7 @@ export class ProjectMessagesController {
   @ApiOperation({ summary: 'Send a message in project chat' })
   create(
     @TenantId() tenantId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
     @CurrentUser() user: UserContext,
     @Body() dto: CreateMessageDto,
   ) {
@@ -27,7 +41,7 @@ export class ProjectMessagesController {
   @ApiOperation({ summary: 'List project chat messages' })
   findAll(
     @TenantId() tenantId: string,
-    @Param('projectId') projectId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
     @Query('offset') offset?: number,
     @Query('limit') limit?: number,
   ) {

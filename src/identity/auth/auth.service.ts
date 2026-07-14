@@ -42,7 +42,13 @@ export class AuthService {
       passwordHash,
     );
 
-    await this.userProfilesService.createDefault(user.id, tenantId);
+    const defaultDisplayName = dto.email.split('@')[0];
+
+    await this.userProfilesService.createDefault(
+      user.id,
+      tenantId,
+      defaultDisplayName,
+    );
 
     this.eventEmitter.emit('user.registered', {
       userId: user.id,

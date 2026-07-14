@@ -6,16 +6,13 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
   ManyToOne,
-  ManyToMany,
   JoinColumn,
-  JoinTable,
 } from 'typeorm';
 import {
   ProjectStatus,
   ProjectVisibility,
 } from '@plic-mti-highfive/shared-types';
 import { Tenant } from '../../../identity/tenants/entities/tenant.entity.js';
-import { Tag } from '../../tags/entities/tag.entity.js';
 
 @Entity('projects')
 export class Project {
@@ -35,6 +32,9 @@ export class Project {
   @Column({ type: 'text', nullable: true })
   description!: string | null;
 
+  @Column({ type: 'varchar', array: true, default: [] })
+  tags!: string[];
+
   @Column({
     type: 'enum',
     enum: ProjectStatus,
@@ -48,14 +48,6 @@ export class Project {
     default: ProjectVisibility.PRIVATE,
   })
   visibility!: ProjectVisibility;
-
-  @ManyToMany(() => Tag)
-  @JoinTable({
-    name: 'project_tags',
-    joinColumn: { name: 'project_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'tag_id', referencedColumnName: 'id' },
-  })
-  tags!: Tag[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

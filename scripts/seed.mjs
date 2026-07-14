@@ -2,7 +2,7 @@
 // Seed script: create EPITA tenant, ~30 users, ~10 projects with members & tickets.
 // Usage: node scripts/seed.mjs  (requires backend running at API_URL)
 
-const API_URL = process.env.API_URL ?? 'http://localhost:3000';
+const API_URL = process.env.API_URL ?? 'http://localhost:3001';
 const TENANT_NAME = 'EPITA';
 const TENANT_DOMAIN = 'epita.highfive.app';
 const USER_COUNT = 30;
@@ -10,16 +10,48 @@ const PROJECT_COUNT = 10;
 const PASSWORD = 'SecureP@ss123';
 
 const FIRST_NAMES = [
-  'alice', 'baptiste', 'clement', 'diane', 'elise', 'felix', 'gabriel', 'helene',
-  'ines', 'jules', 'karim', 'louise', 'marine', 'nathan', 'olivia', 'paul',
-  'quentin', 'remi', 'sarah', 'theo', 'ugo', 'valentine', 'william', 'xavier',
-  'yasmine', 'zoe', 'adrien', 'beatrice', 'clara', 'david',
+  'alice',
+  'baptiste',
+  'clement',
+  'diane',
+  'elise',
+  'felix',
+  'gabriel',
+  'helene',
+  'ines',
+  'jules',
+  'karim',
+  'louise',
+  'marine',
+  'nathan',
+  'olivia',
+  'paul',
+  'quentin',
+  'remi',
+  'sarah',
+  'theo',
+  'ugo',
+  'valentine',
+  'william',
+  'xavier',
+  'yasmine',
+  'zoe',
+  'adrien',
+  'beatrice',
+  'clara',
+  'david',
 ];
 
 const PROJECT_IDEAS = [
   { name: 'Campus Flow', description: 'Gestion du flux étudiant intra-campus' },
-  { name: 'Mentor Match', description: 'Matching mentors/mentorés par affinités' },
-  { name: 'Canteen Queue', description: 'File d\'attente cafétéria en temps réel' },
+  {
+    name: 'Mentor Match',
+    description: 'Matching mentors/mentorés par affinités',
+  },
+  {
+    name: 'Canteen Queue',
+    description: "File d'attente cafétéria en temps réel",
+  },
   { name: 'Study Rooms', description: 'Réservation de salles de travail' },
   { name: 'Ride Share EPITA', description: 'Covoiturage étudiant' },
   { name: 'Dev Portfolio', description: 'Plateforme portfolio dev' },
@@ -94,7 +126,10 @@ async function registerUser(tenantId, email) {
     });
     return auth.accessToken;
   } catch (err) {
-    if (String(err).includes('409') || String(err).toLowerCase().includes('already')) {
+    if (
+      String(err).includes('409') ||
+      String(err).toLowerCase().includes('already')
+    ) {
       const auth = await request('/auth/login', {
         method: 'POST',
         body: { email, password: PASSWORD },
@@ -108,7 +143,9 @@ async function registerUser(tenantId, email) {
 
 function decodeSub(accessToken) {
   const [, payload] = accessToken.split('.');
-  const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+  const decoded = JSON.parse(
+    Buffer.from(payload, 'base64url').toString('utf8'),
+  );
   return decoded.sub;
 }
 
@@ -147,7 +184,10 @@ async function seed() {
     for (const m of members) {
       await request(`/projects/${project.id}/members`, {
         method: 'POST',
-        body: { userId: m.id, role: pickRandom(['ADMIN', 'MEMBER', 'MEMBER', 'VIEWER']) },
+        body: {
+          userId: m.id,
+          role: pickRandom(['ADMIN', 'MEMBER', 'MEMBER', 'VIEWER']),
+        },
         headers: {
           'X-Tenant-ID': tenantId,
           Authorization: `Bearer ${owner.accessToken}`,
@@ -175,7 +215,9 @@ async function seed() {
   }
   console.log('\n✓ Projects ready');
 
-  console.log(`\nDone. Tenant ${tenantId} — ${users.length} users, ${projects.length} projects.`);
+  console.log(
+    `\nDone. Tenant ${tenantId} — ${users.length} users, ${projects.length} projects.`,
+  );
 }
 
 seed().catch((err) => {

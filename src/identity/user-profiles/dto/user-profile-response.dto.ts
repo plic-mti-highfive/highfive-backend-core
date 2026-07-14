@@ -1,56 +1,71 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ProjectResponseDto } from '../../../project-execution/projects/dto/project-response.dto.js';
+import { ApiProperty } from '@nestjs/swagger';
+import { User } from '../../users/entities/user.entity';
 
-class ProfileSkillDto {
-  @ApiProperty() id!: string;
-  @ApiProperty() name!: string;
-}
+export class MinimalProfileDto {
+  @ApiProperty({ description: 'User ID (UUID)' })
+  userId!: string;
 
-class ProfileStatsDto {
-  @ApiProperty() projectsCreated!: number;
-  @ApiProperty() projectsContributed!: number;
-  @ApiProperty() followers!: number;
-  @ApiProperty() following!: number;
-}
+  @ApiProperty({ description: 'Username (email prefix)' })
+  username!: string;
 
-class ProfileProjectsDto {
-  @ApiProperty({ type: [ProjectResponseDto] }) created!: ProjectResponseDto[];
-  @ApiProperty({ type: [ProjectResponseDto] })
-  collaborations!: ProjectResponseDto[];
-  @ApiProperty({ type: [ProjectResponseDto] }) liked!: ProjectResponseDto[];
+  @ApiProperty({ description: 'Display name' })
+  displayName!: string;
+
+  @ApiProperty({ description: 'Avatar URL or path' })
+  avatar!: string;
+
+  static fromUser(user: User): MinimalProfileDto {
+    const username = user.email.split('@')[0];
+    return {
+      userId: user.id,
+      username,
+      displayName: user.profile?.displayName || username,
+      avatar:
+        user.profile?.avatarPath ||
+        `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
+    };
+  }
 }
 
 export class UserProfileResponseDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'User ID (UUID)' })
   userId!: string;
 
-  @ApiProperty()
-  tenantId!: string;
+  @ApiProperty({ description: 'Username (email prefix)' })
+  username!: string;
 
-  @ApiProperty()
-  email!: string;
+  @ApiProperty({ description: 'Display name' })
+  displayName!: string;
 
-  @ApiPropertyOptional({ type: String, nullable: true })
-  displayName!: string | null;
+  @ApiProperty({ description: 'Avatar URL or path' })
+  avatar!: string;
 
-  @ApiPropertyOptional({ type: String, nullable: true })
+  @ApiProperty({ description: 'User bio', nullable: true })
   bio!: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true })
-  avatarPath!: string | null;
+  @ApiProperty({ description: 'Account creation date', type: String })
+  createdAt!: string;
 
-  @ApiProperty()
-  themePreference!: string;
+  @ApiProperty({ description: 'Array of skill names' })
+  skills!: string[];
 
-  @ApiProperty()
-  emailNotifications!: boolean;
+  @ApiProperty({
+    description: 'User statistics with follower/following counts',
+  })
+  stats!: {
+    followers: number;
+    following: number;
+  };
 
-  @ApiProperty({ type: [ProfileSkillDto] })
-  skills!: ProfileSkillDto[];
+  @ApiProperty({
+    description: 'Array of follower profiles',
+    type: [MinimalProfileDto],
+  })
+  followers!: MinimalProfileDto[];
 
-  @ApiProperty({ type: ProfileStatsDto })
-  stats!: ProfileStatsDto;
-
-  @ApiProperty({ type: ProfileProjectsDto })
-  projects!: ProfileProjectsDto;
+  @ApiProperty({
+    description: 'Array of following user profiles',
+    type: [MinimalProfileDto],
+  })
+  following!: MinimalProfileDto[];
 }

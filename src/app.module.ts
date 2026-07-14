@@ -15,21 +15,21 @@ import { TenantsModule } from './identity/tenants/tenants.module.js';
 import { UsersModule } from './identity/users/users.module.js';
 import { AuthModule } from './identity/auth/auth.module.js';
 import { UserProfilesModule } from './identity/user-profiles/user-profiles.module.js';
-import { SkillsModule } from './identity/skills/skills.module.js';
 import { UserConnectionsModule } from './identity/user-connections/user-connections.module.js';
 
 import { ProjectsModule } from './project-execution/projects/projects.module.js';
 import { ProjectMembersModule } from './project-execution/project-members/project-members.module.js';
 import { TicketsModule } from './project-execution/tickets/tickets.module.js';
 import { ProjectMessagesModule } from './project-execution/project-messages/project-messages.module.js';
-import { TagsModule } from './project-execution/tags/tags.module.js';
 import { ProjectHighfivesModule } from './project-execution/project-highfives/project-highfives.module.js';
 
 import { DiscoveryModule } from './discovery/discovery.module.js';
-import { SearchModule } from './discovery/search/search.module.js';
 import { ShowcaseModule } from './showcase/showcase.module.js';
 import { DomainEventsModule } from './shared/events/domain-events.module.js';
 import { AdminModule } from './admin/admin.module.js';
+import { QueueModule } from './shared/queues/queue.module.js';
+import { StorageModule } from './shared/storage/storage.module.js';
+import { SearchModule } from './shared/search/search.module.js';
 
 @Module({
   imports: [
@@ -46,7 +46,6 @@ import { AdminModule } from './admin/admin.module.js';
     UsersModule,
     AuthModule,
     UserProfilesModule,
-    SkillsModule,
     UserConnectionsModule,
 
     // Project Execution
@@ -54,12 +53,10 @@ import { AdminModule } from './admin/admin.module.js';
     ProjectMembersModule,
     TicketsModule,
     ProjectMessagesModule,
-    TagsModule,
     ProjectHighfivesModule,
 
     // Stubs
     DiscoveryModule,
-    SearchModule,
     ShowcaseModule,
 
     // Admin (dashboard plateforme)
@@ -67,6 +64,9 @@ import { AdminModule } from './admin/admin.module.js';
 
     // Cross-cutting
     DomainEventsModule,
+    QueueModule,
+    StorageModule,
+    SearchModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: TenantGuard },

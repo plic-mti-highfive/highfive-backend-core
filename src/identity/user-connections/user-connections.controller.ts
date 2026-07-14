@@ -1,5 +1,18 @@
-import { Controller, Get, Post, Patch, Param, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  ParseUUIDPipe,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiSecurity,
+} from '@nestjs/swagger';
 import type { UserContext } from '@plic-mti-highfive/shared-types';
 import { UserConnectionsService } from './user-connections.service.js';
 import { CreateConnectionDto } from './dto/create-connection.dto.js';
@@ -9,6 +22,7 @@ import { CurrentUser } from '../../shared/decorators/current-user.decorator.js';
 
 @ApiTags('Connections')
 @ApiBearerAuth()
+@ApiSecurity('tenant')
 @Controller('connections')
 export class UserConnectionsController {
   constructor(private readonly connectionsService: UserConnectionsService) {}
@@ -27,7 +41,7 @@ export class UserConnectionsController {
   @ApiOperation({ summary: 'Accept or block connection' })
   update(
     @TenantId() tenantId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: UserContext,
     @Body() dto: UpdateConnectionDto,
   ) {

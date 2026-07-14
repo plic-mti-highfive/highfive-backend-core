@@ -3,27 +3,18 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Project } from './entities/project.entity.js';
-import { Tag } from '../tags/entities/tag.entity.js';
-import { ProjectMember } from '../project-members/entities/project-member.entity.js';
-import { ProjectHighfive } from '../project-highfives/entities/project-highfive.entity.js';
 import { CreateProjectDto } from './dto/create-project.dto.js';
 import { UpdateProjectDto } from './dto/update-project.dto.js';
 import { QueryProjectDto } from './dto/query-project.dto.js';
-import { ProjectResponseDto } from './dto/project-response.dto.js';
 import { ProjectMembersService } from '../project-members/project-members.service.js';
 import { ProjectRole } from '@plic-mti-highfive/shared-types';
+import { ProjectResponseDto } from './dto/project-response.dto.js';
 
 @Injectable()
 export class ProjectsService {
   constructor(
     @InjectRepository(Project)
     private readonly projectRepo: Repository<Project>,
-    @InjectRepository(Tag)
-    private readonly tagRepo: Repository<Tag>,
-    @InjectRepository(ProjectMember)
-    private readonly memberRepo: Repository<ProjectMember>,
-    @InjectRepository(ProjectHighfive)
-    private readonly highfiveRepo: Repository<ProjectHighfive>,
     private readonly membersService: ProjectMembersService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -33,12 +24,18 @@ export class ProjectsService {
     userId: string,
     dto: CreateProjectDto,
   ): Promise<ProjectResponseDto> {
-    const { tagIds, ...rest } = dto;
-    const project = this.projectRepo.create({ ...rest, tenantId });
-    project.tags = await this.resolveTags(tenantId, tagIds);
+    const project = this.projectRepo.create({
+      ...dto,
+      tenantId,
+    });
     const saved = await this.projectRepo.save(project);
 
+    // Creator becomes OWNER
     await this.membersService.addOwner(tenantId, saved.id, userId);
+
+    const ownersMap = await this.membersService.getOwnersForProjects(tenantId, [
+      saved.id,
+    ]);
 
     this.eventEmitter.emit('project.created', {
       projectId: saved.id,
@@ -47,7 +44,7 @@ export class ProjectsService {
       name: saved.name,
     });
 
-    return this.toResponse(saved);
+    return ProjectResponseDto.fromEntity(saved, ownersMap.get(saved.id)!);
   }
 
   async findAll(
@@ -63,41 +60,62 @@ export class ProjectsService {
     const limit = query.limit ?? 20;
     const offset = query.offset ?? 0;
 
-    const qb = this.projectRepo
+    const db = this.projectRepo
       .createQueryBuilder('project')
-      .leftJoinAndSelect('project.tags', 'tag')
-      .where('project.tenant_id = :tenantId', { tenantId });
+      .where('project.tenantId = :tenantId', { tenantId });
 
-    if (query.userId) {
-      qb.innerJoin(
-        'project_members',
-        'pm',
-        'pm.project_id = project.id AND pm.user_id = :userId AND pm.tenant_id = :tenantId',
-        { userId: query.userId, tenantId },
-      );
-    }
     if (query.status) {
-      qb.andWhere('project.status = :status', { status: query.status });
+      db.andWhere('project.status = :status', { status: query.status });
     }
+
     if (query.visibility) {
-      qb.andWhere('project.visibility = :visibility', {
+      db.andWhere('project.visibility = :visibility', {
         visibility: query.visibility,
       });
     }
-    if (query.tag) {
-      qb.andWhere(
-        'project.id IN (SELECT pt.project_id FROM project_tags pt JOIN tags t ON t.id = pt.tag_id WHERE t.name = :tagName AND t.tenant_id = :tenantId)',
-        { tagName: query.tag, tenantId },
+
+    if (query.search) {
+      db.andWhere(
+        'project.name ILIKE :search OR project.description ILIKE :search',
+        {
+          search: `%${query.search}%`,
+        },
       );
     }
 
-    qb.orderBy('project.createdAt', 'DESC').skip(offset).take(limit);
+    if (query.tags && query.tags.length > 0) {
+      db.andWhere('project.tags && ARRAY[:...tags]::varchar[]', {
+        tags: query.tags,
+      });
+    }
 
-    const [data, total] = await qb.getManyAndCount();
-    const enriched = await Promise.all(data.map((p) => this.toResponse(p)));
+    const order = query.sortOrder === 'ASC' ? 'ASC' : 'DESC';
+    switch (query.sortBy) {
+      case 'name':
+        db.orderBy('project.name', order);
+        break;
+      case 'popularity':
+        // TODO: sort by popularity like highfive or members count
+        break;
+      case 'date':
+      default:
+        db.orderBy('project.createdAt', order);
+        break;
+    }
+
+    const [data, total] = await db.skip(offset).take(limit).getManyAndCount();
+
+    // Fetch owners for the projects
+    const projectIds = data.map((p) => p.id);
+    const ownersMap = await this.membersService.getOwnersForProjects(
+      tenantId,
+      projectIds,
+    );
 
     return {
-      data: enriched,
+      data: data.map((p) =>
+        ProjectResponseDto.fromEntity(p, ownersMap.get(p.id)!),
+      ),
       total,
       page: Math.floor(offset / limit) + 1,
       limit,
@@ -106,8 +124,38 @@ export class ProjectsService {
   }
 
   async findById(tenantId: string, id: string): Promise<ProjectResponseDto> {
-    const project = await this.loadProject(tenantId, id);
-    return this.toResponse(project);
+    const project = await this.projectRepo.findOne({
+      where: { id, tenantId },
+    });
+    if (!project) throw new NotFoundException('Project not found');
+
+    const ownersMap = await this.membersService.getOwnersForProjects(tenantId, [
+      id,
+    ]);
+
+    return ProjectResponseDto.fromEntity(project, ownersMap.get(id)!);
+  }
+
+  async findByIds(
+    tenantId: string,
+    ids: string[],
+  ): Promise<ProjectResponseDto[]> {
+    if (ids.length === 0) return [];
+    const projects = await this.projectRepo.find({
+      where: {
+        id: In(ids),
+        tenantId,
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    const ownersMap = await this.membersService.getOwnersForProjects(
+      tenantId,
+      ids,
+    );
+    return projects.map((p) =>
+      ProjectResponseDto.fromEntity(p, ownersMap.get(p.id)!),
+    );
   }
 
   async update(
@@ -121,14 +169,10 @@ export class ProjectsService {
       ProjectRole.ADMIN,
     ]);
 
-    const project = await this.loadProject(tenantId, id);
+    const project = await this.findById(tenantId, id);
     const oldVisibility = project.visibility;
 
-    const { tagIds, ...rest } = dto;
-    Object.assign(project, rest);
-    if (tagIds !== undefined) {
-      project.tags = await this.resolveTags(tenantId, tagIds);
-    }
+    Object.assign(project, dto);
     const saved = await this.projectRepo.save(project);
 
     this.eventEmitter.emit('project.updated', {
@@ -147,7 +191,11 @@ export class ProjectsService {
       });
     }
 
-    return this.toResponse(saved);
+    const ownersMap = await this.membersService.getOwnersForProjects(tenantId, [
+      id,
+    ]);
+
+    return ProjectResponseDto.fromEntity(saved, ownersMap.get(saved.id)!);
   }
 
   async softDelete(
@@ -170,98 +218,45 @@ export class ProjectsService {
     });
   }
 
-  async findByOwner(
+  /**
+   * Record a user liking a project and emit event for AI processing
+   */
+  async likeProject(
     tenantId: string,
+    projectId: string,
     userId: string,
-  ): Promise<ProjectResponseDto[]> {
-    return this.findByMemberRole(tenantId, userId, ProjectRole.OWNER);
+  ): Promise<void> {
+    // Verify project exists
+    await this.findById(tenantId, projectId);
+
+    // TODO: Persist like relationship in database (create Likes table if needed)
+    // For now, just emit the event to trigger AI job queueing
+
+    this.eventEmitter.emit('project.liked', {
+      projectId,
+      tenantId,
+      userId,
+    });
   }
 
-  async findByContributor(
+  /**
+   * Record a user applying to a project and emit event for AI processing
+   */
+  async submitApplication(
     tenantId: string,
+    projectId: string,
     userId: string,
-  ): Promise<ProjectResponseDto[]> {
-    const memberships = await this.memberRepo.find({
-      where: { userId, tenantId },
+  ): Promise<void> {
+    // Verify project exists
+    await this.findById(tenantId, projectId);
+
+    // TODO: Create Application entity and persist application record
+    // For now, just emit the event to trigger AI job queueing
+
+    this.eventEmitter.emit('project.application.submitted', {
+      projectId,
+      tenantId,
+      userId,
     });
-    const ids = memberships
-      .filter((m) => m.role !== ProjectRole.OWNER)
-      .map((m) => m.projectId);
-    return this.findManyByIds(tenantId, ids);
-  }
-
-  async findManyByIds(
-    tenantId: string,
-    ids: string[],
-  ): Promise<ProjectResponseDto[]> {
-    if (!ids.length) return [];
-    const projects = await this.projectRepo.find({
-      where: { id: In(ids), tenantId },
-      relations: ['tags'],
-    });
-    return Promise.all(projects.map((p) => this.toResponse(p)));
-  }
-
-  private async findByMemberRole(
-    tenantId: string,
-    userId: string,
-    role: ProjectRole,
-  ): Promise<ProjectResponseDto[]> {
-    const memberships = await this.memberRepo.find({
-      where: { userId, tenantId, role },
-    });
-    const ids = memberships.map((m) => m.projectId);
-    return this.findManyByIds(tenantId, ids);
-  }
-
-  private async loadProject(tenantId: string, id: string): Promise<Project> {
-    const project = await this.projectRepo.findOne({
-      where: { id, tenantId },
-      relations: ['tags'],
-    });
-    if (!project) throw new NotFoundException('Project not found');
-    return project;
-  }
-
-  private async resolveTags(
-    tenantId: string,
-    tagIds: string[] | undefined,
-  ): Promise<Tag[]> {
-    if (!tagIds?.length) return [];
-    return this.tagRepo.find({ where: { id: In(tagIds), tenantId } });
-  }
-
-  private async toResponse(project: Project): Promise<ProjectResponseDto> {
-    const [owner, contributorsCount, highfiveCount] = await Promise.all([
-      this.memberRepo.findOne({
-        where: {
-          projectId: project.id,
-          tenantId: project.tenantId,
-          role: ProjectRole.OWNER,
-        },
-      }),
-      this.memberRepo.count({
-        where: { projectId: project.id, tenantId: project.tenantId },
-      }),
-      this.highfiveRepo.count({
-        where: { projectId: project.id, tenantId: project.tenantId },
-      }),
-    ]);
-
-    return {
-      id: project.id,
-      tenantId: project.tenantId,
-      name: project.name,
-      description: project.description,
-      status: project.status,
-      visibility: project.visibility,
-      tags: (project.tags ?? []).map((t) => t.name),
-      ownerId: owner?.userId ?? null,
-      contributorsCount,
-      highfiveCount,
-      createdAt: project.createdAt,
-      updatedAt: project.updatedAt,
-      deletedAt: project.deletedAt,
-    };
   }
 }
