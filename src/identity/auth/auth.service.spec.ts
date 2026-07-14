@@ -137,6 +137,7 @@ describe('AuthService', () => {
       expect(userProfilesService.createDefault).toHaveBeenCalledWith(
         'user-1',
         tenantId,
+        'test',
       );
       expect(result.accessToken).toBe('mock-access-token');
       expect(result.refreshToken).toBeDefined();

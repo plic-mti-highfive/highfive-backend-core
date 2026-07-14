@@ -6,6 +6,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ProjectsService } from './projects.service.js';
 import { Project } from './entities/project.entity.js';
 import { ProjectMembersService } from '../project-members/project-members.service.js';
+import { User } from '../../identity/users/entities/user.entity.js';
 import {
   ProjectVisibility,
   ProjectRole,
@@ -22,6 +23,7 @@ type ProjectRepoMock = {
 type MembersServiceMock = {
   addOwner: Mock<ProjectMembersService['addOwner']>;
   assertRole: Mock<ProjectMembersService['assertRole']>;
+  getOwnersForProjects: Mock<ProjectMembersService['getOwnersForProjects']>;
 };
 
 type EventEmitterMock = {
@@ -74,6 +76,13 @@ describe('ProjectsService', () => {
           tenantId,
           role: ProjectRole.OWNER,
         } as Awaited<ReturnType<ProjectMembersService['assertRole']>>),
+      getOwnersForProjects: vi
+        .fn<ProjectMembersService['getOwnersForProjects']>()
+        .mockResolvedValue(
+          new Map<string, User>([
+            ['proj-1', { id: userId, email: 'owner@example.com' } as User],
+          ]),
+        ),
     };
 
     eventEmitter = {
@@ -99,7 +108,7 @@ describe('ProjectsService', () => {
       });
 
       expect(result.name).toBe('My Project');
-      expect(result.tenantId).toBe(tenantId);
+      expect(result.owner?.userId).toBe(userId);
       expect(membersService.addOwner).toHaveBeenCalledWith(
         tenantId,
         'proj-1',

@@ -16,9 +16,6 @@ export class UserProfile {
   @Column({ type: 'varchar', name: 'display_name', nullable: true })
   displayName!: string | null;
 
-  @Column({ type: 'varchar', name: 'display_name', nullable: true })
-  displayName: string | null;
-
   @Column({ type: 'text', nullable: true })
   bio!: string | null;
 
