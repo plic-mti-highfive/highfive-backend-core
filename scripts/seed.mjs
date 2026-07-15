@@ -2,7 +2,9 @@
 // Seed script: create EPITA tenant, ~30 users, ~10 projects with members & tickets.
 // Usage: node scripts/seed.mjs  (requires backend running at API_URL)
 
-const API_URL = process.env.API_URL ?? 'http://localhost:3001';
+// Doit correspondre au PORT du .env (3000 par defaut), sinon le script tape
+// dans le vide et echoue en ECONNREFUSED.
+const API_URL = process.env.API_URL ?? 'http://localhost:3000';
 const TENANT_NAME = 'EPITA';
 const TENANT_DOMAIN = 'epita.highfive.app';
 const USER_COUNT = 30;

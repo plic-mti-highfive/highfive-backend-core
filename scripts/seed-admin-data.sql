@@ -5,21 +5,29 @@
 -- puis régénère utilisateurs / projets / membres / highfives / connexions /
 -- refresh tokens pour le tenant cible.
 --
--- Usage :
+-- Usage (cible automatiquement le tenant de l'instance) :
 --   docker compose exec -T db psql -U highfive -d highfive_dev \
---     -v tenant="'<TENANT_UUID>'" -f - < scripts/seed-admin-data.sql
--- (le tenant par défaut ci-dessous peut aussi être édité directement)
+--     < scripts/seed-admin-data.sql
+--
+-- Pour cibler explicitement un autre tenant :
+--   docker compose exec -T db psql -U highfive -d highfive_dev \
+--     -c "SET seed.tenant_id = '<TENANT_UUID>'" -f - < scripts/seed-admin-data.sql
 -- ============================================================================
 
 \set ON_ERROR_STOP on
 
 DO $$
 DECLARE
-  -- Tenant cible (celui de l'instance courante).
+  -- Tenant cible. Resolu a l'execution plutot que code en dur : un UUID fige
+  -- ne correspond a aucune base fraiche, et le script seedait alors dans le
+  -- vide en laissant le dashboard admin vide sans le moindre message.
+  -- Par defaut on prend le tenant de l'instance ; voir v_override ci-dessous
+  -- pour en cibler un autre.
   -- NB: tenant_id est `uuid` sur users/projects (relation Tenant) mais `varchar`
   -- sur les autres tables (colonne simple) → on garde les deux formes.
-  v_tenant uuid := '6413a58c-78c4-4029-b99c-445a2c347af7';
-  v_tenant_txt text := '6413a58c-78c4-4029-b99c-445a2c347af7';
+  v_override text := current_setting('seed.tenant_id', true);
+  v_tenant uuid;
+  v_tenant_txt text;
   -- Hash placeholder (les comptes seedés ne se connectent pas).
   v_hash text := '$argon2id$v=19$m=65536,t=3,p=4$c2VlZHNlZWRzZWVk$3Zq3Yx0gq0Yx0gq0Yx0gq0Yx0gq0Yx0gq0Yx0gq0Y';
 
@@ -54,6 +62,22 @@ DECLARE
   pstatuses text[] := ARRAY['ACTIVE','ACTIVE','ACTIVE','ARCHIVED','DRAFT'];
   member_roles text[] := ARRAY['MEMBER','MEMBER','ADMIN','VIEWER'];
 BEGIN
+  -- ── Résolution du tenant ─────────────────────────────────────────────────
+  IF v_override IS NOT NULL AND v_override <> '' THEN
+    v_tenant := v_override::uuid;
+  ELSE
+    SELECT id INTO v_tenant FROM tenants ORDER BY created_at ASC LIMIT 1;
+  END IF;
+
+  IF v_tenant IS NULL THEN
+    RAISE EXCEPTION 'Aucun tenant en base. Lancez d''abord : node scripts/seed.mjs';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM tenants WHERE id = v_tenant) THEN
+    RAISE EXCEPTION 'Tenant % introuvable.', v_tenant;
+  END IF;
+  v_tenant_txt := v_tenant::text;
+  RAISE NOTICE 'Seed sur le tenant %', v_tenant;
+
   -- ── Cleanup des données seedées précédentes ──────────────────────────────
   DELETE FROM project_highfives WHERE project_id IN (
     SELECT id FROM projects WHERE tenant_id = v_tenant AND name LIKE '%[seed]');

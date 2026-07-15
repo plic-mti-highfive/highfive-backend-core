@@ -2,8 +2,17 @@ services:
   backend_core:
     build:
       context: .
+      # Stage `builder` (et non `runner`) : il contient les devDependencies et
+      # le nest CLI, indispensables au watch ci-dessous. Le stage `runner` ne
+      # sert que l'image de production, qui execute dist/ et ignorerait les
+      # volumes montes plus bas — le code local ne serait alors jamais relu.
+      target: builder
       secrets:
         - github_token
+    # Recompile a chaud les sources montees. Sans ca, le conteneur executerait
+    # le build fige dans l'image et un `up -d` sans `--build` ferait tourner
+    # silencieusement une version perimee du backend.
+    command: pnpm start:dev
     container_name: dev_highfive_backend_core
     restart: unless-stopped
     ports:
