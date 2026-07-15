@@ -121,9 +121,10 @@ export class ProjectsService {
     const [data, total] = await qb.getManyAndCount();
 
     const projectIds = data.map((p) => p.id);
-    const [ownersMap, highfiveCounts] = await Promise.all([
+    const [ownersMap, highfiveCounts, memberCounts] = await Promise.all([
       this.membersService.getOwnersForProjects(tenantId, projectIds),
       this.getHighfiveCounts(tenantId, projectIds),
+      this.getMemberCounts(tenantId, projectIds),
     ]);
 
     return {
@@ -132,6 +133,7 @@ export class ProjectsService {
           p,
           ownersMap.get(p.id),
           highfiveCounts.get(p.id) ?? 0,
+          memberCounts.get(p.id) ?? 0,
         ),
       ),
       total,
@@ -144,15 +146,17 @@ export class ProjectsService {
   async findById(tenantId: string, id: string): Promise<ProjectResponseDto> {
     const project = await this.loadProject(tenantId, id);
 
-    const [ownersMap, highfiveCounts] = await Promise.all([
+    const [ownersMap, highfiveCounts, memberCounts] = await Promise.all([
       this.membersService.getOwnersForProjects(tenantId, [id]),
       this.getHighfiveCounts(tenantId, [id]),
+      this.getMemberCounts(tenantId, [id]),
     ]);
 
     return ProjectResponseDto.fromEntity(
       project,
       ownersMap.get(id),
       highfiveCounts.get(id) ?? 0,
+      memberCounts.get(id) ?? 0,
     );
   }
 
@@ -174,9 +178,10 @@ export class ProjectsService {
       order: { createdAt: 'DESC' },
     });
 
-    const [ownersMap, highfiveCounts] = await Promise.all([
+    const [ownersMap, highfiveCounts, memberCounts] = await Promise.all([
       this.membersService.getOwnersForProjects(tenantId, ids),
       this.getHighfiveCounts(tenantId, ids),
+      this.getMemberCounts(tenantId, ids),
     ]);
 
     return projects.map((p) =>
@@ -184,6 +189,7 @@ export class ProjectsService {
         p,
         ownersMap.get(p.id),
         highfiveCounts.get(p.id) ?? 0,
+        memberCounts.get(p.id) ?? 0,
       ),
     );
   }
@@ -225,15 +231,17 @@ export class ProjectsService {
       });
     }
 
-    const [ownersMap, highfiveCounts] = await Promise.all([
+    const [ownersMap, highfiveCounts, memberCounts] = await Promise.all([
       this.membersService.getOwnersForProjects(tenantId, [id]),
       this.getHighfiveCounts(tenantId, [id]),
+      this.getMemberCounts(tenantId, [id]),
     ]);
 
     return ProjectResponseDto.fromEntity(
       saved,
       ownersMap.get(id),
       highfiveCounts.get(id) ?? 0,
+      memberCounts.get(id) ?? 0,
     );
   }
 
@@ -329,6 +337,29 @@ export class ProjectsService {
       missingNames.map((name) => this.tagRepo.create({ name, tenantId })),
     );
     return [...existing, ...created];
+  }
+
+  /** Taille des equipes, en une requete groupee plutot qu'une par projet. */
+  private async getMemberCounts(
+    tenantId: string,
+    projectIds: string[],
+  ): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    if (projectIds.length === 0) return counts;
+
+    const rows = await this.memberRepo
+      .createQueryBuilder('member')
+      .select('member.projectId', 'projectId')
+      .addSelect('COUNT(*)', 'count')
+      .where('member.tenantId = :tenantId', { tenantId })
+      .andWhere('member.projectId IN (:...projectIds)', { projectIds })
+      .groupBy('member.projectId')
+      .getRawMany<{ projectId: string; count: string }>();
+
+    for (const row of rows) {
+      counts.set(row.projectId, Number(row.count));
+    }
+    return counts;
   }
 
   private async getHighfiveCounts(

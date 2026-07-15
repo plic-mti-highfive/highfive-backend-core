@@ -9,9 +9,12 @@ services:
       target: builder
       secrets:
         - github_token
-    # Recompile a chaud les sources montees. Sans ca, le conteneur executerait
-    # le build fige dans l'image et un `up -d` sans `--build` ferait tourner
-    # silencieusement une version perimee du backend.
+    # Compile les sources montees au demarrage. Sans ca, le conteneur executait
+    # le `dist` fige dans l'image : un `up -d` sans `--build` faisait tourner
+    # silencieusement une version perimee du backend, sans le moindre indice.
+    # Un `docker compose restart backend_core` suffit desormais a prendre en
+    # compte une modification (les bind mounts ne remontant pas d'evenement
+    # inotify, le watch ne se declenche pas tout seul sous Windows/macOS).
     command: pnpm start:dev
     container_name: dev_highfive_backend_core
     restart: unless-stopped

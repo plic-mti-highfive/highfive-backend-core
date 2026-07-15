@@ -32,6 +32,14 @@ export class ProjectResponseDto {
   @ApiProperty()
   highfiveCount!: number;
 
+  /**
+   * Taille de l'equipe. Expose ici parce que le front l'affiche sur chaque
+   * carte projet : sans lui, il devrait appeler /members projet par projet
+   * pour afficher un simple compteur.
+   */
+  @ApiProperty()
+  membersCount!: number;
+
   @ApiProperty()
   createdAt!: Date;
 
@@ -48,6 +56,7 @@ export class ProjectResponseDto {
     project: Project,
     ownerUser: User | undefined,
     highfiveCount = 0,
+    membersCount = 0,
   ): ProjectResponseDto {
     const dto = new ProjectResponseDto();
     dto.id = project.id;
@@ -58,6 +67,7 @@ export class ProjectResponseDto {
     dto.status = project.status;
     dto.visibility = project.visibility;
     dto.highfiveCount = highfiveCount;
+    dto.membersCount = membersCount;
     dto.createdAt = project.createdAt;
     dto.updatedAt = project.updatedAt;
     dto.deletedAt = project.deletedAt;

@@ -42,6 +42,23 @@ type EventEmitterMock = {
   emit: Mock<(event: string, payload: unknown) => boolean>;
 };
 
+/**
+ * Les comptages (highfives, membres) passent par un query builder : on rend la
+ * chaine fluent en renvoyant le meme objet a chaque maillon, et une agregation
+ * vide au bout.
+ */
+function createQueryBuilderMock(): Record<string, unknown> {
+  const qb: Record<string, unknown> = {
+    getRawMany: vi
+      .fn<() => Promise<{ projectId: string; count: string }[]>>()
+      .mockResolvedValue([]),
+  };
+  for (const method of ['select', 'addSelect', 'where', 'andWhere', 'groupBy']) {
+    qb[method] = vi.fn(() => qb);
+  }
+  return qb;
+}
+
 describe('ProjectsService', () => {
   let service: ProjectsService;
   let projectRepo: ProjectRepoMock;
@@ -91,30 +108,16 @@ describe('ProjectsService', () => {
         .fn<() => Promise<unknown>>()
         .mockResolvedValue({ userId, role: ProjectRole.OWNER }),
       count: vi.fn<() => Promise<number>>().mockResolvedValue(1),
+      // getMemberCounts agrege les membres via un query builder, comme les
+      // highfives ci-dessous.
+      createQueryBuilder: vi.fn<() => unknown>(() => createQueryBuilderMock()),
     };
-
-    // getHighfiveCounts agrege les highfives via un query builder : on rend la
-    // chaine fluent en renvoyant le meme objet a chaque appel.
-    const highfiveQb: Record<string, unknown> = {
-      getRawMany: vi
-        .fn<() => Promise<{ projectId: string; count: string }[]>>()
-        .mockResolvedValue([]),
-    };
-    for (const method of [
-      'select',
-      'addSelect',
-      'where',
-      'andWhere',
-      'groupBy',
-    ]) {
-      highfiveQb[method] = vi.fn(() => highfiveQb);
-    }
 
     highfiveRepo = {
       find: vi.fn<() => Promise<unknown[]>>().mockResolvedValue([]),
       findOne: vi.fn<() => Promise<unknown>>().mockResolvedValue(null),
       count: vi.fn<() => Promise<number>>().mockResolvedValue(0),
-      createQueryBuilder: vi.fn<() => unknown>(() => highfiveQb),
+      createQueryBuilder: vi.fn<() => unknown>(() => createQueryBuilderMock()),
     };
 
     membersService = {
