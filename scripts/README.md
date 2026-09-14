@@ -1,83 +1,36 @@
 # Scripts
 
-## `seed-admin-data.sql` — données de démo pour le dashboard admin
+Tous parlent a l'API HTTP ou aux services voisins, jamais directement a la
+base : ce qu'ils produisent et verifient est ce qu'un client normal obtiendrait.
 
-Remplit la base d'un jeu de données réaliste (utilisateurs, projets, membres,
-highfives, connexions, refresh tokens) afin que le **dashboard admin** ait du
-contenu à afficher : KPIs, graphe d'inscriptions sur 30 jours, projets
-récemment clos, etc.
-
-Le script est **idempotent** : à chaque exécution il purge d'abord les données
-précédemment générées (utilisateurs `seed.%@highfive.test` et projets dont le
-nom se termine par `[seed]`) avant de régénérer. Il ne touche pas aux données
-réelles.
-
-### Prérequis
-
-La stack Docker doit être lancée et la base prête :
+| Script | Role | Prerequis |
+| --- | --- | --- |
+| `seed.mjs` | Jeu de demonstration (5 personnes, 5 projets, highfives, equipes). | API demarree |
+| `smoke.mjs` | Parcours de bout en bout : ~200 verifications, et **un rapport de couverture** — toute route servie qui ne serait appelee par aucun scenario fait echouer le script. | API demarree, `ADMIN_EMAILS`, MinIO pour les fichiers |
+| `smoke-integration.mjs` | Ce que `smoke.mjs` ne peut pas voir : la chaine complete du Mur (jeton du core -> Hocuspocus -> export -> taches) avec un vrai client Yjs, et les jobs reellement deposes sur les files du service IA. | API, service canvas, Redis |
+| `contract-diff.mjs` | Compare les routes des controleurs a celles d'`openapi.yaml`. Ne demande rien de demarre : utilisable en integration continue. | — |
 
 ```bash
-docker compose up -d
-docker compose ps          # le service `db` doit être "healthy"
+docker compose up -d db redis minio
+pnpm build
+ADMIN_EMAILS=admin@highfive.test node dist/main.js &
+
+pnpm check:contract          # sans rien demarrer
+node scripts/seed.mjs
+node scripts/smoke.mjs
+node scripts/smoke-integration.mjs
 ```
 
-> Le schéma doit déjà exister. Il est créé automatiquement par TypeORM
-> (`synchronize`) au démarrage du backend en `NODE_ENV=development` — ce qui est
-> le cas via le `docker-compose.yml` du projet.
+`API_URL` change la cible (par defaut `http://localhost:3000`).
 
-### Lancer le seed
+## Ce qui reste hors de portee de ces scripts
 
-Depuis la racine du repo :
-
-```bash
-docker compose exec -T db psql -U highfive -d highfive_dev < scripts/seed-admin-data.sql
-```
-
-En cas de succès, la dernière ligne affiche :
-
-```
-NOTICE:  Seed terminé : 60 utilisateurs, 28 projets.
-DO
-```
-
-> `-U highfive` / `-d highfive_dev` correspondent aux valeurs `DB_USERNAME` /
-> `DB_DATABASE` du `.env`. Adaptez si vous les avez modifiées.
-
-### Cibler un autre tenant
-
-Le tenant est codé en tête du script (variables `v_tenant` / `v_tenant_txt`).
-Pour seeder un autre tenant, éditez ces deux variables avec l'UUID voulu.
-Récupérer la liste des tenants :
-
-```bash
-docker compose exec -T db psql -U highfive -d highfive_dev -c "SELECT id, name FROM tenants;"
-```
-
-### Devenir administrateur plateforme
-
-Le dashboard est réservé au rôle `ADMIN`. Promouvoir un compte existant :
-
-```bash
-docker compose exec -T db psql -U highfive -d highfive_dev \
-  -c "UPDATE users SET system_role='ADMIN' WHERE email='votre.email@example.com';"
-```
-
-Ensuite, cet admin peut promouvoir/rétrograder les autres via
-`PATCH /admin/users/:id/role`.
-
-### Nettoyer les données de démo
-
-Pour supprimer uniquement les données seedées sans en régénérer :
-
-```bash
-docker compose exec -T db psql -U highfive -d highfive_dev <<'SQL'
-DELETE FROM project_highfives WHERE project_id IN (SELECT id FROM projects WHERE name LIKE '%[seed]');
-DELETE FROM project_members  WHERE project_id IN (SELECT id FROM projects WHERE name LIKE '%[seed]');
-DELETE FROM projects WHERE name LIKE '%[seed]';
-DELETE FROM user_connections WHERE requester_id IN (SELECT id FROM users WHERE email LIKE 'seed.%@highfive.test')
-                                OR addressee_id IN (SELECT id FROM users WHERE email LIKE 'seed.%@highfive.test');
-DELETE FROM refresh_tokens WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'seed.%@highfive.test');
-DELETE FROM user_profiles  WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'seed.%@highfive.test');
-DELETE FROM users WHERE email LIKE 'seed.%@highfive.test';
-SQL
-```
+- **Reinitialisation de mot de passe, chemin complet** : le jeton n'est envoye
+  par aucun canal (pas de service de courriel), il n'est que journalise. Seuls
+  le 204 systematique et le refus d'un jeton invalide sont verifies.
+- **Lecture seule du role `viewer` sur le document du Mur** : appliquee par le
+  service canvas, non verifiee depuis le core.
+- **Recommandations du service IA** : seule la degradation est verifiee (IA
+  injoignable, le fil repond quand meme). Le classement lui-meme demande une
+  instance du service IA avec ses embeddings.
+- **Messagerie** : non implementee (`docs/REFACTO-V2.md` §3).

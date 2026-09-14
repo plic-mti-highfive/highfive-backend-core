@@ -37,22 +37,20 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@plic-mti-highfive'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run linter
         run: pnpm lint
+
+      - name: Check API contract drift
+        run: pnpm check:contract
 
       - name: Run tests and generate JUnit report
         run: pnpm exec vitest run --reporter=default --reporter=junit --outputFile=junit.xml
         env:
           NODE_ENV: test
-          JWT_SECRET: secret-de-test
 
       - name: Publish Test Report
         uses: dorny/test-reporter@v1
@@ -135,5 +133,3 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          secrets: |
-            github_token=${{ secrets.GITHUB_TOKEN }}

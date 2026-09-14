@@ -1,125 +1,108 @@
-# HighFive! - Core Backend
+# HighFive! — Core Backend
 
-NestJS backend for project execution, identity management, and discovery features. Built with TypeScript and PostgreSQL.
+API REST NestJS de la plateforme HighFive! : projets, equipes, Le Lab (Le Mur
+et Les Taches), fil de decouverte, notifications, moderation.
 
-## Prerequisites
+76 des 84 operations du contrat sont servies ; les 8 manquantes sont celles de
+la messagerie, prevue dans un second temps.
 
-- Node.js >= 18
-- pnpm
-- Docker & Docker Compose (for development with PostgreSQL)
+Le contrat est celui du front (`highfive-frontend`, `docs/v2/`) : ce depot
+l'implemente, il ne le definit pas. Voir **`docs/REFACTO-V2.md`** pour ce qui a
+change, ce qui est volontairement absent, et les ecarts assumes.
 
-## Local Setup
+## Prerequis
 
-### 1. Clone and install dependencies
+- Node.js >= 22, pnpm >= 9
+- Docker et Docker Compose (PostgreSQL, Redis, MinIO en developpement)
+
+## Demarrage
 
 ```bash
-git clone <repository>
-cd highfive-backend-core
 pnpm install
-```
-
-### 2. Environment variables
-
-Create a `.env` file at the root with required configurations for your environment.
-
-### 3. Start with Docker Compose (development)
-
-```bash
-docker-compose up --build
-```
-
-### Development
-
-```bash
+cp .env.example .env          # puis ajuster
+docker compose up -d db redis minio
 pnpm start:dev
 ```
 
-The server will start on `http://localhost:3000` with hot reload enabled.
+L'API ecoute sur `http://localhost:3000/api`, la documentation sur
+`http://localhost:3000/api/docs` (le contrat `openapi.yaml`, servi tel quel).
 
-### Production
+En developpement, le schema de base est synchronise au demarrage
+(`synchronize: true`) et les 24 themes sont semes automatiquement.
 
-```bash
-pnpm build
-pnpm start:prod
-```
-
-### 4. MinIO setup
-
-You need to setup a MinIO bucket and lauch some command to setup it.
-
-### Create Bucket
-
-First, access the MinIO admin panel at `http://localhost:9001` and login (`minioadmin` by default).
-Then, click on `Create Bucket` and enter `highfive-core-bucket`, or the name specified in yout .env if you changed it.
-
-### Change Security Access
-
-By default, every bucket are PRIVATE. You need to give anonymous read access to allow the lecture from it. Follow these commands :
+### Jeu de demonstration
 
 ```bash
-docker exec -it dev_highfive_minio bash
-mc alias set mon-minio http://localhost:9000 minioadmin minioadmin
-mc anonymous set download mon-minio/highfive-core-bucket
+node scripts/seed.mjs   # 5 personnes, 5 projets, highfives et equipes
 ```
 
-Change the bucket name if needed. You should have something like that :
+Compte de demonstration : `alex.rivera@example.com` / `demo1234`.
+
+### Verification de bout en bout
 
 ```bash
-bash-5.1# mc alias set mon-minio http://localhost:9000 minioadmin minioadmin
-Added `mon-minio` successfully.
-
-bash-5.1# mc anonymous set download mon-minio/highfive-core-bucket
-Access permission for `mon-minio/highfive-core-bucket` is set to `download`
+pnpm check:contract          # derive du contrat, sans rien demarrer
+pnpm smoke                   # ~200 verifications + rapport de couverture des routes
+pnpm smoke:integration       # chaine complete du Mur, et files du service IA
 ```
 
+`pnpm smoke` echoue si **une seule** route servie n'est exercee par aucun
+scenario. Ce que ces scripts ne couvrent pas est liste dans `scripts/README.md`.
 
-## npm Scripts
+### Administration
 
-| Command            | Description                    |
-| ------------------ | ------------------------------ |
-| `pnpm start`       | Start compiled server          |
-| `pnpm start:dev`   | Start in watch mode (auto-reload) |
-| `pnpm build`       | Compile TypeScript to JavaScript |
-| `pnpm test`        | Run unit tests                 |
-| `pnpm test:e2e`    | Run e2e tests                  |
-| `pnpm test:cov`    | Run tests with coverage report |
-| `pnpm lint`        | ESLint check                   |
-| `pnpm format`      | Prettier formatting            |
+Le role `admin` ne s'obtient par aucune route — un role plateforme ne doit pas
+pouvoir se donner par l'API. Il se declare dans `ADMIN_EMAILS` (adresses
+separees par des virgules), relu au demarrage **et** a l'inscription. La liste
+fait autorite dans les deux sens : un compte retire redevient membre au
+redemarrage suivant.
 
-## Project Structure
+### Stockage objet
+
+Rien a preparer a la main : le seau est cree au demarrage s'il manque, et
+ouvert en lecture anonyme sur les deux prefixes servis publiquement
+(`avatars/`, `projects/`) — le contrat rend ces URL directement lisibles.
+
+## Scripts
+
+| Commande | Role |
+| --- | --- |
+| `pnpm start:dev` | Developpement, rechargement a chaud |
+| `pnpm build` / `pnpm start:prod` | Production |
+| `pnpm typecheck` | `tsc --noEmit` |
+| `pnpm lint` | ESLint (avec `--fix`) |
+| `pnpm test` | Tests unitaires (Vitest) |
+
+## Arborescence
 
 ```
 src/
-├── main.ts                    # Entry point
-├── app.module.ts              # Root module
-├── identity/                  # Identity & authentication
-│   ├── user-profiles/
-│   ├── user-connections/
-│   ├── auth/
-│   └── skills/
-├── project-execution/         # Project management
-│   ├── projects/
-│   ├── project-members/
-│   ├── project-messages/
-│   └── tickets/
-├── discovery/                 # Discovery features
-├── shared/                    # Shared utilities
-│   ├── decorators/
-│   ├── filters/
-│   └── ...
-└── showcase/                  # Showcase features
-
-test/                          # E2E tests
+  contracts/   schemas zod — copie conforme de src/domain/ du front
+  entities/    entites TypeORM, une par table
+  common/      config, base, erreurs, pagination, auth, stockage, IA, mappers
+  modules/     un module par domaine du contrat
+    auth/ users/ tags/ projects/ highfives/ memberships/ announcements/
+    comments/ tasks/ wall/ files/ notifications/ search/ admin/ maintenance/
+docs/
+  REFACTO-V2.md  ce qui change, ce qui manque, pourquoi
+  CANVAS.md      inventaire des fonctions du Mur
+openapi.yaml     le contrat, servi sur /api/docs
 ```
 
-## Architecture
+## Services voisins
 
-The application follows NestJS best practices with modular structure, dependency injection, and comprehensive error handling.
+| Service | Depot | Lien avec le core |
+| --- | --- | --- |
+| Front | `highfive-frontend` | Consomme l'API. Definit le contrat. |
+| Le Mur | `highfive-backend-canvas` | Le core signe les jetons d'acces et appelle `/export`. Voir `docs/CANVAS.md`. |
+| IA | `highfive-backend-ai` | Le core publie des jobs BullMQ et lit les recommandations. **Ce depot n'est pas modifie par le core.** |
 
-### Key Features
+## Points a connaitre
 
-- JWT authentication
-- Role-based access control via decorators
-- Centralized HTTP exception filtering
-- Modular organization by domain
-- E2E testing setup
+- **Authentification** : jeton porteur opaque, table `sessions`, expiration
+  reelle. `POST /auth/logout` invalide le jeton cote serveur.
+- **Validation** : les corps sont valides par les memes schemas zod que le
+  front (`src/contracts/`). Ne jamais reimplementer une regle de forme ici.
+- **Erreurs** : une seule forme, `{ code, message, details? }`, message en
+  francais affichable directement.
+- **Messagerie** : pas encore implementee — c'est le lot suivant.

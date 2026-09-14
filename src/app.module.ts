@@ -1,92 +1,69 @@
-import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
-import configuration from './shared/config/configuration.js';
-import { DatabaseModule } from './shared/database/database.module.js';
-import { TenantMiddleware } from './shared/tenant/tenant.middleware.js';
-import { TenantGuard } from './shared/tenant/tenant.guard.js';
-import { JwtAuthGuard } from './shared/auth/jwt-auth.guard.js';
-import { SystemRolesGuard } from './shared/auth/system-roles.guard.js';
+import configuration from './common/config/configuration.js';
+import { DatabaseModule } from './common/database/database.module.js';
+import { AuthCoreModule } from './common/auth/auth-core.module.js';
+import { AuthGuard } from './common/auth/auth.guard.js';
+import { StorageModule } from './common/storage/storage.service.js';
+import { AiModule } from './common/ai/ai.module.js';
+import { HealthModule } from './common/health/health.controller.js';
 
-import { TenantsModule } from './identity/tenants/tenants.module.js';
-import { UsersModule } from './identity/users/users.module.js';
-import { AuthModule } from './identity/auth/auth.module.js';
-import { UserProfilesModule } from './identity/user-profiles/user-profiles.module.js';
-import { SkillsModule } from './identity/skills/skills.module.js';
-import { UserConnectionsModule } from './identity/user-connections/user-connections.module.js';
+import { AdminModule } from './modules/admin/admin.module.js';
+import { AnnouncementsModule } from './modules/announcements/announcements.module.js';
+import { AuthModule } from './modules/auth/auth.module.js';
+import { CommentsModule } from './modules/comments/comments.module.js';
+import { FilesModule } from './modules/files/files.module.js';
+import { HighfivesModule } from './modules/highfives/highfives.module.js';
+import { MaintenanceModule } from './modules/maintenance/maintenance.module.js';
+import { MembershipsModule } from './modules/memberships/memberships.module.js';
+import { NotificationsModule } from './modules/notifications/notifications.module.js';
+import { ProjectsModule } from './modules/projects/projects.module.js';
+import { SearchModule } from './modules/search/search.module.js';
+import { TagsModule } from './modules/tags/tags.module.js';
+import { TasksModule } from './modules/tasks/tasks.module.js';
+import { UsersModule } from './modules/users/users.module.js';
+import { WallModule } from './modules/wall/wall.module.js';
 
-import { ProjectsModule } from './project-execution/projects/projects.module.js';
-import { ProjectMembersModule } from './project-execution/project-members/project-members.module.js';
-import { TicketsModule } from './project-execution/tickets/tickets.module.js';
-import { ProjectMessagesModule } from './project-execution/project-messages/project-messages.module.js';
-import { TagsModule } from './project-execution/tags/tags.module.js';
-import { ProjectHighfivesModule } from './project-execution/project-highfives/project-highfives.module.js';
-
-import { DiscoveryModule } from './discovery/discovery.module.js';
-import { ShowcaseModule } from './showcase/showcase.module.js';
-import { DomainEventsModule } from './shared/events/domain-events.module.js';
-import { AdminModule } from './admin/admin.module.js';
-import { CanvasModule } from './canvas/canvas.module.js';
-import { QueueModule } from './shared/queues/queue.module.js';
-import { StorageModule } from './shared/storage/storage.module.js';
-import { SearchModule } from './shared/search/search.module.js';
-import { HealthModule } from './shared/health/health.module.js';
-
+/**
+ * Un module par domaine du contrat front (`docs/v2/API-ROUTES.md` du depot
+ * `highfive-frontend`), et rien d'autre : plus de decoupage en « bounded
+ * contexts » qui ne correspondaient a aucun ecran.
+ *
+ * La messagerie (`/conversations`, `/messages`) n'est volontairement pas ici :
+ * elle est prevue dans un second temps, voir `docs/REFACTO-V2.md`.
+ */
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      load: [configuration],
-    }),
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
-    EventEmitterModule.forRoot(),
+    ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 200 }]),
     DatabaseModule,
+    AuthCoreModule,
+    StorageModule,
+    AiModule,
     HealthModule,
 
-    // Identity & Tenancy
-    TenantsModule,
-    UsersModule,
-    AuthModule,
-    UserProfilesModule,
-    SkillsModule,
-    UserConnectionsModule,
-
-    // Project Execution
-    ProjectsModule,
-    ProjectMembersModule,
-    TicketsModule,
-    ProjectMessagesModule,
     TagsModule,
-    ProjectHighfivesModule,
-
-    // Stubs
-    DiscoveryModule,
-    ShowcaseModule,
-
-    // Admin (dashboard plateforme)
-    AdminModule,
-
-    // Canvas de brainstorming + generation de taches
-    CanvasModule,
-
-    // Cross-cutting
-    DomainEventsModule,
-    QueueModule,
-    StorageModule,
+    AuthModule,
+    UsersModule,
+    ProjectsModule,
+    HighfivesModule,
+    MembershipsModule,
+    AnnouncementsModule,
+    CommentsModule,
+    TasksModule,
+    WallModule,
+    FilesModule,
+    NotificationsModule,
     SearchModule,
+    AdminModule,
+    MaintenanceModule,
   ],
   providers: [
-    { provide: APP_GUARD, useClass: TenantGuard },
-    { provide: APP_GUARD, useClass: JwtAuthGuard },
-    { provide: APP_GUARD, useClass: SystemRolesGuard },
+    { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(TenantMiddleware).forRoutes('*');
-  }
-}
+export class AppModule {}

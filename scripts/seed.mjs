@@ -1,226 +1,179 @@
 #!/usr/bin/env node
-// Seed script: create EPITA tenant, ~30 users, ~10 projects with members & tickets.
-// Usage: node scripts/seed.mjs  (requires backend running at API_URL)
+/**
+ * Jeu de demonstration, aligne sur celui du front (`src/mocks/data/` du depot
+ * `highfive-frontend`) : memes personnes, memes projets, meme compte de
+ * demonstration `alex.rivera@example.com` / `demo1234`.
+ *
+ * Le seed passe par l'API publique, pas par la base : ce qu'il produit est
+ * donc exactement ce qu'un usage normal produirait, regles metier comprises.
+ *
+ * Usage : node scripts/seed.mjs   (API demarree, base vide de preference)
+ */
 
-const API_URL = process.env.API_URL ?? 'http://localhost:3001';
-const TENANT_NAME = 'EPITA';
-const TENANT_DOMAIN = 'epita.highfive.app';
-const USER_COUNT = 30;
-const PROJECT_COUNT = 10;
-const PASSWORD = 'SecureP@ss123';
+const API = (process.env.API_URL ?? 'http://localhost:3000') + '/api';
+const PASSWORD = 'demo1234';
 
-const FIRST_NAMES = [
-  'alice',
-  'baptiste',
-  'clement',
-  'diane',
-  'elise',
-  'felix',
-  'gabriel',
-  'helene',
-  'ines',
-  'jules',
-  'karim',
-  'louise',
-  'marine',
-  'nathan',
-  'olivia',
-  'paul',
-  'quentin',
-  'remi',
-  'sarah',
-  'theo',
-  'ugo',
-  'valentine',
-  'william',
-  'xavier',
-  'yasmine',
-  'zoe',
-  'adrien',
-  'beatrice',
-  'clara',
-  'david',
-];
+async function call(method, path, { token, body } = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
 
-const PROJECT_IDEAS = [
-  { name: 'Campus Flow', description: 'Gestion du flux étudiant intra-campus' },
-  {
-    name: 'Mentor Match',
-    description: 'Matching mentors/mentorés par affinités',
-  },
-  {
-    name: 'Canteen Queue',
-    description: "File d'attente cafétéria en temps réel",
-  },
-  { name: 'Study Rooms', description: 'Réservation de salles de travail' },
-  { name: 'Ride Share EPITA', description: 'Covoiturage étudiant' },
-  { name: 'Dev Portfolio', description: 'Plateforme portfolio dev' },
-  { name: 'Hackathon Tracker', description: 'Suivi des hackathons EPITA' },
-  { name: 'Library Bot', description: 'Assistant bibliothèque' },
-  { name: 'Alumni Network', description: 'Réseau anciens élèves' },
-  { name: 'Course Feedback', description: 'Retours anonymes sur les cours' },
-];
-
-const TICKET_TITLES = [
-  'Setup CI/CD pipeline',
-  'Design authentication flow',
-  'Implement user dashboard',
-  'Write API documentation',
-  'Add unit tests for core module',
-  'Fix responsive layout on mobile',
-  'Integrate payment gateway',
-  'Performance profiling',
-];
-
-const PROJECT_ROLES = ['OWNER', 'ADMIN', 'MEMBER', 'VIEWER'];
-
-async function request(path, { method = 'GET', body, headers = {} } = {}) {
-  const res = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(API + path, {
     method,
-    headers: { 'Content-Type': 'application/json', ...headers },
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
-  const text = await res.text();
-  const json = text ? JSON.parse(text) : null;
-  if (!res.ok) {
-    throw new Error(`${method} ${path} → ${res.status} ${text}`);
+
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) : undefined;
+
+  if (!response.ok) {
+    throw new Error(
+      `${method} ${path} -> ${response.status} ${JSON.stringify(payload)}`,
+    );
   }
-  return json;
+  return payload;
 }
 
-function pickRandom(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function sampleWithout(arr, exclude, count) {
-  const pool = arr.filter((x) => !exclude.includes(x));
-  const out = [];
-  while (out.length < count && pool.length) {
-    const idx = Math.floor(Math.random() * pool.length);
-    out.push(pool.splice(idx, 1)[0]);
-  }
-  return out;
-}
-
-async function ensureTenant() {
-  const tenants = await request('/tenants');
-  const existing = tenants.find((t) => t.domain === TENANT_DOMAIN);
-  if (existing) {
-    console.log(`✓ Tenant already exists: ${existing.id}`);
-    return existing.id;
-  }
-  const created = await request('/tenants', {
-    method: 'POST',
-    body: { name: TENANT_NAME, domain: TENANT_DOMAIN },
-  });
-  console.log(`✓ Tenant created: ${created.id}`);
-  return created.id;
-}
-
-async function registerUser(tenantId, email) {
+/** Ré-inscrire une personne deja presente echoue : on retombe sur la connexion. */
+async function ensureAccount(person) {
   try {
-    const auth = await request('/auth/register', {
-      method: 'POST',
-      body: { email, password: PASSWORD },
-      headers: { 'X-Tenant-ID': tenantId },
-    });
-    return auth.accessToken;
-  } catch (err) {
-    if (
-      String(err).includes('409') ||
-      String(err).toLowerCase().includes('already')
-    ) {
-      const auth = await request('/auth/login', {
-        method: 'POST',
-        body: { email, password: PASSWORD },
-        headers: { 'X-Tenant-ID': tenantId },
-      });
-      return auth.accessToken;
-    }
-    throw err;
-  }
-}
-
-function decodeSub(accessToken) {
-  const [, payload] = accessToken.split('.');
-  const decoded = JSON.parse(
-    Buffer.from(payload, 'base64url').toString('utf8'),
-  );
-  return decoded.sub;
-}
-
-async function seed() {
-  console.log(`→ Seeding ${API_URL}`);
-  const tenantId = await ensureTenant();
-
-  const users = [];
-  for (let i = 0; i < USER_COUNT; i++) {
-    const first = FIRST_NAMES[i % FIRST_NAMES.length];
-    const email = `${first}${String(i + 1).padStart(2, '0')}@epita.fr`;
-    const accessToken = await registerUser(tenantId, email);
-    const id = decodeSub(accessToken);
-    users.push({ id, email, accessToken });
-    process.stdout.write(`\r  users: ${i + 1}/${USER_COUNT}`);
-  }
-  console.log('\n✓ Users ready');
-
-  const projects = [];
-  for (let i = 0; i < PROJECT_COUNT; i++) {
-    const idea = PROJECT_IDEAS[i % PROJECT_IDEAS.length];
-    const owner = users[i % users.length];
-    const visibility = pickRandom(['PUBLIC', 'PRIVATE', 'INVITATION_ONLY']);
-    const project = await request('/projects', {
-      method: 'POST',
-      body: { name: idea.name, description: idea.description, visibility },
-      headers: {
-        'X-Tenant-ID': tenantId,
-        Authorization: `Bearer ${owner.accessToken}`,
+    return await call('POST', '/auth/register', {
+      body: {
+        email: person.email,
+        password: PASSWORD,
+        username: person.username,
+        displayName: person.displayName,
       },
     });
-    projects.push({ ...project, owner });
-
-    const memberCount = 3 + Math.floor(Math.random() * 4);
-    const members = sampleWithout(users, [owner], memberCount);
-    for (const m of members) {
-      await request(`/projects/${project.id}/members`, {
-        method: 'POST',
-        body: {
-          userId: m.id,
-          role: pickRandom(['ADMIN', 'MEMBER', 'MEMBER', 'VIEWER']),
-        },
-        headers: {
-          'X-Tenant-ID': tenantId,
-          Authorization: `Bearer ${owner.accessToken}`,
-        },
-      });
-    }
-
-    const ticketCount = 2 + Math.floor(Math.random() * 4);
-    for (let t = 0; t < ticketCount; t++) {
-      const assignee = pickRandom([owner, ...members]);
-      await request(`/projects/${project.id}/tickets`, {
-        method: 'POST',
-        body: {
-          title: pickRandom(TICKET_TITLES),
-          description: `Ticket #${t + 1} pour ${idea.name}`,
-          assigneeId: assignee.id,
-        },
-        headers: {
-          'X-Tenant-ID': tenantId,
-          Authorization: `Bearer ${owner.accessToken}`,
-        },
-      });
-    }
-    process.stdout.write(`\r  projects: ${i + 1}/${PROJECT_COUNT}`);
+  } catch {
+    return call('POST', '/auth/login', {
+      body: { email: person.email, password: PASSWORD },
+    });
   }
-  console.log('\n✓ Projects ready');
-
-  console.log(
-    `\nDone. Tenant ${tenantId} — ${users.length} users, ${projects.length} projects.`,
-  );
 }
 
-seed().catch((err) => {
-  console.error('\n✗ Seed failed:', err.message);
-  process.exit(1);
-});
+const PEOPLE = [
+  { username: 'alex.rivera', displayName: 'Alex Rivera', email: 'alex.rivera@example.com', bio: 'Fresques, murs et peinture qui deborde.', interests: ['dessin', 'quartier'] },
+  { username: 'marc.leroy', displayName: 'Marc Leroy', email: 'marc.leroy@example.com', bio: 'Bricoleur du dimanche, soudeur le samedi.', interests: ['bricolage', 'reparation'] },
+  { username: 'sophie.b', displayName: 'Sophie Bernard', email: 'sophie.b@example.com', bio: 'Jardin partage et compost collectif.', interests: ['jardinage', 'environnement'] },
+  { username: 'yanis.f', displayName: 'Yanis Fournier', email: 'yanis.f@example.com', bio: 'Je code des petits jeux le soir.', interests: ['code', 'jeu-video'] },
+  { username: 'lea.m', displayName: 'Lea Moreau', email: 'lea.m@example.com', bio: 'Cuisine de quartier, sans chichis.', interests: ['cuisine', 'solidarite'] },
+];
+
+const PROJECTS = [
+  {
+    owner: 'alex.rivera',
+    title: 'Fresque murale collaborative',
+    tagline: 'Repeindre le mur du gymnase avec le quartier',
+    description: "Un mur gris de trente metres, un quartier qui passe devant tous les jours. On veut le couvrir de couleurs, ensemble, un samedi par mois.",
+    tags: ['dessin', 'quartier'],
+    needs: [{ label: 'Peintres amateurs' }, { label: 'Pret d un echafaudage' }],
+    publish: true,
+  },
+  {
+    owner: 'sophie.b',
+    title: 'Jardin partage des Lilas',
+    tagline: 'Transformer la friche en potager de quartier',
+    description: "Deux cents metres carres de friche derriere l ecole. On defriche, on plante, on partage la recolte.",
+    tags: ['jardinage', 'environnement'],
+    needs: [{ label: 'Outils de jardinage' }],
+    publish: true,
+  },
+  {
+    owner: 'marc.leroy',
+    title: 'Repair cafe mensuel',
+    tagline: 'Reparer ensemble plutot que jeter',
+    description: "Un samedi par mois, on ouvre l atelier : grille-pain, velos, lampes. On repare, et surtout on montre comment faire.",
+    tags: ['reparation', 'solidarite'],
+    needs: [{ label: 'Electronicien bienveillant' }],
+    publish: true,
+  },
+  {
+    owner: 'lea.m',
+    title: 'Distribution de soupe',
+    tagline: 'Une soupe chaude devant la gare, tous les jeudis',
+    description: "On cuisine l apres-midi, on distribue le soir. Il faut des bras, des marmites et de la bonne humeur.",
+    tags: ['cuisine', 'solidarite'],
+    needs: [{ label: 'Conducteur avec un vehicule' }],
+    publish: true,
+  },
+  {
+    owner: 'yanis.f',
+    title: 'Petit jeu du quartier',
+    tagline: 'Un jeu video qui se passe dans nos rues',
+    description: "Une carte du quartier, des personnages inspires des gens d ici. Encore au stade des idees.",
+    tags: ['jeu-video', 'code'],
+    needs: [{ label: 'Quelqu un qui dessine' }],
+    publish: false,
+  },
+];
+
+const sessions = new Map();
+
+console.log(`Seed sur ${API}`);
+
+for (const person of PEOPLE) {
+  const session = await ensureAccount(person);
+  sessions.set(person.username, session.token);
+  await call('PATCH', '/me', {
+    token: session.token,
+    body: { bio: person.bio, interests: person.interests },
+  });
+  console.log(`  personne ${person.username}`);
+}
+
+const slugs = [];
+
+for (const project of PROJECTS) {
+  const token = sessions.get(project.owner);
+  const created = await call('POST', '/projects', {
+    token,
+    body: {
+      title: project.title,
+      tagline: project.tagline,
+      description: project.description,
+      tags: project.tags,
+      needs: project.needs,
+      visibility: 'public',
+      participation: 'open',
+    },
+  });
+
+  if (project.publish) {
+    await call('POST', `/projects/${created.slug}/transition`, {
+      token,
+      body: { transition: 'publish' },
+    });
+    slugs.push(created.slug);
+  }
+  console.log(`  projet ${created.slug}${project.publish ? '' : ' (brouillon)'}`);
+}
+
+// Un peu de vie : des highfives croises et quelques equipes reelles, pour que
+// les fils et les compteurs ne soient pas tous a zero.
+for (const slug of slugs) {
+  for (const [username, token] of sessions) {
+    try {
+      await call('POST', `/projects/${slug}/highfive`, { token });
+    } catch {
+      // Le porteur ne highfive pas son projet (R-H2) : c'est attendu.
+      void username;
+    }
+  }
+}
+
+for (const slug of slugs.slice(0, 3)) {
+  for (const username of ['marc.leroy', 'lea.m']) {
+    try {
+      await call('POST', `/projects/${slug}/join-requests`, {
+        token: sessions.get(username),
+        body: { message: 'Je veux bien donner un coup de main.' },
+      });
+    } catch {
+      // Deja membre, ou porteur du projet.
+    }
+  }
+}
+
+console.log('\nTermine.');
+console.log(`Compte de demonstration : alex.rivera@example.com / ${PASSWORD}`);

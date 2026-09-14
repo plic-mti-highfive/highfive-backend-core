@@ -2,8 +2,6 @@ services:
   backend_core:
     build:
       context: .
-      secrets:
-        - github_token
     container_name: dev_highfive_backend_core
     restart: unless-stopped
     ports:
@@ -19,21 +17,26 @@ services:
       DB_DATABASE: ${DB_DATABASE}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
-      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION}
+      SESSION_TOKEN_PEPPER: ${SESSION_TOKEN_PEPPER}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      CANVAS_URL: ${CANVAS_URL}
+      CANVAS_WS_URL: ${CANVAS_WS_URL}
+      CANVAS_JWT_SECRET: ${CANVAS_JWT_SECRET}
+      CANVAS_INTERNAL_SECRET: ${CANVAS_INTERNAL_SECRET}
+      AI_URL: ${AI_URL}
       NODE_ENV: ${NODE_ENV}
     volumes:
       - ./src:/app/src
-      - ./test:/app/test
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${PORT}/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT}/api/health"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -107,7 +110,3 @@ volumes:
   pgdata:
   redis_data:
   minio_data:
-
-secrets:
-  github_token:
-    environment: GITHUB_TOKEN

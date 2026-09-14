@@ -1,64 +1,67 @@
-import { NestFactory, Reflector } from '@nestjs/core';
-import {
-  ValidationPipe,
-  Logger,
-  ClassSerializerInterceptor,
-} from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { NestFactory } from '@nestjs/core';
+import { SwaggerModule, type OpenAPIObject } from '@nestjs/swagger';
 import helmet from 'helmet';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { parse } from 'yaml';
 import { AppModule } from './app.module.js';
-import { AllExceptionsFilter } from './shared/filters/http-exception.filter.js';
+import { ApiExceptionFilter } from './common/errors/api-exception.filter.js';
 
-async function bootstrap() {
+async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
   const port = config.get<number>('port', 3000);
 
-  // CORS must be configured before other middleware
+  /*
+   * Toutes les routes sont prefixees `/api` (SPEC.md §1.1, `src/api/client.ts`
+   * cote front). Le prefixe vit ici, une fois, plutot que dans chaque
+   * controleur.
+   */
+  app.setGlobalPrefix('api', { exclude: ['api/docs'] });
+
+  const origins = config.get<string>('corsOrigins', '*');
   app.enableCors({
-    origin: true,
+    origin: origins === '*' ? true : origins.split(',').map((o) => o.trim()),
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  // Security — disable CORP header that would block cross-origin fetches in dev
-  app.use(
-    helmet({
-      crossOriginResourcePolicy: false,
-    }),
-  );
+  // `crossOriginResourcePolicy` desactive : le front est servi depuis une
+  // autre origine en developpement et doit pouvoir lire les reponses.
+  app.use(helmet({ crossOriginResourcePolicy: false }));
 
-  // Global pipes
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
+  /*
+   * Pas de pipe de validation global : les corps sont valides par les schemas
+   * zod du contrat (`ZodBody`), les parametres de route par les pipes poses
+   * route par route (`ParseUUIDPipe`). Un `ValidationPipe` en plus exigerait
+   * `class-validator` pour ne rien valider de plus.
+   */
+  app.useGlobalFilters(new ApiExceptionFilter());
 
-  // Global filters
-  app.useGlobalFilters(new AllExceptionsFilter());
-  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
-
-  // Swagger
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('HighFive! API')
-    .setDescription('Core backend API for the HighFive! platform')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .addApiKey({ type: 'apiKey', name: 'X-Tenant-ID', in: 'header' }, 'tenant')
-    .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document);
+  mountOpenApi(app);
 
   await app.listen(port);
-  Logger.log(`Application running on port ${port}`, 'Bootstrap');
-  Logger.log(
-    `Swagger available at http://localhost:${port}/api/docs`,
-    'Bootstrap',
-  );
+  Logger.log(`API disponible sur http://localhost:${port}/api`, 'Bootstrap');
 }
+
+/**
+ * La documentation servie est le contrat lui-meme (`openapi.yaml`, genere
+ * depuis les schemas zod du front), pas un document reconstruit a partir de
+ * decorateurs : deux sources se seraient inevitablement contredites.
+ */
+function mountOpenApi(app: Parameters<typeof SwaggerModule.setup>[1]): void {
+  try {
+    const raw = readFileSync(join(process.cwd(), 'openapi.yaml'), 'utf8');
+    SwaggerModule.setup('api/docs', app, parse(raw) as OpenAPIObject);
+  } catch (error) {
+    Logger.warn(
+      `Contrat openapi.yaml illisible, documentation non servie: ${String(error)}`,
+      'Bootstrap',
+    );
+  }
+}
+
 void bootstrap();

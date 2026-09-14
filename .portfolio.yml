@@ -1,0 +1,24 @@
+title: HighFive — backend core
+type: project
+course: PLIC — Projet Long d'Innovation Collaborative
+school: EPITA
+year: MTI
+dates: 2025-2026
+description: API REST NestJS multi-tenant de HighFive (mise en relation d'étudiants EPITA autour de projets) — identité/auth, gestion de projets/tickets, canvas IA et recherche globale, organisée en bounded contexts DDD.
+repo: github.com/plic-mti-highfive/highfive-backend-core
+authorship: author
+contribution: projet d'équipe — développeur au même titre — dépôt GitHub d'un tiers (organisation plic-mti-highfive), 23 commits sur 67 (sous deux identités git)
+languages: [TypeScript]
+tools: [NestJS, TypeORM, PostgreSQL, BullMQ, Redis, Passport JWT, argon2, Swagger/OpenAPI, class-validator, Vitest, AWS S3 SDK, OpenAI SDK, Docker, Docker Compose, pnpm, GitHub Actions]
+skills:
+  - API REST NestJS structurée en bounded contexts DDD (Identity, Project Execution, Discovery, Showcase)
+  - Authentification JWT (access/refresh) avec hachage argon2 et guards Passport
+  - Isolation multi-tenant par middleware/guard (résolution via header X-Tenant-ID, filtrage systématique des repositories par tenant_id)
+  - Persistance PostgreSQL via TypeORM (entités, migrations, repository pattern)
+  - Intégration IA : génération de tâches à partir d'un canvas de brainstorming via l'API OpenAI, avec dégradation gracieuse si le service n'est pas configuré
+  - Événements de domaine découplés (EventEmitter) et préparation de files BullMQ/Redis
+  - Documentation API auto-générée avec Swagger/OpenAPI et validation des DTO via class-validator
+  - Pipeline CI/Docker multi-stage avec registre npm privé GitHub Packages et rate limiting (throttler, helmet)
+team_size: 4
+role: Développeur
+highlight: true

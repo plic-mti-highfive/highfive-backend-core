@@ -1,846 +1,2023 @@
-openapi: 3.0.0
-paths:
-  /tenants:
-    post:
-      operationId: TenantsController_create
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateTenantDto'
-      responses:
-        '201':
-          description: ''
-      summary: Create a new tenant
-      tags:
-        - Tenants
-    get:
-      operationId: TenantsController_findAll
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      summary: List all tenants
-      tags:
-        - Tenants
-  /auth/register:
-    post:
-      operationId: AuthController_register
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RegisterDto'
-      responses:
-        '201':
-          description: ''
-      summary: Register a new user
-      tags:
-        - Auth
-  /auth/login:
-    post:
-      operationId: AuthController_login
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginDto'
-      responses:
-        '201':
-          description: ''
-      summary: Login with email and password
-      tags:
-        - Auth
-  /auth/refresh:
-    post:
-      operationId: AuthController_refresh
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RefreshTokenDto'
-      responses:
-        '201':
-          description: ''
-      summary: Refresh access token
-      tags:
-        - Auth
-  /auth/logout:
-    post:
-      operationId: AuthController_logout
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RefreshTokenDto'
-      responses:
-        '201':
-          description: ''
-      security:
-        - bearer: []
-      summary: Logout (revoke refresh token)
-      tags:
-        - Auth
-  /auth/me:
-    get:
-      operationId: AuthController_me
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: Get current user info
-      tags:
-        - Auth
-  /users/{id}/profile:
-    get:
-      operationId: UserProfilesController_findOne
-      parameters:
-        - name: id
-          required: true
-          in: path
-          schema:
-            type: string
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: Get user profile
-      tags:
-        - User Profiles
-    patch:
-      operationId: UserProfilesController_update
-      parameters:
-        - name: id
-          required: true
-          in: path
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateProfileDto'
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: Update own profile
-      tags:
-        - User Profiles
-  /skills:
-    get:
-      operationId: SkillsController_findAll
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: List all skills for the tenant
-      tags:
-        - Skills
-    post:
-      operationId: SkillsController_create
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateSkillDto'
-      responses:
-        '201':
-          description: ''
-      security:
-        - bearer: []
-      summary: Create a skill
-      tags:
-        - Skills
-  /users/{userId}/skills:
-    get:
-      operationId: SkillsController_findUserSkills
-      parameters:
-        - name: userId
-          required: true
-          in: path
-          schema:
-            type: string
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: List skills for a user
-      tags:
-        - Skills
-  /users/{userId}/skills/{skillId}:
-    post:
-      operationId: SkillsController_addSkill
-      parameters:
-        - name: userId
-          required: true
-          in: path
-          schema:
-            type: string
-        - name: skillId
-          required: true
-          in: path
-          schema:
-            type: string
-      responses:
-        '201':
-          description: ''
-      security:
-        - bearer: []
-      summary: Add skill to user
-      tags:
-        - Skills
-    delete:
-      operationId: SkillsController_removeSkill
-      parameters:
-        - name: userId
-          required: true
-          in: path
-          schema:
-            type: string
-        - name: skillId
-          required: true
-          in: path
-          schema:
-            type: string
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: Remove skill from user
-      tags:
-        - Skills
-  /connections:
-    post:
-      operationId: UserConnectionsController_create
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateConnectionDto'
-      responses:
-        '201':
-          description: ''
-      security:
-        - bearer: []
-      summary: Send connection request
-      tags:
-        - Connections
-    get:
-      operationId: UserConnectionsController_findAll
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: List accepted connections
-      tags:
-        - Connections
-  /connections/{id}:
-    patch:
-      operationId: UserConnectionsController_update
-      parameters:
-        - name: id
-          required: true
-          in: path
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateConnectionDto'
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: Accept or block connection
-      tags:
-        - Connections
-  /connections/pending:
-    get:
-      operationId: UserConnectionsController_findPending
-      parameters: []
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: List pending connection requests
-      tags:
-        - Connections
-  /projects:
-    post:
-      operationId: ProjectsController_create
-      parameters: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateProjectDto'
-      responses:
-        '201':
-          description: ''
-      security:
-        - bearer: []
-      summary: Create a project (creator becomes OWNER)
-      tags:
-        - Projects
-    get:
-      operationId: ProjectsController_findAll
-      parameters:
-        - name: status
-          required: false
-          in: query
-          schema:
-            type: string
-            enum:
-              - DRAFT
-              - ACTIVE
-              - ARCHIVED
-        - name: visibility
-          required: false
-          in: query
-          schema:
-            type: string
-            enum:
-              - PUBLIC
-              - PRIVATE
-              - INVITATION_ONLY
-        - name: offset
-          required: false
-          in: query
-          schema:
-            default: 0
-            type: number
-        - name: limit
-          required: false
-          in: query
-          schema:
-            default: 20
-            type: number
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: List projects (with filters and pagination)
-      tags:
-        - Projects
-  /projects/{id}:
-    get:
-      operationId: ProjectsController_findOne
-      parameters:
-        - name: id
-          required: true
-          in: path
-          schema:
-            type: string
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: Get project by ID
-      tags:
-        - Projects
-    patch:
-      operationId: ProjectsController_update
-      parameters:
-        - name: id
-          required: true
-          in: path
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateProjectDto'
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: Update project (OWNER/ADMIN only)
-      tags:
-        - Projects
-    delete:
-      operationId: ProjectsController_remove
-      parameters:
-        - name: id
-          required: true
-          in: path
-          schema:
-            type: string
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: Soft delete project (OWNER only)
-      tags:
-        - Projects
-  /projects/{projectId}/members:
-    get:
-      operationId: ProjectMembersController_findAll
-      parameters:
-        - name: projectId
-          required: true
-          in: path
-          schema:
-            type: string
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: List project members
-      tags:
-        - Project Members
-    post:
-      operationId: ProjectMembersController_add
-      parameters:
-        - name: projectId
-          required: true
-          in: path
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AddMemberDto'
-      responses:
-        '201':
-          description: ''
-      security:
-        - bearer: []
-      summary: Add member to project (OWNER/ADMIN)
-      tags:
-        - Project Members
-  /projects/{projectId}/members/{userId}:
-    patch:
-      operationId: ProjectMembersController_updateRole
-      parameters:
-        - name: projectId
-          required: true
-          in: path
-          schema:
-            type: string
-        - name: userId
-          required: true
-          in: path
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateMemberRoleDto'
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: Update member role (OWNER/ADMIN)
-      tags:
-        - Project Members
-    delete:
-      operationId: ProjectMembersController_remove
-      parameters:
-        - name: projectId
-          required: true
-          in: path
-          schema:
-            type: string
-        - name: userId
-          required: true
-          in: path
-          schema:
-            type: string
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: Remove member from project (OWNER/ADMIN)
-      tags:
-        - Project Members
-  /projects/{projectId}/tickets:
-    post:
-      operationId: TicketsController_create
-      parameters:
-        - name: projectId
-          required: true
-          in: path
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateTicketDto'
-      responses:
-        '201':
-          description: ''
-      security:
-        - bearer: []
-      summary: Create a ticket (OWNER/ADMIN/MEMBER)
-      tags:
-        - Tickets
-    get:
-      operationId: TicketsController_findAll
-      parameters:
-        - name: projectId
-          required: true
-          in: path
-          schema:
-            type: string
-        - name: offset
-          required: true
-          in: query
-          schema:
-            type: number
-        - name: limit
-          required: true
-          in: query
-          schema:
-            type: number
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: List tickets for a project
-      tags:
-        - Tickets
-  /projects/{projectId}/tickets/{ticketId}:
-    get:
-      operationId: TicketsController_findOne
-      parameters:
-        - name: projectId
-          required: true
-          in: path
-          schema:
-            type: string
-        - name: ticketId
-          required: true
-          in: path
-          schema:
-            type: string
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: Get ticket by ID
-      tags:
-        - Tickets
-    patch:
-      operationId: TicketsController_update
-      parameters:
-        - name: projectId
-          required: true
-          in: path
-          schema:
-            type: string
-        - name: ticketId
-          required: true
-          in: path
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateTicketDto'
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: Update ticket (OWNER/ADMIN/MEMBER)
-      tags:
-        - Tickets
-  /projects/{projectId}/messages:
-    post:
-      operationId: ProjectMessagesController_create
-      parameters:
-        - name: projectId
-          required: true
-          in: path
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateMessageDto'
-      responses:
-        '201':
-          description: ''
-      security:
-        - bearer: []
-      summary: Send a message in project chat
-      tags:
-        - Project Messages
-    get:
-      operationId: ProjectMessagesController_findAll
-      parameters:
-        - name: projectId
-          required: true
-          in: path
-          schema:
-            type: string
-        - name: offset
-          required: true
-          in: query
-          schema:
-            type: number
-        - name: limit
-          required: true
-          in: query
-          schema:
-            type: number
-      responses:
-        '200':
-          description: ''
-      security:
-        - bearer: []
-      summary: List project chat messages
-      tags:
-        - Project Messages
+openapi: 3.1.0
 info:
   title: HighFive! API
-  description: Core backend API for the HighFive! platform
-  version: '1.0'
-  contact: {}
-tags: []
-servers: []
+  version: 2.0.0
+  description: >-
+    Contrat backend v2, derive de `src/domain/**` (schemas zod), `src/api/*.ts`
+    (appels reels du front) et `src/mocks/handlers/**` (regles metier
+    appliquees cote mock). Voir `docs/v2/backend/SPEC.md` pour le detail des
+    regles metier, du modele de persistance propose et des ecarts connus.
+    Les schemas de composants sont generes depuis `src/domain/index.ts` par
+    `pnpm export:schemas` (zod 4, `z.toJSONSchema`) dans `docs/v2/backend/schemas/`.
+servers:
+  - url: /api
+    description: Prefixe fixe (voir `src/api/client.ts`), au-dessus de `VITE_API_URL`.
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: auth
+  - name: tags
+  - name: users
+  - name: projects
+  - name: highfives
+  - name: memberships
+  - name: announcements
+  - name: comments
+  - name: tasks
+  - name: wall
+  - name: files
+  - name: conversations
+  - name: notifications
+  - name: search
+  - name: admin
+
+paths:
+  # ---------------------------------------------------------------- Auth
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Connexion
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginInput" }
+      responses:
+        "200":
+          description: Session ouverte.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Session" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401":
+          description: Identifiants invalides ou compte `deleted`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Inscription
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterInput" }
+      responses:
+        "201":
+          description: Compte cree, session ouverte.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Session" }
+        "400":
+          description: Corps invalide, ou email/pseudo deja pris (mock, `validation_error`) — recommande `409 conflict` cote backend, voir SPEC.md.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Deconnexion (invalide le jeton)
+      responses:
+        "204": { description: Jeton invalide. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Session courante
+      responses:
+        "200":
+          description: Personne connectee.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CurrentUser" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      operationId: updateCurrentUser
+      tags: [users]
+      summary: Mettre a jour son profil
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserProfileUpdateInput" }
+      responses:
+        "200":
+          description: Profil mis a jour.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CurrentUser" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: R-P1 — compte `suspended` (bio/avatar verrouilles).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+
+  /auth/password-reset-request:
+    post:
+      operationId: requestPasswordReset
+      tags: [auth]
+      summary: Demander un lien de reinitialisation
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordResetRequestInput" }
+      responses:
+        "204":
+          { description: "Toujours 204 : ne revele jamais si l'email existe." }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /auth/password-reset:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Reinitialiser le mot de passe avec un jeton
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordResetInput" }
+      responses:
+        "204": { description: Mot de passe change. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  # ---------------------------------------------------------------- Tags
+  /tags:
+    get:
+      operationId: listTags
+      tags: [tags]
+      summary: Liste fermee des 24 tags (R-T1/R-T2)
+      security: []
+      responses:
+        "200":
+          description: Tags.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Tag" }
+
+  # ---------------------------------------------------------------- Users
+  /users/{username}:
+    get:
+      operationId: getUserByUsername
+      tags: [users]
+      summary: Profil public
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/UsernameParam"
+      responses:
+        "200":
+          description: Profil public.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "404":
+          description: Introuvable ou compte `deleted`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+
+  /users/{username}/projects:
+    get:
+      operationId: getUserProjects
+      tags: [users]
+      summary: Projets d'une personne (R-V4)
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/UsernameParam"
+      responses:
+        "200":
+          description: Projets crees, collaborations, et nombre de projets prives sans les nommer.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserProjectsResponse" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /feed/people:
+    get:
+      operationId: listSuggestedPeople
+      tags: [users]
+      summary: Colonne d'appui "Des gens a rencontrer"
+      security: []
+      responses:
+        "200":
+          description: Personnes suggerees.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserSummary" }
+
+  /me/avatar:
+    post:
+      operationId: uploadAvatar
+      tags: [files]
+      summary: Deposer un nouvel avatar
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar: { type: string, format: binary }
+              required: [avatar]
+      responses:
+        "200":
+          description: Nouvelle URL d'avatar.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AvatarResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ------------------------------------------------------------- Projects
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: Fil des projets publics actifs (R-V1)
+      security: []
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 200 }
+          description: Recherche texte (titre, accroche).
+        - name: tags
+          in: query
+          style: form
+          explode: false
+          schema: { type: array, items: { type: string } }
+          description: Filtre additif par identifiants de tags (liste separee par virgules cote HTTP).
+        - name: participation
+          in: query
+          schema: { $ref: "#/components/schemas/Participation" }
+          description: >-
+            Declare cote client (`ListProjectsQuery`) mais non applique par le
+            mock actuel — a implementer cote backend, voir SPEC.md.
+        - name: sort
+          in: query
+          schema: { type: string, enum: [recent, popular, relevant] }
+          description: >-
+            Declare cote client mais non applique par le mock actuel (tri fixe
+            sur `lastActivityAt`) — a implementer cote backend, voir SPEC.md.
+        - $ref: "#/components/parameters/CursorParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: Page de projets.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaginatedProjectSummary" }
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Creer un projet (etat initial `draft`)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProjectCreateInput" }
+      responses:
+        "201":
+          description: Projet cree, porteur = personne connectee.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Compte non `active` (suspendu).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /projects/{slug}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Fiche d'un projet
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      responses:
+        "200":
+          description: Projet complet.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        "403":
+          description: Projet prive et lecteur hors equipe (R-V3).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      summary: Modifier titre/accroche/description/tags/besoins/visibilite/participation
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProjectUpdateInput" }
+      responses:
+        "200":
+          description: Projet mis a jour.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Reserve porteur/co-porteur (R-PR1).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+    delete:
+      operationId: deleteProject
+      tags: [projects]
+      summary: Supprimer definitivement (R-PR7, confirmation nominative)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProjectDeleteInput" }
+      responses:
+        "204":
+          {
+            description: "Projet supprime (differe 30 jours cote donnees, R-X3 ; voir SPEC.md).",
+          }
+        "400":
+          description: Le titre saisi ne correspond pas (`confirmTitle`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Reserve au porteur et a l'administration.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /projects/{slug}/transition:
+    post:
+      operationId: transitionProject
+      tags: [projects]
+      summary: Transition d'etat explicite (publier/terminer/rouvrir/archiver/reactiver)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transition: { $ref: "#/components/schemas/ProjectTransition" }
+              required: [transition]
+      responses:
+        "200":
+          description: Projet dans son nouvel etat.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        "400":
+          description: Transition inconnue, ou R-PR3 non satisfaite (ex. aucun tag pour publier).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Role insuffisant pour cette transition (doc 04 §3).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Transition invalide depuis l'etat courant (backend, voir SPEC.md).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+
+  /projects/{slug}/transfer:
+    post:
+      operationId: transferProjectOwnership
+      tags: [projects]
+      summary: Transferer la propriete (R-M2)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newOwnerId: { $ref: "#/components/schemas/Id" }
+              required: [newOwnerId]
+      responses:
+        "200":
+          description: Projet avec le nouveau porteur ; l'ancien devient co-porteur.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Reserve au porteur.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /me/projects:
+    get:
+      operationId: listMyProjects
+      tags: [projects]
+      summary: "Mes projets (portes, co-portes, membre)"
+      responses:
+        "200":
+          description: Projets de la personne connectee.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ProjectSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ------------------------------------------------------------ Highfives
+  /projects/{slug}/highfive:
+    post:
+      operationId: giveHighfive
+      tags: [highfives]
+      summary: Donner un highfive (R-H1, idempotent)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      responses:
+        "200":
+          description: Etat et compteur recalcules cote serveur (R-X2).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HighfiveToggleResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: R-H2 — le porteur ne peut pas highfiver son propre projet.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: withdrawHighfive
+      tags: [highfives]
+      summary: Retirer un highfive (R-H4, sans notification)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      responses:
+        "200":
+          description: Etat et compteur recalcules.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HighfiveToggleResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /projects/{slug}/highfives:
+    get:
+      operationId: listProjectHighfivers
+      tags: [highfives]
+      summary: Liste publique des personnes ayant highfive (R-H3)
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+        - $ref: "#/components/parameters/CursorParam"
+      responses:
+        "200":
+          description: Page de personnes.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaginatedUserSummary" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------------------------------------------------------- Memberships
+  /projects/{slug}/members:
+    get:
+      operationId: listMembers
+      tags: [memberships]
+      summary: Equipe (R-V7 — membres d'un projet prive non publics, applique par le lecteur cote fiche)
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      responses:
+        "200":
+          description: Membres avec profil resume.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TeamMember" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /projects/{slug}/members/{userId}:
+    patch:
+      operationId: updateMemberRole
+      tags: [memberships]
+      summary: Nommer/retirer un co-porteur (porteur uniquement)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+        - $ref: "#/components/parameters/UserIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role: { $ref: "#/components/schemas/MembershipRole" }
+              required: [role]
+      responses:
+        "200":
+          description: Appartenance mise a jour.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Membership" }
+        "400":
+          description: Role invalide, ou tentative de nommer `owner`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: removeMember
+      tags: [memberships]
+      summary: Exclure un membre (R-M4)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+        - $ref: "#/components/parameters/UserIdParam"
+      responses:
+        "204": { description: Appartenance retiree. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Role insuffisant, ou tentative d'exclure le porteur.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /projects/{slug}/members/{userId}/block:
+    post:
+      operationId: blockMember
+      tags: [memberships]
+      summary: Bloquer une personne sur ce projet (R-M4)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+        - $ref: "#/components/parameters/UserIdParam"
+      responses:
+        "204": { description: "`blocked = true`." }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /projects/{slug}/leave:
+    post:
+      operationId: leaveProject
+      tags: [memberships]
+      summary: Quitter le projet
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      responses:
+        "204": { description: Appartenance retiree. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: R-M3 — le porteur doit d'abord transferer ou archiver.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /projects/{slug}/join-requests:
+    get:
+      operationId: listJoinRequests
+      tags: [memberships]
+      summary: Demandes a rejoindre (porteur/co-porteur)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      responses:
+        "200":
+          description: Demandes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/JoinRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: createJoinRequest
+      tags: [memberships]
+      summary: Demander a rejoindre (auto-accepte si `open`)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/JoinRequestCreateInput" }
+      responses:
+        "201":
+          description: "Demande creee — `status: accepted` immediatement si `participation = open`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JoinRequest" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: "`participation = on_invite` : ne se rejoint que sur invitation."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Demande deja `pending` pour cette personne (backend, voir SPEC.md — R-D2 delai de 30 jours apres refus).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+
+  /projects/{slug}/join-requests/{requestId}/accept:
+    post:
+      operationId: acceptJoinRequest
+      tags: [memberships]
+      summary: Accepter une demande (cree l'appartenance `member`)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+        - $ref: "#/components/parameters/RequestIdParam"
+      responses:
+        "204": { description: Appartenance creee. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /projects/{slug}/join-requests/{requestId}/reject:
+    post:
+      operationId: rejectJoinRequest
+      tags: [memberships]
+      summary: Refuser une demande (R-D3 — aucun motif renvoye)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+        - $ref: "#/components/parameters/RequestIdParam"
+      responses:
+        "204": { description: Demande refusee. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /projects/{slug}/invitations:
+    get:
+      operationId: listInvitations
+      tags: [memberships]
+      summary: Invitations emises (porteur/co-porteur)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      responses:
+        "200":
+          description: Invitations.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Invitation" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: createInvitation
+      tags: [memberships]
+      summary: Inviter une personne (R-I1 expiration 30 jours, R-I3)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InvitationCreateInput" }
+      responses:
+        "201":
+          description: Invitation creee, `pending`, `expiresAt` = +30 jours.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Invitation" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Role insuffisant, ou R-I3 (personne bloquee sur ce projet).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /invitations/{invitationId}/accept:
+    post:
+      operationId: acceptInvitation
+      tags: [memberships]
+      summary: Accepter une invitation (R-I2 — appartenance au role propose)
+      parameters:
+        - $ref: "#/components/parameters/InvitationIdParam"
+      responses:
+        "204": { description: Appartenance creee. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /invitations/{invitationId}/reject:
+    post:
+      operationId: rejectInvitation
+      tags: [memberships]
+      summary: Refuser une invitation
+      parameters:
+        - $ref: "#/components/parameters/InvitationIdParam"
+      responses:
+        "204": { description: Invitation refusee. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # -------------------------------------------------------- Announcements
+  /projects/{slug}/announcements:
+    get:
+      operationId: listAnnouncements
+      tags: [announcements]
+      summary: Annonces d'un projet (auteur resolu)
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      responses:
+        "200":
+          description: Annonces.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AnnouncementWithAuthor" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: createAnnouncement
+      tags: [announcements]
+      summary: Publier une annonce (R-A1, notifie membres + highfiveurs R-A3)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AnnouncementCreateInput" }
+      responses:
+        "201":
+          description: Annonce publiee.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Announcement" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Reserve porteur/co-porteur (R-A1).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /announcements/{announcementId}/pin:
+    post:
+      operationId: pinAnnouncement
+      tags: [announcements]
+      summary: Epingler (R-A2 — depingle automatiquement l'ancienne)
+      parameters:
+        - $ref: "#/components/parameters/AnnouncementIdParam"
+      responses:
+        "200":
+          description: Annonce epinglee.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Announcement" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /announcements/{announcementId}:
+    delete:
+      operationId: deleteAnnouncement
+      tags: [announcements]
+      summary: Supprimer une annonce
+      parameters:
+        - $ref: "#/components/parameters/AnnouncementIdParam"
+      responses:
+        "204": { description: Annonce supprimee. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ------------------------------------------------------------- Comments
+  /projects/{slug}/comments:
+    get:
+      operationId: listComments
+      tags: [comments]
+      summary: Commentaires (R-C1/R-V5 — masque les `hidden`, auteur resolu)
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      responses:
+        "200":
+          description: Commentaires visibles.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CommentWithAuthor" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: createComment
+      tags: [comments]
+      summary: Commenter (R-C2 connecte et non suspendu, R-C4 un seul niveau)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommentCreateInput" }
+      responses:
+        "201":
+          description: Commentaire publie.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Comment" }
+        "400":
+          description: "Corps invalide, ou `parentId` pointant un commentaire deja reponse (R-C4)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Compte suspendu (R-C2).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /comments/{commentId}/hide:
+    post:
+      operationId: hideComment
+      tags: [comments]
+      summary: Masquer un commentaire (porteur/co-porteur/admin, R-C3)
+      parameters:
+        - $ref: "#/components/parameters/CommentIdParam"
+      responses:
+        "204": { description: Commentaire masque. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /comments/{commentId}:
+    delete:
+      operationId: deleteComment
+      tags: [comments]
+      summary: Supprimer un commentaire (admin uniquement, R-C3)
+      parameters:
+        - $ref: "#/components/parameters/CommentIdParam"
+      responses:
+        "204": { description: Commentaire supprime. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Reserve a l'administration.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # --------------------------------------------------------------- Tasks
+  /projects/{slug}/columns:
+    get:
+      operationId: listColumns
+      tags: [tasks]
+      summary: Colonnes des Taches
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      responses:
+        "200":
+          description: Colonnes ordonnees.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Column" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: createColumn
+      tags: [tasks]
+      summary: Creer une colonne (R-K2 — 1 a 6)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ColumnCreateInput" }
+      responses:
+        "201":
+          description: Colonne creee.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Column" }
+        "400":
+          description: "Corps invalide, ou plafond de 6 colonnes atteint (R-K2)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /columns/{columnId}:
+    delete:
+      operationId: deleteColumn
+      tags: [tasks]
+      summary: Supprimer une colonne (R-K3 — destination obligatoire)
+      parameters:
+        - $ref: "#/components/parameters/ColumnIdParam"
+        - name: moveTo
+          in: query
+          required: true
+          schema: { $ref: "#/components/schemas/Id" }
+          description: Colonne de destination pour les taches deplacees (R-K3).
+      responses:
+        "204": { description: Colonne supprimee, taches deplacees. }
+        "400":
+          description: "`moveTo` manquant, ou derniere colonne du projet (au moins 1 restante)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: Colonne source ou colonne de destination introuvable.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+
+  /projects/{slug}/tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: Taches d'un projet
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      responses:
+        "200":
+          description: Taches.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Task" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /tasks:
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Creer une tache (R-K4 — titre seul obligatoire)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TaskCreateInput" }
+      responses:
+        "201":
+          description: Tache creee.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Task" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: Colonne cible introuvable.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+
+  /tasks/{taskId}:
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      summary: Modifier une tache
+      parameters:
+        - $ref: "#/components/parameters/TaskIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TaskUpdateInput" }
+      responses:
+        "200":
+          description: Tache mise a jour.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Task" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: deleteTask
+      tags: [tasks]
+      summary: Supprimer une tache
+      parameters:
+        - $ref: "#/components/parameters/TaskIdParam"
+      responses:
+        "204": { description: Tache supprimee. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /tasks/{taskId}/move:
+    post:
+      operationId: moveTask
+      tags: [tasks]
+      summary: Deplacer une tache entre colonnes (glisser-deposer)
+      parameters:
+        - $ref: "#/components/parameters/TaskIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TaskMoveInput" }
+      responses:
+        "200":
+          description: Tache deplacee.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Task" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: Tache ou colonne de destination introuvable.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+
+  # ---------------------------------------------------------------- Wall
+  /projects/{slug}/wall:
+    get:
+      operationId: getWall
+      tags: [wall]
+      summary: Metadonnees du Mur (R-W1 — membre+/observateur)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      responses:
+        "200":
+          description: "Metadonnees (le document collaboratif tldraw/Yjs lui-meme ne passe pas par REST, voir SPEC.md)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Wall" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /projects/{slug}/wall/to-tasks:
+    post:
+      operationId: convertWallSelectionToTasks
+      tags: [wall]
+      summary: Convertir une selection du Mur en taches (R-W2)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WallToTasksInput" }
+      responses:
+        "201":
+          description: 'Taches creees dans la colonne "A faire", lien vers l''origine conserve.'
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Task" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: Projet introuvable, ou aucune colonne disponible.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+
+  # -------------------------------------------------------------- Files
+  /projects/{slug}/files:
+    get:
+      operationId: listFiles
+      tags: [files]
+      summary: Fichiers d'un projet (R-F4 — publics si le projet est public)
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      responses:
+        "200":
+          description: Fichiers.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ProjectFile" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: uploadFile
+      tags: [files]
+      summary: Deposer un fichier (R-F1 20 Mo/fichier, 200 Mo/projet ; R-F2 types autorises)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+              required: [file]
+      responses:
+        "201":
+          description: Fichier depose.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProjectFile" }
+        "400":
+          description: "Fichier manquant, type refuse (executable, R-F2), ou quota depasse (R-F1)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413":
+          description: Fichier trop volumineux (alternative a un 400, au choix du backend — voir SPEC.md).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+
+  /files/{fileId}:
+    delete:
+      operationId: deleteFile
+      tags: [files]
+      summary: Supprimer un fichier (R-F3 — deposant, porteur ou co-porteur)
+      parameters:
+        - $ref: "#/components/parameters/FileIdParam"
+      responses:
+        "204": { description: Fichier supprime. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ------------------------------------------------------------- Messagerie
+  /conversations:
+    get:
+      operationId: listConversations
+      tags: [conversations]
+      summary: "Mes conversations (R-MSG7 — `isMessageRequest` tant que non repondu)"
+      responses:
+        "200":
+          description: Conversations, participants et projet resolus.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ConversationSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: createConversation
+      tags: [conversations]
+      summary: "Demarrer une conversation (R-MSG1 directe = 2, R-MSG2 groupe = 3-50)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConversationCreateInput" }
+      responses:
+        "201":
+          description: "Conversation creee (type deduit du nombre de participants), premier message envoye."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Conversation" }
+        "400":
+          description: Nombre de participants hors bornes (3 a 50 pour un groupe).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /conversations/{conversationId}:
+    get:
+      operationId: getConversation
+      tags: [conversations]
+      summary: Ouvrir une conversation (participant uniquement)
+      parameters:
+        - $ref: "#/components/parameters/ConversationIdParam"
+      responses:
+        "200":
+          description: Conversation, participants resolus.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConversationDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404":
+          description: Introuvable, ou personne connectee non participante.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+
+  /conversations/{conversationId}/messages:
+    get:
+      operationId: listMessages
+      tags: [conversations]
+      summary: Messages d'une conversation (auteur et piece jointe resolus)
+      parameters:
+        - $ref: "#/components/parameters/ConversationIdParam"
+        - $ref: "#/components/parameters/CursorParam"
+      responses:
+        "200":
+          description: Page de messages.
+          content:
+            application/json:
+              schema:
+                { $ref: "#/components/schemas/PaginatedMessageWithAuthor" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: sendMessage
+      tags: [conversations]
+      summary: Envoyer un message (R-MSG4 — piece jointe projet ou fichier)
+      parameters:
+        - $ref: "#/components/parameters/ConversationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MessageCreateInput" }
+      responses:
+        "201":
+          description: Message envoye.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageWithAuthor" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /conversations/{conversationId}/read:
+    post:
+      operationId: markConversationRead
+      tags: [conversations]
+      summary: Marquer tous les messages comme lus
+      parameters:
+        - $ref: "#/components/parameters/ConversationIdParam"
+      responses:
+        "204": { description: Conversation marquee lue. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /messages/{messageId}:
+    patch:
+      operationId: editMessage
+      tags: [conversations]
+      summary: Modifier un message (R-MSG5 — fenetre de 15 minutes, auteur uniquement)
+      parameters:
+        - $ref: "#/components/parameters/MessageIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MessageBodyUpdateInput" }
+      responses:
+        "200":
+          description: 'Message modifie, marque "modifie".'
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageWithAuthor" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Fenetre de 15 minutes depassee (R-MSG5).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404":
+          description: Introuvable, ou personne connectee non auteure.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+    delete:
+      operationId: deleteMessage
+      tags: [conversations]
+      summary: 'Supprimer un message (R-MSG6 — laisse "Message supprime")'
+      parameters:
+        - $ref: "#/components/parameters/MessageIdParam"
+      responses:
+        "204": { description: Message marque supprime. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404":
+          description: Introuvable, ou personne connectee non auteure.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+
+  # --------------------------------------------------------- Notifications
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: Notifications (R-N1/R-N2 regroupees, R-N3 cible resolue)
+      parameters:
+        - $ref: "#/components/parameters/CursorParam"
+      responses:
+        "200":
+          description: Page de notifications.
+          content:
+            application/json:
+              schema:
+                { $ref: "#/components/schemas/PaginatedNotificationSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /notifications/{notificationId}/read:
+    post:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Marquer une notification comme lue
+      parameters:
+        - $ref: "#/components/parameters/NotificationIdParam"
+      responses:
+        "204": { description: Notification marquee lue. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Tout marquer comme lu
+      responses:
+        "204": { description: Toutes les notifications marquees lues. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /notifications/preferences:
+    get:
+      operationId: getNotificationPreferences
+      tags: [notifications]
+      summary: Preferences par type et par canal (R-N4)
+      responses:
+        "200":
+          description: "Preferences (fusionnees avec les defauts, doc 04 §14)."
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/NotificationPreference" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      operationId: updateNotificationPreferences
+      tags: [notifications]
+      summary: Modifier les preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              {
+                $ref: "#/components/schemas/NotificationPreferencesUpdateInput",
+              }
+      responses:
+        "200":
+          description: Preferences mises a jour (fusionnees avec les defauts).
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/NotificationPreference" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # -------------------------------------------------------- Recherche/fil
+  /search:
+    get:
+      operationId: search
+      tags: [search]
+      summary: Recherche globale (R-R4) — projets, personnes, tags
+      security: []
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 200 }
+        - name: types
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { $ref: "#/components/schemas/SearchEntityType" }
+          description: "Defaut si absent : `projects,users,tags`."
+        - name: tags
+          in: query
+          style: form
+          explode: false
+          schema: { type: array, items: { type: string } }
+        - name: sort
+          in: query
+          schema: { $ref: "#/components/schemas/SearchSort" }
+          description: "Trie les projets uniquement. `active` = `lastActivityAt` ; `relevant`/`recent` trient par `createdAt` cote mock, faute de score de pertinence texte — a affiner cote backend."
+        - $ref: "#/components/parameters/CursorParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: "Resultats par type demande (chaque champ absent si son `type` n'est pas dans `types`)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchResults" }
+
+  /feed/discover:
+    get:
+      operationId: getDiscoverFeed
+      tags: [search]
+      summary: 'Page Decouvrir : "projet du moment" + sections thematiques courtes'
+      security:
+        - bearerAuth: []
+        - {}
+      responses:
+        "200":
+          description: >-
+            `moment` (un projet, hors sections, jamais paginee) + `sections`
+            (0 a 5, chacune 6 projets maximum, sans pagination ; `for_you` et
+            `near_your_projects` sont personnalisees et absentes si vides —
+            visiteur, ou compte sans interet/projet). Pas de parametres : la
+            barre de themes ne filtre plus ce fil, elle navigue vers
+            `/search` (voir `SearchResults`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DiscoverFeed" }
+
+  /tags/{tagId}/projects:
+    get:
+      operationId: getProjectsByTag
+      tags: [search]
+      summary: "Page d'un theme"
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/TagIdParam"
+        - $ref: "#/components/parameters/CursorParam"
+      responses:
+        "200":
+          description: Projets publics actifs portant ce tag.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaginatedProjectSummary" }
+
+  /feed/tags-trending:
+    get:
+      operationId: getTrendingTags
+      tags: [search]
+      summary: 'Colonne "Ce qui bouge en ce moment" (5 maximum)'
+      security: []
+      responses:
+        "200":
+          description: Tags les plus actifs sur les projets publics/actifs.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TrendingTag" }
+
+  # ------------------------------------------------------- Administration
+  /admin/reports:
+    get:
+      operationId: listReports
+      tags: [admin]
+      summary: File de moderation (R-S2 — 3+ signalements en tete)
+      parameters:
+        - $ref: "#/components/parameters/CursorParam"
+      responses:
+        "200":
+          description: Page de signalements, avec signaleur, apercu de la cible et compte de signalements similaires.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaginatedReportSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/reports/{reportId}/resolve:
+    post:
+      operationId: resolveReport
+      tags: [admin]
+      summary: Traiter un signalement (R-S4 journalise)
+      parameters:
+        - $ref: "#/components/parameters/ReportIdParam"
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminReasonInput" }
+      responses:
+        "200":
+          description: "Signalement `status: handled`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Report" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/reports/{reportId}/reject:
+    post:
+      operationId: rejectReport
+      tags: [admin]
+      summary: Rejeter un signalement (R-S4 journalise)
+      parameters:
+        - $ref: "#/components/parameters/ReportIdParam"
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminReasonInput" }
+      responses:
+        "200":
+          description: "Signalement `status: rejected`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Report" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Statistiques de la plateforme (calculees en direct)
+      responses:
+        "200":
+          description: Statistiques.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminStats" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/users:
+    get:
+      operationId: listAdminUsers
+      tags: [admin]
+      summary: Comptes (mot de passe jamais renvoye)
+      parameters:
+        - $ref: "#/components/parameters/CursorParam"
+      responses:
+        "200":
+          description: Page de comptes.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaginatedCurrentUser" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/users/{userId}/suspend:
+    post:
+      operationId: suspendUser
+      tags: [admin]
+      summary: Suspendre un compte (journalise, notifie R-RP3)
+      parameters:
+        - $ref: "#/components/parameters/UserIdParam"
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminReasonInput" }
+      responses:
+        "204": { description: "Compte `accountStatus: suspended`." }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/users/{userId}/reactivate:
+    post:
+      operationId: reactivateUser
+      tags: [admin]
+      summary: Lever une suspension (journalise, notifie R-RP3)
+      parameters:
+        - $ref: "#/components/parameters/UserIdParam"
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminReasonInput" }
+      responses:
+        "204": { description: "Compte `accountStatus: active`." }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/projects:
+    get:
+      operationId: listAdminProjects
+      tags: [admin]
+      summary: Tous les projets (tout etat)
+      parameters:
+        - $ref: "#/components/parameters/CursorParam"
+      responses:
+        "200":
+          description: Page de projets.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaginatedProjectSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/projects/{slug}:
+    delete:
+      operationId: adminDeleteProject
+      tags: [admin]
+      summary: >-
+        Supprimer un projet (R-PR7, journalise). Non appele par l'interface
+        actuelle, qui reutilise `DELETE /projects/{slug}` avec confirmation
+        nominative — route conservee au contrat, voir SPEC.md.
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      responses:
+        "204": { description: Projet supprime. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/tags:
+    get:
+      operationId: listAdminTags
+      tags: [admin]
+      summary: Tags (vue administration)
+      responses:
+        "200":
+          description: Tags.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Tag" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
 components:
   securitySchemes:
-    bearer:
-      scheme: bearer
-      bearerFormat: JWT
+    bearerAuth:
       type: http
-    tenant:
-      type: apiKey
-      in: header
-      name: X-Tenant-ID
+      scheme: bearer
+      description: >-
+        Jeton opaque (pas necessairement un JWT dans le mock : `nextId()`).
+        Envoye `Authorization: Bearer <token>` par `src/api/client.ts`.
+
+  parameters:
+    CursorParam:
+      name: cursor
+      in: query
+      required: false
+      schema: { type: string }
+      description: Curseur opaque de page (issu de `nextCursor`, `null` = derniere page).
+    LimitParam:
+      name: limit
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 100 }
+      description: Taille de page (20 par defaut cote serveur).
+    SlugParam:
+      name: slug
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Slug" }
+    UsernameParam:
+      name: username
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Username" }
+    TagIdParam:
+      name: tagId
+      in: path
+      required: true
+      schema: { type: string }
+    UserIdParam:
+      name: userId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+    RequestIdParam:
+      name: requestId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+      description: Identifiant d'une demande a rejoindre (`JoinRequest.id`).
+    InvitationIdParam:
+      name: invitationId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+    AnnouncementIdParam:
+      name: announcementId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+    CommentIdParam:
+      name: commentId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+    ColumnIdParam:
+      name: columnId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+    TaskIdParam:
+      name: taskId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+    FileIdParam:
+      name: fileId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+    ConversationIdParam:
+      name: conversationId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+    MessageIdParam:
+      name: messageId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+    NotificationIdParam:
+      name: notificationId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+    ReportIdParam:
+      name: reportId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+
+  responses:
+    BadRequest:
+      description: "`validation_error` — corps ou parametres invalides."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorBody" }
+    Unauthorized:
+      description: "`unauthorized` — jeton absent ou invalide."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorBody" }
+    Forbidden:
+      description: "`forbidden` — role insuffisant pour cette action."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorBody" }
+    NotFound:
+      description: "`not_found` — ressource introuvable."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorBody" }
+    Conflict:
+      description: "`conflict` — etat deja atteint ou contrainte d'unicite (ex. email/pseudo deja pris)."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorBody" }
+    UnprocessableEntity:
+      description: "`validation_error` — corps syntaxiquement valide mais violant une regle metier (ex. R-PR1)."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiErrorBody" }
+
   schemas:
-    CreateTenantDto:
+    # --- Genere par `pnpm export:schemas` depuis src/domain/index.ts, un $ref
+    # --- par fichier de docs/v2/backend/schemas/. Ne pas editer a la main :
+    # --- regenerer le script si le domaine change.
+    AccountStatus: { $ref: "./schemas/AccountStatus.json" }
+    AdminAction: { $ref: "./schemas/AdminAction.json" }
+    AdminActionType: { $ref: "./schemas/AdminActionType.json" }
+    AdminStats: { $ref: "./schemas/AdminStats.json" }
+    Announcement: { $ref: "./schemas/Announcement.json" }
+    AnnouncementCreateInput: { $ref: "./schemas/AnnouncementCreateInput.json" }
+    ApiErrorBody: { $ref: "./schemas/ApiErrorBody.json" }
+    Column: { $ref: "./schemas/Column.json" }
+    ColumnCreateInput: { $ref: "./schemas/ColumnCreateInput.json" }
+    Comment: { $ref: "./schemas/Comment.json" }
+    CommentCreateInput: { $ref: "./schemas/CommentCreateInput.json" }
+    Conversation: { $ref: "./schemas/Conversation.json" }
+    ConversationCreateInput: { $ref: "./schemas/ConversationCreateInput.json" }
+    ConversationDetail: { $ref: "./schemas/ConversationDetail.json" }
+    ConversationSummary: { $ref: "./schemas/ConversationSummary.json" }
+    ConversationType: { $ref: "./schemas/ConversationType.json" }
+    CurrentUser: { $ref: "./schemas/CurrentUser.json" }
+    CursorPagination: { $ref: "./schemas/CursorPagination.json" }
+    DiscoverFeed: { $ref: "./schemas/DiscoverFeed.json" }
+    DiscoverSection: { $ref: "./schemas/DiscoverSection.json" }
+    DiscoverSectionId: { $ref: "./schemas/DiscoverSectionId.json" }
+    Highfive: { $ref: "./schemas/Highfive.json" }
+    Id: { $ref: "./schemas/Id.json" }
+    Invitation: { $ref: "./schemas/Invitation.json" }
+    InvitationCreateInput: { $ref: "./schemas/InvitationCreateInput.json" }
+    InvitationStatus: { $ref: "./schemas/InvitationStatus.json" }
+    IsoDateTime: { $ref: "./schemas/IsoDateTime.json" }
+    JoinRequest: { $ref: "./schemas/JoinRequest.json" }
+    JoinRequestCreateInput: { $ref: "./schemas/JoinRequestCreateInput.json" }
+    JoinRequestStatus: { $ref: "./schemas/JoinRequestStatus.json" }
+    LoginInput: { $ref: "./schemas/LoginInput.json" }
+    Membership: { $ref: "./schemas/Membership.json" }
+    MembershipRole: { $ref: "./schemas/MembershipRole.json" }
+    Message: { $ref: "./schemas/Message.json" }
+    MessageAttachment: { $ref: "./schemas/MessageAttachment.json" }
+    MessageAttachmentPreview:
+      { $ref: "./schemas/MessageAttachmentPreview.json" }
+    MessageCreateInput: { $ref: "./schemas/MessageCreateInput.json" }
+    MessageWithAuthor: { $ref: "./schemas/MessageWithAuthor.json" }
+    Need: { $ref: "./schemas/Need.json" }
+    Notification: { $ref: "./schemas/Notification.json" }
+    NotificationChannel: { $ref: "./schemas/NotificationChannel.json" }
+    NotificationPreference: { $ref: "./schemas/NotificationPreference.json" }
+    NotificationPreferencesUpdateInput:
+      { $ref: "./schemas/NotificationPreferencesUpdateInput.json" }
+    NotificationSummary: { $ref: "./schemas/NotificationSummary.json" }
+    NotificationTarget: { $ref: "./schemas/NotificationTarget.json" }
+    NotificationTargetType: { $ref: "./schemas/NotificationTargetType.json" }
+    NotificationType: { $ref: "./schemas/NotificationType.json" }
+    PaginatedCurrentUser: { $ref: "./schemas/PaginatedCurrentUser.json" }
+    PaginatedMessageWithAuthor:
+      { $ref: "./schemas/PaginatedMessageWithAuthor.json" }
+    PaginatedNotificationSummary:
+      { $ref: "./schemas/PaginatedNotificationSummary.json" }
+    PaginatedProjectSummary: { $ref: "./schemas/PaginatedProjectSummary.json" }
+    PaginatedReportSummary: { $ref: "./schemas/PaginatedReportSummary.json" }
+    PaginatedTag: { $ref: "./schemas/PaginatedTag.json" }
+    PaginatedUserSummary: { $ref: "./schemas/PaginatedUserSummary.json" }
+    Participation: { $ref: "./schemas/Participation.json" }
+    PasswordResetInput: { $ref: "./schemas/PasswordResetInput.json" }
+    PasswordResetRequestInput:
+      { $ref: "./schemas/PasswordResetRequestInput.json" }
+    PlatformRole: { $ref: "./schemas/PlatformRole.json" }
+    Project: { $ref: "./schemas/Project.json" }
+    ProjectCreateInput: { $ref: "./schemas/ProjectCreateInput.json" }
+    ProjectFile: { $ref: "./schemas/ProjectFile.json" }
+    ProjectState: { $ref: "./schemas/ProjectState.json" }
+    ProjectSummary: { $ref: "./schemas/ProjectSummary.json" }
+    ProjectTransition: { $ref: "./schemas/ProjectTransition.json" }
+    ProjectUpdateInput: { $ref: "./schemas/ProjectUpdateInput.json" }
+    RegisterInput: { $ref: "./schemas/RegisterInput.json" }
+    Report: { $ref: "./schemas/Report.json" }
+    ReportCreateInput: { $ref: "./schemas/ReportCreateInput.json" }
+    ReportReason: { $ref: "./schemas/ReportReason.json" }
+    ReportStatus: { $ref: "./schemas/ReportStatus.json" }
+    ReportSummary: { $ref: "./schemas/ReportSummary.json" }
+    ReportTargetPreview: { $ref: "./schemas/ReportTargetPreview.json" }
+    ReportTargetType: { $ref: "./schemas/ReportTargetType.json" }
+    SearchEntityType: { $ref: "./schemas/SearchEntityType.json" }
+    SearchParams: { $ref: "./schemas/SearchParams.json" }
+    SearchResults: { $ref: "./schemas/SearchResults.json" }
+    SearchSort: { $ref: "./schemas/SearchSort.json" }
+    Session: { $ref: "./schemas/Session.json" }
+    Slug: { $ref: "./schemas/Slug.json" }
+    Tag: { $ref: "./schemas/Tag.json" }
+    TagAccent: { $ref: "./schemas/TagAccent.json" }
+    TagFamily: { $ref: "./schemas/TagFamily.json" }
+    Task: { $ref: "./schemas/Task.json" }
+    TaskCreateInput: { $ref: "./schemas/TaskCreateInput.json" }
+    TaskMoveInput: { $ref: "./schemas/TaskMoveInput.json" }
+    TaskUpdateInput: { $ref: "./schemas/TaskUpdateInput.json" }
+    TrendingTag: { $ref: "./schemas/TrendingTag.json" }
+    User: { $ref: "./schemas/User.json" }
+    UserProfileUpdateInput: { $ref: "./schemas/UserProfileUpdateInput.json" }
+    UserSummary: { $ref: "./schemas/UserSummary.json" }
+    Username: { $ref: "./schemas/Username.json" }
+    Visibility: { $ref: "./schemas/Visibility.json" }
+    Wall: { $ref: "./schemas/Wall.json" }
+    WallToTasksInput: { $ref: "./schemas/WallToTasksInput.json" }
+
+    # --- Formes composites definies dans src/api/*.ts (pas dans src/domain),
+    # --- reconstruites ici par composition sur les $ref ci-dessus pour rester
+    # --- DRY. Voir SPEC.md pour la justification de chacune.
+    TeamMember:
+      description: "Membre affiche dans l'onglet Equipe (`teamMemberSchema`, src/api/memberships.ts) : appartenance + profil resume."
+      allOf:
+        - { $ref: "#/components/schemas/Membership" }
+        - type: object
+          properties:
+            user: { $ref: "#/components/schemas/UserSummary" }
+          required: [user]
+
+    AnnouncementWithAuthor:
+      description: "Annonce + auteur resolu (`announcementWithAuthorSchema`, src/api/announcements.ts)."
+      allOf:
+        - { $ref: "#/components/schemas/Announcement" }
+        - type: object
+          properties:
+            author: { $ref: "#/components/schemas/UserSummary" }
+          required: [author]
+
+    CommentWithAuthor:
+      description: "Commentaire + auteur resolu (`commentWithAuthorSchema`, src/api/comments.ts)."
+      allOf:
+        - { $ref: "#/components/schemas/Comment" }
+        - type: object
+          properties:
+            author: { $ref: "#/components/schemas/UserSummary" }
+          required: [author]
+
+    UserProjectsResponse:
+      description: "R-V4 (`userProjectsResponseSchema`, src/api/users.ts)."
       type: object
       properties:
-        name:
-          type: string
-          example: EPITA
-        domain:
-          type: string
-          example: epita.highfive.app
-      required:
-        - name
-        - domain
-    RegisterDto:
+        created:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/ProjectSummary" },
+          }
+        collaborations:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/ProjectSummary" },
+          }
+        privateProjectsCount: { type: integer, minimum: 0 }
+      required: [created, collaborations, privateProjectsCount]
+      additionalProperties: false
+
+    HighfiveToggleResponse:
+      description: "R-H1/R-X2 (`highfiveToggleResponseSchema`, src/api/highfives.ts)."
       type: object
       properties:
-        email:
-          type: string
-          example: user@epita.fr
-        password:
-          type: string
-          example: SecureP@ss123
-          minLength: 8
-      required:
-        - email
-        - password
-    LoginDto:
+        given: { type: boolean }
+        highfiveCount: { type: integer, minimum: 0 }
+      required: [given, highfiveCount]
+      additionalProperties: false
+
+    AvatarResponse:
+      description: "Reponse de `POST /me/avatar` (schema anonyme, src/api/files.ts)."
       type: object
       properties:
-        email:
-          type: string
-          example: user@epita.fr
-        password:
-          type: string
-          example: SecureP@ss123
-      required:
-        - email
-        - password
-    RefreshTokenDto:
+        avatar: { type: string, format: uri }
+      required: [avatar]
+      additionalProperties: false
+
+    ProjectDeleteInput:
+      description: "R-PR7 — confirmation nominative (schema anonyme, src/api/projects.ts)."
       type: object
       properties:
-        refreshToken:
+        confirmTitle:
           type: string
-      required:
-        - refreshToken
-    UpdateProfileDto:
+          description: Doit correspondre exactement au titre courant du projet.
+      required: [confirmTitle]
+      additionalProperties: false
+
+    MessageBodyUpdateInput:
+      description: "Corps de `PATCH /messages/{messageId}` (schema anonyme, src/api/conversations.ts)."
       type: object
       properties:
-        bio:
-          type: string
-        avatarPath:
-          type: string
-        themePreference:
-          type: string
-        emailNotifications:
-          type: boolean
-    CreateSkillDto:
+        body: { type: string, minLength: 1, maxLength: 4000 }
+      required: [body]
+      additionalProperties: false
+
+    AdminReasonInput:
+      description: "Motif optionnel d'une action d'administration (schema anonyme, src/api/admin.ts). Recommande de le rendre obligatoire cote backend pour R-S3 (motif toujours notifie) — voir SPEC.md."
       type: object
       properties:
-        name:
-          type: string
-          example: TypeScript
-      required:
-        - name
-    CreateConnectionDto:
-      type: object
-      properties:
-        addresseeId:
-          type: string
-      required:
-        - addresseeId
-    UpdateConnectionDto:
-      type: object
-      properties:
-        status:
-          type: string
-          enum:
-            - PENDING
-            - ACCEPTED
-            - BLOCKED
-      required:
-        - status
-    CreateProjectDto:
-      type: object
-      properties:
-        name:
-          type: string
-          example: My Awesome Project
-        description:
-          type: string
-        visibility:
-          type: string
-          enum:
-            - PUBLIC
-            - PRIVATE
-            - INVITATION_ONLY
-      required:
-        - name
-    UpdateProjectDto:
-      type: object
-      properties:
-        name:
-          type: string
-        description:
-          type: string
-        status:
-          type: string
-          enum:
-            - DRAFT
-            - ACTIVE
-            - ARCHIVED
-        visibility:
-          type: string
-          enum:
-            - PUBLIC
-            - PRIVATE
-            - INVITATION_ONLY
-    AddMemberDto:
-      type: object
-      properties:
-        userId:
-          type: string
-        role:
-          type: string
-          enum:
-            - OWNER
-            - ADMIN
-            - MEMBER
-            - VIEWER
-          default: MEMBER
-      required:
-        - userId
-    UpdateMemberRoleDto:
-      type: object
-      properties:
-        role:
-          type: string
-          enum:
-            - OWNER
-            - ADMIN
-            - MEMBER
-            - VIEWER
-      required:
-        - role
-    CreateTicketDto:
-      type: object
-      properties:
-        title:
-          type: string
-          example: Fix login bug
-        description:
-          type: string
-        assigneeId:
-          type: object
-      required:
-        - title
-    UpdateTicketDto:
-      type: object
-      properties:
-        title:
-          type: string
-        description:
-          type: string
-        status:
-          type: string
-          enum:
-            - TODO
-            - IN_PROGRESS
-            - IN_REVIEW
-            - DONE
-        assigneeId:
-          type: object
-          description: Set to null to unassign
-    CreateMessageDto:
-      type: object
-      properties:
-        content:
-          type: string
-          example: Hey team, check this out!
-        attachmentPath:
-          type: string
-      required:
-        - content
+        reason: { type: string, maxLength: 1000 }
+      additionalProperties: false
