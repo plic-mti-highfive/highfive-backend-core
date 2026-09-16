@@ -66,11 +66,11 @@ export class WallService {
    * R-W2 : conversion d'elements du Mur en taches, dans la premiere colonne,
    * avec le lien vers l'origine (`wallOriginId`).
    *
-   * Le titre de chaque tache vient du texte de l'element tel que le service
-   * canvas le connait : c'est la seule source de verite du document. Si le
-   * canvas est injoignable ou si l'element n'y est pas (Mur encore local au
-   * navigateur), on retombe sur un libelle generique plutot que d'echouer —
-   * la personne renommera, elle n'aura rien perdu.
+   * Le titre vient du libelle envoye par le client : le Mur tourne en local
+   * dans le navigateur, le service canvas n'a donc pas forcement connaissance
+   * des elements selectionnes. Un libelle vide retombe sur un texte generique
+   * plutot que de faire echouer la conversion — la personne renommera, elle
+   * n'aura rien perdu.
    */
   async convertToTasks(
     slug: string,
@@ -79,16 +79,11 @@ export class WallService {
   ): Promise<Task[]> {
     const { project, wall } = await this.wallFor(slug, user, 'member');
 
-    const exported = await this.canvas.fetchExport(wall.canvasId);
-    const textById = new Map(
-      (exported?.elements ?? []).map((element) => [element.id, element.text]),
-    );
-
-    const items = input.elementIds.map((elementId, index) => {
-      const text = textById.get(elementId)?.trim();
+    const items = input.elements.map((element, index) => {
+      const label = element.label.trim();
       return {
-        elementId,
-        title: text ? text.slice(0, 120) : `Idee du Mur ${index + 1}`,
+        elementId: element.id,
+        title: label ? label.slice(0, 120) : `Idee du Mur ${index + 1}`,
       };
     });
 

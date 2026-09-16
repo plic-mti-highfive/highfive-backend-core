@@ -15,6 +15,6 @@ export type Wall = z.infer<typeof wallSchema>;
 
 /** R-W2 : conversion d'elements du Mur en taches (colonne "A faire"). */
 export const wallToTasksInputSchema = z.object({
-  elementIds: z.array(z.string()).min(1),
+  elements: z.array(z.object({ id: z.string(), label: z.string() })).min(1),
 });
 export type WallToTasksInput = z.infer<typeof wallToTasksInputSchema>;

@@ -609,7 +609,12 @@ check('R-W1 : hors equipe, refuse 403', r.status === 403, r.body);
 
 r = await call('POST', `/projects/${slug}/wall/to-tasks`, {
   token: bobToken,
-  body: { elementIds: ['shape:abc', 'shape:def'] },
+  body: {
+    elements: [
+      { id: 'shape:abc', label: 'Acheter outil' },
+      { id: 'shape:def', label: 'Demander de l aide' },
+    ],
+  },
 });
 check('R-W2 : conversion 201', r.status === 201 && r.body.length === 2, r.body);
 check('R-W2 : lien vers l origine conserve', r.body?.[0]?.wallOriginId === 'shape:abc', r.body?.[0]);

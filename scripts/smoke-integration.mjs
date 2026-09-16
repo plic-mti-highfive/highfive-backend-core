@@ -120,11 +120,11 @@ const reachable = await fetch(
 if (!reachable) {
   skip('chaine complete du Mur', 'service canvas injoignable');
 
-  // Sans document, la conversion doit quand meme aboutir, avec un libelle de
-  // repli : c'est le comportement attendu tant que le front reste local.
+  // La conversion ne depend pas du service canvas : le libelle vient du
+  // client. Un libelle vide retombe sur un texte generique.
   r = await call('POST', `/projects/${slug}/wall/to-tasks`, {
     token,
-    body: { elementIds: ['shape:absent'] },
+    body: { elements: [{ id: 'shape:absent', label: '' }] },
   });
   check('repli : conversion malgre tout 201', r.status === 201, r.body);
   check(
@@ -172,7 +172,13 @@ if (!reachable) {
 
     r = await call('POST', `/projects/${slug}/wall/to-tasks`, {
       token,
-      body: { elementIds: ['shape:note1', 'shape:geo1', 'shape:absent'] },
+      body: {
+        elements: [
+          { id: 'shape:note1', label: 'Reserver la salle des fetes' },
+          { id: 'shape:geo1', label: 'Budget a valider' },
+          { id: 'shape:absent', label: '' },
+        ],
+      },
     });
     check('conversion 201', r.status === 201 && r.body.length === 3, r.body);
 
@@ -180,17 +186,17 @@ if (!reachable) {
       (r.body ?? []).map((task) => [task.wallOriginId, task.title]),
     );
     check(
-      'le titre vient du texte reel du post-it',
+      'le titre vient du libelle du post-it',
       byOrigin['shape:note1'] === 'Reserver la salle des fetes',
       byOrigin,
     );
     check(
-      'le titre vient du texte reel de la forme annotee',
+      'le titre vient du libelle de la forme annotee',
       byOrigin['shape:geo1'] === 'Budget a valider',
       byOrigin,
     );
     check(
-      'un element inconnu retombe sur un libelle generique',
+      'un libelle vide retombe sur un texte generique',
       byOrigin['shape:absent']?.startsWith('Idee du Mur'),
       byOrigin,
     );
