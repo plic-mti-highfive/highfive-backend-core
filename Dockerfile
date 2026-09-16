@@ -36,6 +36,9 @@ COPY --from=builder /app/dist ./dist
 # documentation s'affiche avec des schemas non resolus.
 COPY openapi.yaml ./openapi.yaml
 COPY schemas ./schemas
+# scripts/seed.mjs n'a aucune dependance (fetch natif) : embarque tel quel
+# pour que l'infra puisse le lancer comme un job ponctuel apres demarrage.
+COPY scripts ./scripts
 
 EXPOSE 3000
 
