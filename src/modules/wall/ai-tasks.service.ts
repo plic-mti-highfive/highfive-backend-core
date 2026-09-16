@@ -98,7 +98,7 @@ On te donne le titre et la description d'un projet, puis le contenu d'un mur col
 Deduis-en des taches concretes et actionnables.
 
 Regles :
-- Ne t'appuie que sur le mur, le titre et la description du projet. N'invente aucune fonctionnalite qui n'y est pas evoquee.
+- Appuie toi sur le mur, le titre et la description du projet. N'invente aucune fonctionnalite qui n'y est pas evoquee.
 - Une tache = une action realisable, formulee a l'infinitif (ex: "Reserver la salle des fetes").
 - Les fleches indiquent des dependances : refletes-les dans l'ordre des taches.
 - Entre 3 et 10 taches. S'il y a peu de matiere, propose-en moins plutot que de remplir.
