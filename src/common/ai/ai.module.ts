@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { AI_QUEUES } from './ai.constants.js';
 import { AiEventsService } from './ai-events.service.js';
 import { AiRecommendationsService } from './ai-recommendations.service.js';
@@ -33,6 +34,8 @@ import { AiRecommendationsService } from './ai-recommendations.service.js';
       { name: AI_QUEUES.AI_TASKS },
       { name: AI_QUEUES.FAST_EVENTS },
     ),
+    // Le secret est passe a chaque signature : rien a enregistrer ici.
+    JwtModule.register({}),
   ],
   providers: [AiEventsService, AiRecommendationsService],
   exports: [AiEventsService, AiRecommendationsService],

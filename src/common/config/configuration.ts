@@ -74,6 +74,12 @@ export default () => ({
      */
     tenantId:
       process.env.AI_TENANT_ID ?? '00000000-0000-4000-8000-000000000001',
+    /**
+     * Doit valoir exactement le JWT_SECRET du service IA : ses routes
+     * `/api/v1/matchmaking/*` sont derriere un `HTTPBearer` et lisent le
+     * `tenantId` dans le jeton, pas dans la query.
+     */
+    jwtSecret: process.env.AI_JWT_SECRET ?? 'change-me-ai',
     /** R-IA-28 : une seule tentative, 12 s au maximum. */
     timeoutMs: parseInt(process.env.AI_TIMEOUT_MS ?? '12000', 10),
   },

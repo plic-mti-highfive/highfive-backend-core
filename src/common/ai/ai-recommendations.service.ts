@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 
 /**
  * Lecture des recommandations du service IA.
@@ -18,11 +19,16 @@ export class AiRecommendationsService {
   private readonly baseUrl: string;
   private readonly tenantId: string;
   private readonly timeoutMs: number;
+  private readonly jwtSecret: string;
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly jwt: JwtService,
+  ) {
     this.baseUrl = (config.get<string>('ai.url') ?? '').replace(/\/$/, '');
     this.tenantId = config.get<string>('ai.tenantId')!;
     this.timeoutMs = config.get<number>('ai.timeoutMs', 12_000);
+    this.jwtSecret = config.get<string>('ai.jwtSecret')!;
   }
 
   /** Projets recommandes a une personne, du plus pertinent au moins. */
@@ -46,7 +52,10 @@ export class AiRecommendationsService {
     try {
       const response = await fetch(
         `${this.baseUrl}${path}?limit=${limit}&tenant_id=${this.tenantId}`,
-        { signal: AbortSignal.timeout(this.timeoutMs) },
+        {
+          headers: { authorization: `Bearer ${await this.serviceToken()}` },
+          signal: AbortSignal.timeout(this.timeoutMs),
+        },
       );
       if (!response.ok) return [];
 
@@ -60,5 +69,18 @@ export class AiRecommendationsService {
       );
       return [];
     }
+  }
+
+  /**
+   * Jeton de service pour le backend IA. Ses routes de matchmaking exigent un
+   * `HTTPBearer` (`src/api/dependencies.py`) et lisent le tenant dans le
+   * `tenantId` du jeton : le `tenant_id` de la query ne suffit pas. Le `sub`
+   * identifie l'appelant, ici le core lui-meme et non un utilisateur final.
+   */
+  private serviceToken(): Promise<string> {
+    return this.jwt.signAsync(
+      { sub: 'highfive-core', tenantId: this.tenantId },
+      { secret: this.jwtSecret, expiresIn: '5m' },
+    );
   }
 }
