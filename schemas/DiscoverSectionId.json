@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string",
+  "enum": [
+    "for_you",
+    "starting",
+    "trending_highfives",
+    "needs_help",
+    "near_your_projects"
+  ],
+  "title": "DiscoverSectionId"
+}

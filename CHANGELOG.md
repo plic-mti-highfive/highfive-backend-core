@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-09-16
+
+### Fixed
+
+- `/api/docs` affichait des schemas non resolus. `components.schemas` ne
+  contient que des renvois `./schemas/*.json` vers le bundle exporte depuis le
+  front, mais ce dossier n'avait jamais ete copie ici et Swagger UI, qui
+  tourne dans le navigateur, aurait de toute facon cherche ces fichiers sur
+  une route que l'API ne sert pas. Les 94 schemas sont desormais presents,
+  copies dans l'image, et resolus au chargement pour que le document servi
+  soit autonome.
+- Le bundle reprend `WallToTasksInput` dans sa forme reelle (`elements`), et
+  non l'ancien `elementIds`.
+
 ## [2.0.0] - 2026-09-16
 
 ### Refonte v2 — le backend suit le contrat du front

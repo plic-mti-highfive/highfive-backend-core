@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string",
+  "enum": [
+    "hateful_content",
+    "harassment",
+    "scam",
+    "sexual_content",
+    "spam",
+    "other"
+  ],
+  "title": "ReportReason"
+}

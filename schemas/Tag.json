@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "label": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 20
+    },
+    "family": {
+      "type": "string",
+      "enum": ["do", "help", "create", "learn", "live"]
+    },
+    "accent": {
+      "type": "string",
+      "enum": ["rose", "orange", "yellow", "apple", "sky", "purple"]
+    }
+  },
+  "required": ["id", "label", "family", "accent"],
+  "additionalProperties": false,
+  "title": "Tag"
+}

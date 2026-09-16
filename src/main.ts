@@ -54,13 +54,47 @@ async function bootstrap(): Promise<void> {
  */
 function mountOpenApi(app: Parameters<typeof SwaggerModule.setup>[1]): void {
   try {
-    const raw = readFileSync(join(process.cwd(), 'openapi.yaml'), 'utf8');
-    SwaggerModule.setup('api/docs', app, parse(raw) as OpenAPIObject);
+    const root = process.cwd();
+    const raw = readFileSync(join(root, 'openapi.yaml'), 'utf8');
+    const document = parse(raw) as OpenAPIObject;
+    inlineExternalSchemas(document, root);
+    SwaggerModule.setup('api/docs', app, document);
   } catch (error) {
     Logger.warn(
       `Contrat openapi.yaml illisible, documentation non servie: ${String(error)}`,
       'Bootstrap',
     );
+  }
+}
+
+/**
+ * `components.schemas` ne contient que des renvois vers `./schemas/*.json`,
+ * le bundle exporte depuis les schemas zod du front. Swagger UI tourne dans
+ * le navigateur : laisses tels quels, ces chemins relatifs seraient resolus
+ * contre `/api/docs` et demanderaient des fichiers que l'API ne sert pas.
+ * On les remplace donc par leur contenu au chargement, une fois, pour que le
+ * document servi soit autonome.
+ */
+function inlineExternalSchemas(document: OpenAPIObject, root: string): void {
+  const schemas = document.components?.schemas;
+  if (!schemas) return;
+
+  for (const [name, value] of Object.entries(schemas)) {
+    const ref = (value as { $ref?: string }).$ref;
+    if (!ref?.startsWith('./schemas/')) continue;
+
+    try {
+      schemas[name] = JSON.parse(
+        readFileSync(join(root, ref), 'utf8'),
+      ) as (typeof schemas)[string];
+    } catch (error) {
+      // Un schema manquant ne doit pas priver de toute la documentation : on
+      // laisse le renvoi en place et on signale lequel.
+      Logger.warn(
+        `Schema « ${name} » introuvable (${ref}): ${String(error)}`,
+        'Bootstrap',
+      );
+    }
   }
 }
 
