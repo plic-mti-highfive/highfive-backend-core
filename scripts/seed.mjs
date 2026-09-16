@@ -7,7 +7,12 @@
  * Le seed passe par l'API publique, pas par la base : ce qu'il produit est
  * donc exactement ce qu'un usage normal produirait, regles metier comprises.
  *
- * Usage : node scripts/seed.mjs   (API demarree, base vide de preference)
+ * Idempotent : relance sans effet sur une base deja seedee (l'infra le
+ * relance a chaque `docker compose up`, cf. highfive-infra/docker-compose.dev.yml).
+ * Les comptes retombent sur la connexion s'ils existent deja ; les projets
+ * sont retrouves par leur slug avant creation.
+ *
+ * Usage : node scripts/seed.mjs   (API demarree, base vide ou deja seedee)
  */
 
 const API = (process.env.API_URL ?? 'http://localhost:3000') + '/api';
@@ -27,11 +32,25 @@ async function call(method, path, { token, body } = {}) {
   const payload = text ? JSON.parse(text) : undefined;
 
   if (!response.ok) {
-    throw new Error(
+    const error = new Error(
       `${method} ${path} -> ${response.status} ${JSON.stringify(payload)}`,
     );
+    error.status = response.status;
+    throw error;
   }
   return payload;
+}
+
+/** Identique a src/modules/projects/slug.ts, pour deviner le slug avant creation. */
+function slugify(title) {
+  const base = title
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .slice(0, 70);
+  return base || 'projet';
 }
 
 /** Ré-inscrire une personne deja presente echoue : on retombe sur la connexion. */
@@ -126,27 +145,38 @@ const slugs = [];
 
 for (const project of PROJECTS) {
   const token = sessions.get(project.owner);
-  const created = await call('POST', '/projects', {
-    token,
-    body: {
-      title: project.title,
-      tagline: project.tagline,
-      description: project.description,
-      tags: project.tags,
-      needs: project.needs,
-      visibility: 'public',
-      participation: 'open',
-    },
-  });
+  const slug = slugify(project.title);
 
-  if (project.publish) {
-    await call('POST', `/projects/${created.slug}/transition`, {
+  let created;
+  try {
+    created = await call('GET', `/projects/${slug}`, { token });
+    console.log(`  projet ${created.slug} (deja present)`);
+  } catch (err) {
+    if (err.status !== 404) throw err;
+
+    created = await call('POST', '/projects', {
       token,
-      body: { transition: 'publish' },
+      body: {
+        title: project.title,
+        tagline: project.tagline,
+        description: project.description,
+        tags: project.tags,
+        needs: project.needs,
+        visibility: 'public',
+        participation: 'open',
+      },
     });
-    slugs.push(created.slug);
+
+    if (project.publish) {
+      await call('POST', `/projects/${created.slug}/transition`, {
+        token,
+        body: { transition: 'publish' },
+      });
+    }
+    console.log(`  projet ${created.slug}${project.publish ? '' : ' (brouillon)'}`);
   }
-  console.log(`  projet ${created.slug}${project.publish ? '' : ' (brouillon)'}`);
+
+  if (project.publish) slugs.push(created.slug);
 }
 
 // Un peu de vie : des highfives croises et quelques equipes reelles, pour que
