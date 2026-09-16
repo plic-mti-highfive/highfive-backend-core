@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string",
+  "enum": [
+    "suspend_account",
+    "reactivate_account",
+    "delete_project",
+    "hide_comment",
+    "reject_report",
+    "resolve_report"
+  ],
+  "title": "AdminActionType"
+}

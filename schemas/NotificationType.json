@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string",
+  "enum": [
+    "highfive_received",
+    "comment_on_project",
+    "reply_to_comment",
+    "join_request_received",
+    "join_request_accepted",
+    "join_request_rejected",
+    "invitation_received",
+    "new_member",
+    "announcement_on_followed_project",
+    "task_assigned",
+    "mention",
+    "message_received",
+    "admin_decision"
+  ],
+  "title": "NotificationType"
+}

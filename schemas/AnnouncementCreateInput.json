@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 80
+    },
+    "body": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "pinned": {
+      "type": "boolean"
+    }
+  },
+  "required": ["title", "body"],
+  "additionalProperties": false,
+  "title": "AnnouncementCreateInput"
+}

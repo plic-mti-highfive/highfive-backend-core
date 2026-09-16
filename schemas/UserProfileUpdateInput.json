@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "displayName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "bio": {
+      "type": "string",
+      "maxLength": 280
+    },
+    "interests": {
+      "maxItems": 10,
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "title": "UserProfileUpdateInput"
+}

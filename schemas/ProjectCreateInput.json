@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 70
+    },
+    "tagline": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 140
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 5000
+    },
+    "tags": {
+      "minItems": 1,
+      "maxItems": 5,
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "needs": {
+      "maxItems": 6,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 40
+          },
+          "tagId": {
+            "type": "string"
+          }
+        },
+        "required": ["label"],
+        "additionalProperties": false
+      }
+    },
+    "visibility": {
+      "type": "string",
+      "enum": ["public", "private"]
+    },
+    "participation": {
+      "type": "string",
+      "enum": ["open", "on_request", "on_invite"]
+    }
+  },
+  "required": ["title", "tagline", "tags", "visibility", "participation"],
+  "additionalProperties": false,
+  "title": "ProjectCreateInput"
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "elements": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "label"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["elements"],
+  "additionalProperties": false,
+  "title": "WallToTasksInput"
+}

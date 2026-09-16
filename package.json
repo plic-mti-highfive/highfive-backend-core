@@ -1,6 +1,6 @@
 {
   "name": "core_backend",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "HighFive! — API core (contrat v2, derive du front)",
   "private": true,
   "type": "commonjs",

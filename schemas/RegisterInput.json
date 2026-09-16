@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "format": "email",
+      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+    },
+    "password": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 128
+    },
+    "username": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 24,
+      "pattern": "^[a-z0-9._-]+$"
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    }
+  },
+  "required": ["email", "password", "username"],
+  "additionalProperties": false,
+  "title": "RegisterInput"
+}
