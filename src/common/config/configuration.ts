@@ -96,8 +96,10 @@ export default () => ({
    * appele ailleurs que par le core.
    */
   assistant: {
-    /** `fake` (deterministe, sans reseau : tests, CI, e2e). Le fournisseur reel viendra s'y ajouter. */
+    /** `openai` (reel, SDK `openai`) ou `fake` (deterministe, sans reseau : tests, CI, e2e). */
     provider: process.env.LLM_PROVIDER ?? 'fake',
+    /** Cle du fournisseur `openai` ; `OPENAI_TOKEN` accepte en repli. Jamais de valeur par defaut. */
+    openaiApiKey: process.env.OPENAI_API_KEY ?? process.env.OPENAI_TOKEN,
     /** `mention` : repond aux messages contenant `@ia` ; `all` : a tous. */
     trigger: process.env.ASSISTANT_TRIGGER ?? 'mention',
     /** Delai maximal d'un appel au LLM, par tentative. */

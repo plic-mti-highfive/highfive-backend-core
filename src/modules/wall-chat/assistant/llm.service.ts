@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { ChatTurn } from './context.js';
 import { FakeLlmProvider } from './fake.provider.js';
+import { OpenAiLlmProvider } from './openai.provider.js';
 import { LlmPermanentError, type LlmProvider } from './llm-provider.js';
 
 /** Levee quand le LLM reste inaccessible apres les tentatives autorisees. */
@@ -47,12 +48,26 @@ export class LlmService {
       this.provider = new FakeLlmProvider();
       return this.provider;
     }
+    if (name === 'openai') {
+      const apiKey = this.config.get<string>('assistant.openaiApiKey');
+      if (!apiKey) {
+        throw new LlmUnavailableError(
+          "L'assistant IA n'est pas configure sur ce serveur (cle OpenAI absente).",
+        );
+      }
+      this.provider = new OpenAiLlmProvider(
+        apiKey,
+        this.config.get<string>('openai.model') ?? 'gpt-4o-mini',
+      );
+      return this.provider;
+    }
     throw new LlmUnavailableError(
       `Le fournisseur d'IA « ${name} » n'est pas disponible sur ce serveur.`,
     );
   }
 
   async complete(turns: ChatTurn[]): Promise<string> {
+    // Lever ici (hors boucle) : une config manquante ne se reessaie pas.
     const provider = this.getProvider();
     const timeoutMs = this.config.get<number>('assistant.timeoutMs') ?? 20000;
     const retries = Math.max(

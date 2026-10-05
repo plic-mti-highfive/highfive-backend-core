@@ -33,3 +33,10 @@ describe('LlmService', () => {
     );
   });
 });
+
+describe('LlmService openai', () => {
+  it('sans cle : erreur francaise propre, sans appel reseau', async () => {
+    const service = make({ 'assistant.provider': 'openai' });
+    await expect(service.complete(turns)).rejects.toThrow(/cle OpenAI absente/);
+  });
+});

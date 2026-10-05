@@ -4,7 +4,7 @@ Flux : le canvas publie `canvas_chat_message` sur la file BullMQ `canvas_events`
 -> `CanvasChatConsumer` (core) sauvegarde le message (table provisoire
 `wall_chat_messages`, derriere `WallChatRepository`, idempotent sur l'id du
 message) -> si l'assistant est sollicite, il construit le contexte, appelle le
-`LlmProvider` (`LLM_PROVIDER`), sauvegarde la reponse (role `assistant`, auteur
+`LlmProvider` (`LLM_PROVIDER` = `fake` | `openai`, cle `OPENAI_API_KEY`, modele `OPENAI_MODEL`), sauvegarde la reponse (role `assistant`, auteur
 `ASSISTANT_USER_ID`) et la renvoie au canvas par
 `POST {CANVAS_URL}/canvas/:canvasId/chat` (en-tete `X-Internal-Secret`).
 
