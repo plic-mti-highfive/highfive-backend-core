@@ -18,6 +18,9 @@ message) -> si l'assistant est sollicite, il construit le contexte, appelle le
 - Erreurs : delai `LLM_TIMEOUT_MS`, `LLM_MAX_RETRIES` tentatives en plus
   (backoff exponentiel) ; apres echec, un message d'erreur en francais est
   poste comme reponse. Le worker ne plante jamais pour une erreur LLM/canvas.
-- Migration : `migrations/001_wall_chat_messages.sql` (en dev, `synchronize`).
+- Migration : `migrations/001_wall_chat_messages.sql` (idempotent, verifiee). En dev, `synchronize`
+  cree la table ; hors `NODE_ENV=development` rien n'est joue automatiquement (le
+  schema entier repose sur `synchronize`, le script ne couvre que cette table) :
+  l'appliquer a la main (`psql -f`) sur une base deja initialisee.
 - Rebrancher sur la messagerie : fournir une autre implementation de
   `WallChatRepository` dans `WallChatModule`.
