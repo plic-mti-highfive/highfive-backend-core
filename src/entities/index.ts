@@ -18,3 +18,4 @@ export * from './notification.entity.js';
 export * from './notification-preference.entity.js';
 export * from './report.entity.js';
 export * from './admin-action.entity.js';
+export * from './wall-chat-message.entity.js';

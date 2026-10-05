@@ -91,6 +91,36 @@ export default () => ({
     model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
   },
 
+  /**
+   * Assistant du chat du Mur (voir `docs/WALL-CHAT.md`). Le LLM n'est jamais
+   * appele ailleurs que par le core.
+   */
+  assistant: {
+    /** `fake` (deterministe, sans reseau : tests, CI, e2e). Le fournisseur reel viendra s'y ajouter. */
+    provider: process.env.LLM_PROVIDER ?? 'fake',
+    /** `mention` : repond aux messages contenant `@ia` ; `all` : a tous. */
+    trigger: process.env.ASSISTANT_TRIGGER ?? 'mention',
+    /** Delai maximal d'un appel au LLM, par tentative. */
+    timeoutMs: parseInt(process.env.LLM_TIMEOUT_MS ?? '20000', 10),
+    /** Tentatives supplementaires apres un echec (0 = aucune). */
+    maxRetries: parseInt(process.env.LLM_MAX_RETRIES ?? '2', 10),
+    /** Budget (estime) de tokens d'entree : prompt systeme + historique. */
+    contextTokenBudget: parseInt(
+      process.env.LLM_CONTEXT_TOKEN_BUDGET ?? '3000',
+      10,
+    ),
+    /** Plafond de messages relus en base avant troncature par le budget. */
+    contextMaxMessages: parseInt(
+      process.env.LLM_CONTEXT_MAX_MESSAGES ?? '50',
+      10,
+    ),
+    /** Nombre de jobs `canvas_chat_message` traites en parallele. */
+    consumerConcurrency: parseInt(
+      process.env.CHAT_CONSUMER_CONCURRENCY ?? '5',
+      10,
+    ),
+  },
+
   files: {
     /** R-F1 : 20 Mo par fichier. */
     maxFileBytes: 20 * 1024 * 1024,
