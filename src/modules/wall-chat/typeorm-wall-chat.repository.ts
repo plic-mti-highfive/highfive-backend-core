@@ -31,6 +31,10 @@ export class TypeormWallChatRepository extends WallChatRepository {
     }
   }
 
+  async findById(id: string): Promise<WallChatMessage | undefined> {
+    return (await this.rows.findOneBy({ id })) ?? undefined;
+  }
+
   async recent(projectId: string, limit: number): Promise<WallChatMessage[]> {
     const rows = await this.rows.find({
       where: { projectId },

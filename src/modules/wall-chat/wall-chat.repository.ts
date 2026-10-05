@@ -22,6 +22,9 @@ export abstract class WallChatRepository {
   /** Renvoie `false` sans rien ecrire si l'`id` existe deja (idempotent). */
   abstract saveIfAbsent(message: WallChatMessage): Promise<boolean>;
 
+  /** Un message par son `id`, ou `undefined`. */
+  abstract findById(id: string): Promise<WallChatMessage | undefined>;
+
   /** Les `limit` derniers messages du projet, en ordre chronologique. */
   abstract recent(projectId: string, limit: number): Promise<WallChatMessage[]>;
 }

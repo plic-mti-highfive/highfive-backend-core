@@ -56,6 +56,7 @@ export class AssistantService {
   async reply(
     project: ProjectEntity,
     canvasId: string,
+    replyId: string = crypto.randomUUID(),
   ): Promise<AssistantReply> {
     const limit = this.config.get<number>('assistant.contextMaxMessages') ?? 50;
     const budget =
@@ -104,7 +105,7 @@ export class AssistantService {
     }
 
     const message = {
-      id: crypto.randomUUID(),
+      id: replyId,
       projectId: project.id,
       canvasId,
       authorId: ASSISTANT_USER_ID,

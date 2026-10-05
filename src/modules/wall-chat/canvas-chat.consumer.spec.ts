@@ -14,7 +14,12 @@ const uuid = (n: number) =>
 const project = { id: uuid(1), title: 'P' } as ProjectEntity;
 
 const setup = (
-  opts: { created?: boolean; reply?: boolean; wall?: boolean } = {},
+  opts: {
+    created?: boolean;
+    reply?: boolean;
+    wall?: boolean;
+    existingReply?: boolean;
+  } = {},
 ) => {
   const save = vi.fn().mockResolvedValue(opts.created ?? true);
   const reply = vi.fn().mockResolvedValue({
@@ -27,6 +32,13 @@ const setup = (
   const chat = {
     saveIfAbsent: save,
     recent: vi.fn(),
+    findById: vi
+      .fn()
+      .mockResolvedValue(
+        opts.existingReply
+          ? { id: uuid(9), body: 'deja repondu', sentAt: new Date(5) }
+          : undefined,
+      ),
   } as unknown as WallChatRepository;
   const walls = {
     findOne: vi
@@ -96,11 +108,23 @@ describe('CanvasChatConsumer', () => {
     );
   });
 
-  it('idempotent : un message deja vu ne relance ni LLM ni injection', async () => {
-    const { consumer, reply, post } = setup({ created: false });
+  it('idempotent : un message deja vu et deja repondu ne relance pas le LLM, il re-diffuse', async () => {
+    const { consumer, reply, post } = setup({
+      created: false,
+      existingReply: true,
+    });
     await consumer.process(job());
     expect(reply).not.toHaveBeenCalled();
-    expect(post).not.toHaveBeenCalled();
+    expect(post).toHaveBeenCalledWith(
+      uuid(2),
+      expect.objectContaining({ id: uuid(9), text: 'deja repondu' }),
+    );
+  });
+
+  it('message deja vu mais jamais repondu (job precedent tombe) : la reponse est generee', async () => {
+    const { consumer, reply } = setup({ created: false });
+    await consumer.process(job());
+    expect(reply).toHaveBeenCalledOnce();
   });
 
   it("sauvegarde sans repondre quand l'assistant n'est pas sollicite", async () => {

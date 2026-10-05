@@ -8,6 +8,7 @@ import type { CanvasChatJobData } from '../wall/canvas.types.js';
 import { CanvasClientService } from '../wall/canvas-client.service.js';
 import { AssistantService } from './assistant/assistant.service.js';
 import {
+  assistantReplyId,
   ASSISTANT_USER_ID,
   CANVAS_CHAT_JOB,
   CANVAS_EVENTS_QUEUE,
@@ -77,13 +78,22 @@ export class CanvasChatConsumer extends WorkerHost {
       body: data.text.slice(0, 4000),
       sentAt: new Date(data.timestamp),
     });
-    // Job rejoue : tout a deja ete fait (et la reponse deja donnee).
-    if (!created) return;
 
     if (data.authorId === ASSISTANT_USER_ID) return;
     if (!this.assistant.shouldReply(data.text)) return;
 
-    const reply = await this.assistant.reply(project, data.canvasId);
+    // Job rejoue (le message existait deja) : la reponse a peut-etre deja ete
+    // donnee. Si oui, on la re-diffuse (le canvas est idempotent sur l'id) sans
+    // rappeler le LLM ; sinon le job precedent est tombe avant, on la genere.
+    const replyId = assistantReplyId(data.id);
+    const existing = created ? undefined : await this.chat.findById(replyId);
+    const reply = existing
+      ? {
+          id: existing.id,
+          text: existing.body,
+          timestamp: existing.sentAt.getTime(),
+        }
+      : await this.assistant.reply(project, data.canvasId, replyId);
     const delivered = await this.canvas.postChatMessage(data.canvasId, {
       id: reply.id,
       text: reply.text,
