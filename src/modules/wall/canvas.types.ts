@@ -40,6 +40,34 @@ export interface CanvasChatMessage {
   text: string;
   authorId: string;
   timestamp: number;
+  /** Vrai pour une reponse de l'assistant IA injectee par le core. */
+  isAssistant?: boolean;
+}
+
+/**
+ * Message de chat publie par le canvas sur la file BullMQ `canvas_events`
+ * (job `canvas_chat_message`). L'`id` est celui du message dans le Y.Doc.
+ */
+export interface CanvasChatJobData {
+  id: string;
+  text: string;
+  authorId: string;
+  canvasId: string;
+  timestamp: number;
+}
+
+/**
+ * Corps de `POST {CANVAS_URL}/canvas/:canvasId/chat` (interne, en-tete
+ * `X-Internal-Secret`) : le core y renvoie la reponse de l'assistant pour
+ * qu'elle rejoigne le chat du Y.Doc et soit diffusee aux clients connectes.
+ * `id` rend l'injection idempotente.
+ */
+export interface CanvasAssistantChatInput {
+  id: string;
+  text: string;
+  authorId: string;
+  timestamp: number;
+  isAssistant: true;
 }
 
 /**

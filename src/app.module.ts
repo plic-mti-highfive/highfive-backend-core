@@ -25,6 +25,7 @@ import { SearchModule } from './modules/search/search.module.js';
 import { TagsModule } from './modules/tags/tags.module.js';
 import { TasksModule } from './modules/tasks/tasks.module.js';
 import { UsersModule } from './modules/users/users.module.js';
+import { WallChatModule } from './modules/wall-chat/wall-chat.module.js';
 import { WallModule } from './modules/wall/wall.module.js';
 
 /**
@@ -55,6 +56,7 @@ import { WallModule } from './modules/wall/wall.module.js';
     CommentsModule,
     TasksModule,
     WallModule,
+    WallChatModule,
     FilesModule,
     NotificationsModule,
     SearchModule,

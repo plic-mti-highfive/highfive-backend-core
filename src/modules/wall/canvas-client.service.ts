@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { CanvasExport } from './canvas.types.js';
+import type { CanvasAssistantChatInput, CanvasExport } from './canvas.types.js';
 
 /**
  * Client HTTP vers le service canvas.
@@ -45,6 +45,41 @@ export class CanvasClientService {
     } catch (error) {
       this.logger.warn(`Service canvas injoignable (${url}): ${String(error)}`);
       return null;
+    }
+  }
+
+  /**
+   * Injecte un message de l'assistant dans le chat du Mur (Y.Doc + diffusion
+   * aux clients connectes). Renvoie `false` plutot que de lever : le message
+   * est deja sauvegarde cote core, l'echec de diffusion ne doit rien annuler.
+   */
+  async postChatMessage(
+    canvasId: string,
+    message: CanvasAssistantChatInput,
+  ): Promise<boolean> {
+    const baseUrl = this.config.get<string>('canvas.url')!.replace(/\/$/, '');
+    const secret = this.config.get<string>('canvas.internalSecret')!;
+    const url = `${baseUrl}/canvas/${encodeURIComponent(canvasId)}/chat`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Secret': secret,
+        },
+        body: JSON.stringify(message),
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!response.ok) {
+        this.logger.warn(
+          `Injection du message dans le Mur ${canvasId} refusee : HTTP ${response.status}`,
+        );
+      }
+      return response.ok;
+    } catch (error) {
+      this.logger.warn(`Service canvas injoignable (${url}): ${String(error)}`);
+      return false;
     }
   }
 }
