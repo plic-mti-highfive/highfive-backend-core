@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, IsNull, MoreThan, Repository } from 'typeorm';
 import type {
@@ -17,6 +18,9 @@ import type {
 import {
   AdminActionEntity,
   CommentEntity,
+  ConversationParticipantEntity,
+  MessageEntity,
+  MessageUploadEntity,
   ProjectEntity,
   ReportEntity,
   UserEntity,
@@ -33,9 +37,11 @@ import {
   toUserSummary,
 } from '../../common/mappers/index.js';
 import { SessionService } from '../../common/auth/session.service.js';
+import { PROJECT_DELETED } from '../../common/events/project-events.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { ProjectAccessService } from '../projects/project-access.service.js';
 import { TagsService } from '../tags/tags.service.js';
+import { messageExcerpt } from './message-excerpt.js';
 
 /** Fenetre au-dela de laquelle on ne considere plus une personne « en ligne ». */
 const ONLINE_WINDOW_MS = 15 * 60 * 1000;
@@ -56,10 +62,17 @@ export class AdminService {
     private readonly projects: Repository<ProjectEntity>,
     @InjectRepository(CommentEntity)
     private readonly comments: Repository<CommentEntity>,
+    @InjectRepository(MessageEntity)
+    private readonly messages: Repository<MessageEntity>,
+    @InjectRepository(MessageUploadEntity)
+    private readonly messageUploads: Repository<MessageUploadEntity>,
+    @InjectRepository(ConversationParticipantEntity)
+    private readonly conversationParticipants: Repository<ConversationParticipantEntity>,
     private readonly access: ProjectAccessService,
     private readonly tags: TagsService,
     private readonly notifications: NotificationsService,
     private readonly sessions: SessionService,
+    private readonly events: EventEmitter2,
   ) {}
 
   /**
@@ -73,7 +86,7 @@ export class AdminService {
     reporter: UserEntity,
     input: ReportCreateInput,
   ): Promise<Report> {
-    await this.assertTargetExists(input.targetType, input.targetId);
+    await this.assertTargetExists(input.targetType, input.targetId, reporter);
 
     const existing = await this.reports.findOne({
       where: {
@@ -301,6 +314,7 @@ export class AdminService {
     const project = await this.access.findBySlugOrFail(slug);
 
     await this.projects.update({ id: project.id }, { deletedAt: new Date() });
+    await this.events.emitAsync(PROJECT_DELETED, { projectId: project.id });
     await this.journal(admin, 'delete_project', 'project', project.id, reason);
 
     await this.notifications.notify({
@@ -410,13 +424,29 @@ export class AdminService {
       };
     }
 
-    // `message` : la messagerie n'est pas encore implementee cote backend.
-    return undefined;
+    // `message` : l'administration lit le message signale, et lui seul —
+    // jamais le reste de la conversation.
+    const message = await this.messages.findOne({ where: { id: targetId } });
+    if (!message) return undefined;
+
+    const [author, upload] = await Promise.all([
+      this.users.findOne({ where: { id: message.authorId } }),
+      message.attachmentUploadId
+        ? this.messageUploads.findOne({
+            where: { id: message.attachmentUploadId },
+          })
+        : Promise.resolve(null),
+    ]);
+    return {
+      author: author ? toUserSummary(author) : undefined,
+      excerpt: messageExcerpt(message, upload?.fileName),
+    };
   }
 
   private async assertTargetExists(
     targetType: ReportTargetType,
     targetId: string,
+    reporter: UserEntity,
   ): Promise<void> {
     const exists =
       targetType === 'project'
@@ -425,13 +455,31 @@ export class AdminService {
           ? await this.comments.findOne({ where: { id: targetId } })
           : targetType === 'user'
             ? await this.users.findOne({ where: { id: targetId } })
-            : null;
+            : await this.reportableMessage(targetId, reporter);
 
     if (!exists) {
       throw ApiError.notFound(
         "Ce contenu n'existe pas ou n'est pas signalable.",
       );
     }
+  }
+
+  /**
+   * Un message ne se signale que depuis la conversation ou on l'a lu : un
+   * message prive dont on n'est pas participant repond comme un message
+   * inexistant, sans quoi son existence se sonderait par son identifiant.
+   * Un message deja supprime n'a plus rien a moderer.
+   */
+  private async reportableMessage(
+    messageId: string,
+    reporter: UserEntity,
+  ): Promise<MessageEntity | null> {
+    const message = await this.messages.findOne({ where: { id: messageId } });
+    if (!message || message.deleted) return null;
+    const isParticipant = await this.conversationParticipants.exists({
+      where: { conversationId: message.conversationId, userId: reporter.id },
+    });
+    return isParticipant ? message : null;
   }
 
   /** Serie des inscriptions, jour par jour, sur les 30 derniers jours. */

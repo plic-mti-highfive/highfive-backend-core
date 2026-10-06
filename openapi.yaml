@@ -1266,6 +1266,95 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiErrorBody" }
+    patch:
+      operationId: renameConversation
+      tags: [conversations]
+      summary: "Renommer un groupe (R-MSG9 — tout participant)"
+      parameters:
+        - $ref: "#/components/parameters/ConversationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConversationUpdateInput" }
+      responses:
+        "200":
+          description: Groupe renomme.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConversationDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: "Pas un groupe (une conversation directe reste a deux, un canal suit son equipe), ou compte suspendu."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /conversations/{conversationId}/participants:
+    post:
+      operationId: addConversationParticipants
+      tags: [conversations]
+      summary: "Ajouter des personnes a un groupe (R-MSG9 — tout participant ; R-MSG2 — 50 au plus)"
+      parameters:
+        - $ref: "#/components/parameters/ConversationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              { $ref: "#/components/schemas/ConversationParticipantsAddInput" }
+      responses:
+        "200":
+          description: Groupe mis a jour, participants resolus.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConversationDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: "Pas un groupe (une conversation directe reste a deux, un canal suit son equipe), ou compte suspendu."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /conversations/{conversationId}/participants/{userId}:
+    delete:
+      operationId: removeConversationParticipant
+      tags: [conversations]
+      summary: "Retirer quelqu'un d'un groupe (R-MSG9 — administrateur seulement)"
+      parameters:
+        - $ref: "#/components/parameters/ConversationIdParam"
+        - $ref: "#/components/parameters/UserIdParam"
+      responses:
+        "204": { description: Personne retiree du groupe. }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: "Pas un groupe, ou personne connectee qui n'en est pas l'administrateur."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /conversations/{conversationId}/leave:
+    post:
+      operationId: leaveConversation
+      tags: [conversations]
+      summary: "Quitter un groupe (R-MSG9 — l'administration passe au plus ancien participant)"
+      parameters:
+        - $ref: "#/components/parameters/ConversationIdParam"
+      responses:
+        "204": { description: Groupe quitte. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: "Pas un groupe : une conversation directe ne se quitte pas, un canal se quitte avec son projet."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /conversations/{conversationId}/messages:
     get:
@@ -1287,7 +1376,7 @@ paths:
     post:
       operationId: sendMessage
       tags: [conversations]
-      summary: Envoyer un message (R-MSG4 — piece jointe projet ou fichier)
+      summary: "Envoyer un message (R-MSG4 — piece jointe projet, fichier ou depot ; R-MSG8 — texte facultatif avec une piece jointe)"
       parameters:
         - $ref: "#/components/parameters/ConversationIdParam"
       requestBody:
@@ -1303,6 +1392,44 @@ paths:
               schema: { $ref: "#/components/schemas/MessageWithAuthor" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /conversations/{conversationId}/attachments:
+    post:
+      operationId: uploadMessageAttachment
+      tags: [conversations]
+      summary: "Deposer une image, une video ou un fichier a joindre a un message (R-MSG8)"
+      description: |
+        Depot en deux temps : ce depot renvoie un `id`, que le message suivant
+        reference (`attachment: { kind: "upload", uploadId }`). Le type reel du
+        contenu est verifie (executables refuses, R-F2) ; plafonds : 10 Mo pour
+        une image, 50 Mo pour une video, 20 Mo pour le reste. Un depot jamais
+        joint est purge apres 24 h ; il ne se joint qu'une fois, par son auteur,
+        dans cette conversation.
+      parameters:
+        - $ref: "#/components/parameters/ConversationIdParam"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+              required: [file]
+      responses:
+        "201":
+          description: Fichier depose, pret a etre joint.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageUpload" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Compte suspendu.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
         "404": { $ref: "#/components/responses/NotFound" }
 
   /conversations/{conversationId}/read:
@@ -1321,7 +1448,7 @@ paths:
     patch:
       operationId: editMessage
       tags: [conversations]
-      summary: Modifier un message (R-MSG5 — fenetre de 15 minutes, auteur uniquement)
+      summary: Modifier un message (R-MSG5 — auteur uniquement, sans limite de temps)
       parameters:
         - $ref: "#/components/parameters/MessageIdParam"
       requestBody:
@@ -1338,7 +1465,7 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403":
-          description: Fenetre de 15 minutes depassee (R-MSG5).
+          description: Message supprime (R-MSG5/R-MSG6), ou compte suspendu.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiErrorBody" }
@@ -1846,8 +1973,11 @@ components:
     Conversation: { $ref: "./schemas/Conversation.json" }
     ConversationCreateInput: { $ref: "./schemas/ConversationCreateInput.json" }
     ConversationDetail: { $ref: "./schemas/ConversationDetail.json" }
+    ConversationParticipantsAddInput:
+      { $ref: "./schemas/ConversationParticipantsAddInput.json" }
     ConversationSummary: { $ref: "./schemas/ConversationSummary.json" }
     ConversationType: { $ref: "./schemas/ConversationType.json" }
+    ConversationUpdateInput: { $ref: "./schemas/ConversationUpdateInput.json" }
     CurrentUser: { $ref: "./schemas/CurrentUser.json" }
     CursorPagination: { $ref: "./schemas/CursorPagination.json" }
     DiscoverFeed: { $ref: "./schemas/DiscoverFeed.json" }
@@ -1867,9 +1997,12 @@ components:
     MembershipRole: { $ref: "./schemas/MembershipRole.json" }
     Message: { $ref: "./schemas/Message.json" }
     MessageAttachment: { $ref: "./schemas/MessageAttachment.json" }
+    MessageAttachmentKind: { $ref: "./schemas/MessageAttachmentKind.json" }
     MessageAttachmentPreview:
       { $ref: "./schemas/MessageAttachmentPreview.json" }
     MessageCreateInput: { $ref: "./schemas/MessageCreateInput.json" }
+    MessageBodyUpdateInput: { $ref: "./schemas/MessageBodyUpdateInput.json" }
+    MessageUpload: { $ref: "./schemas/MessageUpload.json" }
     MessageWithAuthor: { $ref: "./schemas/MessageWithAuthor.json" }
     Need: { $ref: "./schemas/Need.json" }
     Notification: { $ref: "./schemas/Notification.json" }
@@ -2005,14 +2138,6 @@ components:
           type: string
           description: Doit correspondre exactement au titre courant du projet.
       required: [confirmTitle]
-      additionalProperties: false
-
-    MessageBodyUpdateInput:
-      description: "Corps de `PATCH /messages/{messageId}` (schema anonyme, src/api/conversations.ts)."
-      type: object
-      properties:
-        body: { type: string, minLength: 1, maxLength: 4000 }
-      required: [body]
       additionalProperties: false
 
     AdminReasonInput:

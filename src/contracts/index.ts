@@ -8,9 +8,7 @@
  * Ils remplacent l'ancien paquet `@plic-mti-highfive/shared-types`, supprime.
  *
  * Regle : ne jamais modifier un schema ici sans le modifier d'abord cote
- * front. La seule divergence assumee est l'absence de `conversation.ts` : la
- * messagerie n'est pas encore implementee cote backend (voir
- * `docs/REFACTO-V2.md`).
+ * front.
  */
 
 export * from './common.js';
@@ -25,6 +23,7 @@ export * from './task.js';
 export * from './wall.js';
 export * from './file.js';
 export * from './notification.js';
+export * from './conversation.js';
 export * from './search.js';
 export * from './auth.js';
 export * from './admin.js';

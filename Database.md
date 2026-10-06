@@ -58,7 +58,13 @@ document de domaine).
 | `reports` | `id` uuid PK, `reporter_id`, `target_type`, `target_id`, `reason`, `detail`, `status`, `handled_by` | `target_id` est polymorphe : pas de cle etrangere typee, existence verifiee a la creation. |
 | `admin_actions` | `id` uuid PK, `admin_id`, `type`, `target_type`, `target_id`, `reason` | R-S4 : table en ajout seul. Aucune route ne la modifie ni ne la supprime. |
 
-## Absentes
+## Messagerie
 
-`conversations`, `conversation_participants`, `messages` : la messagerie n'est
-pas implementee (voir `docs/REFACTO-V2.md` §3).
+Routes servies (texte, pieces jointes, medias) ; la suite est dans `docs/MESSAGERIE.md`.
+
+| Table | Colonnes cles | Contraintes / notes |
+| --- | --- | --- |
+| `conversations` | `id` uuid PK, `type`, `project_id`, `title`, `admin_id`, `direct_key`, `last_activity_at` | R-MSG1 : `direct_key` (les deux identifiants tries) est unique — une seule conversation directe par paire. R-MSG3 : index unique partiel `project_id WHERE type = 'channel'` ; les participants d'un canal sont tenus egaux a l'equipe non bloquee par `ChannelsService` (evenements + rattrapage periodique). Une contrainte `CHECK` lie `project_id` aux canaux et `direct_key` aux conversations directes. `last_activity_at` est un cache de tri, jamais expose. R-MSG9 : `admin_id` (groupes seulement) ; sans contrainte en base, un groupe anterieur a la regle retombe a la lecture sur son plus ancien participant. |
+| `conversation_participants` | `conversation_id`, `user_id`, PK composite, `last_read_at`, `joined_at` | Remplace `participantIds[]` et `message.readBy[]` du contrat : `unreadCount` et `readBy` se deduisent de `last_read_at` a la lecture. Index `(user_id)` pour la liste des conversations. `last_read_at` en `timestamptz(3)`, comme `messages.sent_at` auquel il est compare. |
+| `messages` | `id` uuid PK, `conversation_id`, `author_id`, `body`, `attachment_kind`, `attachment_project_id`, `attachment_file_id`, `attachment_upload_id` (unique), `sent_at`, `edited_at`, `deleted` | R-MSG4 : piece jointe a plat, coherence garantie par `CHECK`. Pas de cle etrangere vers `projects` / `project_files` : un projet ou un fichier supprime laisse le message intact, sans apercu. R-MSG6 : suppression = `deleted = true` et `body` vide, jamais de `DELETE`. Index `(conversation_id, sent_at)`, qui sert le curseur keyset `(sent_at, id)` ; `sent_at` en `timestamptz(3)` pour que ce curseur soit exact. |
+| `message_uploads` | `id` uuid PK, `conversation_id`, `uploaded_by`, `file_name`, `size` bigint, `mime_type`, `storage_key`, `uploaded_at` | R-MSG8 : depot d'une image, video ou fichier avant envoi. Contenu sous le prefixe prive `messages/` du stockage, lu par URL signee. Rattache quand un message le reference (`messages.attachment_upload_id`, unique) ; supprime avec ce message ; purge apres 24 h s'il ne l'est jamais. Index `(uploaded_at)` pour cette purge. |

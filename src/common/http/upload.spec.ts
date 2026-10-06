@@ -31,6 +31,24 @@ describe('detectMimeType', () => {
     expect(() => detectMimeType(file([0x7f, 0x45, 0x4c, 0x46]))).toThrow();
   });
 
+  const isoBmff = (brand: string) => [
+    ...[0x00, 0x00, 0x00, 0x18],
+    ...Buffer.from(`ftyp${brand}`, 'latin1'),
+  ];
+
+  it('reconnait les videos a leur conteneur, pas a leur nom', () => {
+    expect(detectMimeType(file(isoBmff('isom'), 'image/png'))).toBe(
+      'video/mp4',
+    );
+    expect(detectMimeType(file(isoBmff('qt  ')))).toBe('video/quicktime');
+    expect(detectMimeType(file([0x1a, 0x45, 0xdf, 0xa3]))).toBe('video/webm');
+  });
+
+  it('distingue les autres membres de la famille MP4', () => {
+    expect(detectMimeType(file(isoBmff('heic')))).toBe('image/heic');
+    expect(detectMimeType(file(isoBmff('M4A ')))).toBe('audio/mp4');
+  });
+
   it('retombe sur le type annonce pour les formats sans signature connue', () => {
     expect(
       detectMimeType(file([0x3c, 0x73, 0x76, 0x67], 'image/svg+xml')),

@@ -9,11 +9,13 @@ import { ConfigService } from '@nestjs/config';
 import {
   CreateBucketCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
   HeadBucketCommand,
   PutBucketPolicyCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'node:crypto';
 
 /**
@@ -24,6 +26,13 @@ import { randomUUID } from 'node:crypto';
 export class StorageService implements OnModuleInit {
   private readonly logger = new Logger(StorageService.name);
   private readonly client: S3Client;
+  /**
+   * Meme compte, adresse publique : une URL signee couvre l'hote qu'elle
+   * vise, et le navigateur n'atteint le stockage que par son adresse
+   * publique (`minio:9000` n'existe que dans le reseau Docker). La signature
+   * se calcule sans appel reseau : ce client n'envoie jamais rien.
+   */
+  private readonly signer: S3Client;
   private readonly bucket: string;
   private readonly publicEndpoint: string;
 
@@ -33,15 +42,19 @@ export class StorageService implements OnModuleInit {
       config.get<string>('storage.publicEndpoint') ??
       config.get<string>('storage.endpoint')!;
 
-    this.client = new S3Client({
+    const options = {
       region: config.get<string>('storage.region'),
-      endpoint: config.get<string>('storage.endpoint'),
       credentials: {
         accessKeyId: config.get<string>('storage.accessKeyId')!,
         secretAccessKey: config.get<string>('storage.secretAccessKey')!,
       },
       forcePathStyle: config.get<boolean>('storage.forcePathStyle'),
+    };
+    this.client = new S3Client({
+      ...options,
+      endpoint: config.get<string>('storage.endpoint'),
     });
+    this.signer = new S3Client({ ...options, endpoint: this.publicEndpoint });
   }
 
   /**
@@ -119,6 +132,27 @@ export class StorageService implements OnModuleInit {
 
   urlFor(key: string): string {
     return `${this.publicEndpoint}/${this.bucket}/${key}`;
+  }
+
+  /**
+   * Lecture temporaire d'un objet hors des prefixes publics (pieces jointes
+   * de messages). `fileName` est rendu au telechargement plutot que la cle
+   * aleatoire.
+   */
+  signedUrlFor(
+    key: string,
+    ttlSeconds: number,
+    fileName: string,
+  ): Promise<string> {
+    return getSignedUrl(
+      this.signer,
+      new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        ResponseContentDisposition: `inline; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+      }),
+      { expiresIn: ttlSeconds },
+    );
   }
 
   /**

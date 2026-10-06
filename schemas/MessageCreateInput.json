@@ -4,7 +4,6 @@
   "properties": {
     "body": {
       "type": "string",
-      "minLength": 1,
       "maxLength": 4000
     },
     "attachment": {
@@ -40,11 +39,26 @@
           },
           "required": ["kind", "fileId"],
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "upload"
+            },
+            "uploadId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": ["kind", "uploadId"],
+          "additionalProperties": false
         }
       ]
     }
   },
-  "required": ["body"],
   "additionalProperties": false,
   "title": "MessageCreateInput"
 }

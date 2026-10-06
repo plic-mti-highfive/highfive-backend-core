@@ -3,8 +3,10 @@
 API REST NestJS de la plateforme HighFive! : projets, equipes, Le Lab (Le Mur
 et Les Taches), fil de decouverte, notifications, moderation.
 
-76 des 84 operations du contrat sont servies ; les 8 manquantes sont celles de
-la messagerie, prevue dans un second temps.
+Les 89 operations du contrat sont servies. La messagerie est servie (texte,
+projet ou fichier de projet en piece jointe, images, videos et fichiers
+deposes), avec ses notifications, la moderation des messages et les canaux
+de projet (`docs/MESSAGERIE.md`).
 
 Le contrat est celui du front (`highfive-frontend`, `docs/v2/`) : ce depot
 l'implemente, il ne le definit pas. Voir **`docs/REFACTO-V2.md`** pour ce qui a
@@ -105,4 +107,9 @@ openapi.yaml     le contrat, servi sur /api/docs
   front (`src/contracts/`). Ne jamais reimplementer une regle de forme ici.
 - **Erreurs** : une seule forme, `{ code, message, details? }`, message en
   francais affichable directement.
-- **Messagerie** : pas encore implementee — c'est le lot suivant.
+- **Messagerie** : conversations directes, groupes et canaux de projet,
+  pieces jointes et medias (stockage prive, URL signees). Choix et limites :
+  `docs/MESSAGERIE.md`.
+- **Limitation de debit** : comptee par personne connectee (par IP a
+  defaut), 200 requetes par minute et par route ; plus strict sur l'envoi
+  de messages (60), les depots et l'ouverture de conversations (20).

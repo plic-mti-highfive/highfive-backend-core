@@ -13,6 +13,8 @@ import type {
 import {
   ColumnEntity,
   CommentEntity,
+  ConversationEntity,
+  ConversationParticipantEntity,
   NotificationEntity,
   NotificationPreferenceEntity,
   ProjectEntity,
@@ -71,6 +73,10 @@ export class NotificationsService {
     private readonly columns: Repository<ColumnEntity>,
     @InjectRepository(CommentEntity)
     private readonly comments: Repository<CommentEntity>,
+    @InjectRepository(ConversationEntity)
+    private readonly conversations: Repository<ConversationEntity>,
+    @InjectRepository(ConversationParticipantEntity)
+    private readonly participants: Repository<ConversationParticipantEntity>,
   ) {}
 
   /**
@@ -125,13 +131,83 @@ export class NotificationsService {
     }
   }
 
-  /** Notifie plusieurs destinataires du meme evenement. */
+  /**
+   * Notifie plusieurs destinataires du meme evenement — memes regles que
+   * `notify`, mais lues en une fois : preferences, acteur et notifications
+   * deja ouvertes tiennent en trois requetes quel que soit le nombre de
+   * destinataires, et les ecritures partent ensemble. C'est ce qui garde
+   * l'envoi d'un message dans un grand canal (R-MSG3, sans plafond) a un cout
+   * raisonnable.
+   */
   async notifyMany(
     recipientIds: string[],
     input: Omit<NotifyInput, 'recipientId'>,
   ): Promise<void> {
-    for (const recipientId of new Set(recipientIds)) {
-      await this.notify({ ...input, recipientId });
+    try {
+      const candidates = [...new Set(recipientIds)].filter(
+        (id) => id !== input.actorId || input.allowSelf,
+      );
+      if (candidates.length === 0) return;
+
+      const [preferences, actor, open] = await Promise.all([
+        this.preferences.find({
+          where: { userId: In(candidates), type: input.type },
+        }),
+        this.users.findOne({ where: { id: input.actorId } }),
+        this.notifications.find({
+          where: {
+            recipientId: In(candidates),
+            type: input.type,
+            targetType: input.targetType,
+            targetId: input.targetId,
+            read: false,
+          },
+          order: { createdAt: 'DESC' },
+        }),
+      ]);
+      if (!actor) return;
+
+      const channelsByUser = new Map(
+        preferences.map((row) => [row.userId, row.channels]),
+      );
+      const recipients = candidates.filter((id) =>
+        (channelsByUser.get(id) ?? defaultChannelsFor(input.type)).includes(
+          'app',
+        ),
+      );
+
+      // La plus recente par destinataire, comme `notify`.
+      const openByRecipient = new Map<string, NotificationEntity>();
+      for (const row of open) {
+        if (!openByRecipient.has(row.recipientId)) {
+          openByRecipient.set(row.recipientId, row);
+        }
+      }
+
+      const now = new Date();
+      const toSave: NotificationEntity[] = [];
+      for (const recipientId of recipients) {
+        const existing = openByRecipient.get(recipientId);
+        if (!existing) {
+          toSave.push(
+            this.notifications.create({
+              recipientId,
+              type: input.type,
+              targetType: input.targetType,
+              targetId: input.targetId,
+              actors: [actor],
+              read: false,
+            }),
+          );
+        } else if (!existing.actors.some((user) => user.id === actor.id)) {
+          existing.actors = [actor, ...existing.actors];
+          existing.createdAt = now;
+          toSave.push(existing);
+        }
+      }
+      if (toSave.length) await this.notifications.save(toSave);
+    } catch (error) {
+      this.logger.warn(`Notifications non emises: ${String(error)}`);
     }
   }
 
@@ -152,7 +228,11 @@ export class NotificationsService {
 
     const items: NotificationSummary[] = [];
     for (const row of rows) {
-      const target = await this.resolveTarget(row.targetType, row.targetId);
+      const target = await this.resolveTarget(
+        row.targetType,
+        row.targetId,
+        userId,
+      );
       // R-N3 : sans cible resolue, le lien serait faux — on prefere ne pas
       // afficher la notification plutot que d'envoyer la personne nulle part.
       if (!target) continue;
@@ -177,6 +257,22 @@ export class NotificationsService {
   async markRead(userId: string, notificationId: string): Promise<void> {
     await this.notifications.update(
       { id: notificationId, recipientId: userId },
+      { read: true },
+    );
+  }
+
+  /**
+   * Lire la cible vaut lire ce qui y renvoyait : ouvrir une conversation
+   * eteint ses notifications `message_received`, sans quoi elles
+   * s'accumuleraient pour des messages deja lus.
+   */
+  async markTargetRead(
+    userId: string,
+    targetType: NotificationTargetType,
+    targetId: string,
+  ): Promise<void> {
+    await this.notifications.update(
+      { recipientId: userId, targetType, targetId, read: false },
       { read: true },
     );
   }
@@ -244,6 +340,7 @@ export class NotificationsService {
   private async resolveTarget(
     targetType: NotificationTargetType,
     targetId: string,
+    recipientId: string,
   ): Promise<NotificationTarget | null> {
     if (targetType === 'project' || targetType === 'comment') {
       const projectId =
@@ -285,10 +382,27 @@ export class NotificationsService {
       };
     }
 
-    // `message` : la messagerie n'est pas encore implementee cote backend
-    // (voir docs/REFACTO-V2.md). Aucune notification de ce type n'est emise,
-    // et une ligne heritee ne serait pas routable.
-    return null;
+    // `message` : la cible est la conversation (le regroupement R-N2 se fait
+    // donc par conversation). Qui n'en fait plus partie n'a plus de lien
+    // valable a suivre : la notification est ecartee.
+    const [conversation, isParticipant] = await Promise.all([
+      this.conversations.findOne({ where: { id: targetId } }),
+      this.participants.exists({
+        where: { conversationId: targetId, userId: recipientId },
+      }),
+    ]);
+    if (!conversation || !isParticipant) return null;
+
+    // Un groupe a son titre, un canal celui de son projet ; une conversation
+    // directe n'en a pas — le front affiche alors l'acteur.
+    const project = conversation.projectId
+      ? await this.projects.findOne({ where: { id: conversation.projectId } })
+      : null;
+    return {
+      type: 'message',
+      conversationId: conversation.id,
+      conversationTitle: conversation.title ?? project?.title ?? undefined,
+    };
   }
 
   /** Utilise par l'administration : compte des personnes a notifier d'un coup. */

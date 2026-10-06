@@ -2,10 +2,13 @@ import type {
   Announcement,
   Column as ColumnDto,
   Comment as CommentDto,
+  Conversation,
   CurrentUser,
   Invitation,
   JoinRequest,
   Membership,
+  Message,
+  MessageAttachment,
   Need,
   Project,
   ProjectFile,
@@ -20,9 +23,11 @@ import type {
   AnnouncementEntity,
   ColumnEntity,
   CommentEntity,
+  ConversationEntity,
   InvitationEntity,
   JoinRequestEntity,
   MembershipEntity,
+  MessageEntity,
   NeedEntity,
   ProjectEntity,
   ProjectFileEntity,
@@ -221,4 +226,60 @@ export const toReport = (report: ReportEntity): Report => ({
   status: report.status,
   handledBy: opt(report.handledBy),
   createdAt: iso(report.createdAt),
+});
+
+/**
+ * Les participants ne sont pas une colonne : l'appelant les lit dans
+ * `conversation_participants` et les passe ici.
+ */
+export const toConversation = (
+  conversation: ConversationEntity,
+  participantIds: string[],
+): Conversation => ({
+  id: conversation.id,
+  type: conversation.type,
+  participantIds,
+  projectId: opt(conversation.projectId),
+  title: opt(conversation.title),
+  // R-MSG9 : un groupe sans administrateur enregistre (anterieur a la regle)
+  // est administre par son plus ancien participant.
+  adminId:
+    conversation.type === 'group'
+      ? (conversation.adminId ?? participantIds[0])
+      : undefined,
+  createdAt: iso(conversation.createdAt),
+});
+
+const toMessageAttachment = (
+  message: MessageEntity,
+): MessageAttachment | undefined => {
+  if (message.attachmentKind === 'project' && message.attachmentProjectId) {
+    return { kind: 'project', projectId: message.attachmentProjectId };
+  }
+  if (message.attachmentKind === 'file' && message.attachmentFileId) {
+    return { kind: 'file', fileId: message.attachmentFileId };
+  }
+  if (message.attachmentKind === 'upload' && message.attachmentUploadId) {
+    return { kind: 'upload', uploadId: message.attachmentUploadId };
+  }
+  return undefined;
+};
+
+/**
+ * `readBy` est deduit des `last_read_at` des participants (SPEC.md §2) ;
+ * l'appelant le calcule, ce mapper ne lit pas la base.
+ */
+export const toMessage = (
+  message: MessageEntity,
+  readBy: string[],
+): Message => ({
+  id: message.id,
+  conversationId: message.conversationId,
+  authorId: message.authorId,
+  body: message.body,
+  attachment: toMessageAttachment(message),
+  readBy,
+  sentAt: iso(message.sentAt),
+  editedAt: message.editedAt ? iso(message.editedAt) : undefined,
+  deleted: message.deleted,
 });

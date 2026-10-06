@@ -10,7 +10,8 @@ Plus de multi-tenance : la plateforme est mono-instance.
 
 ### Dans le perimetre
 
-- Les 76 routes du contrat v2 hors messagerie (8 routes, lot suivant), plus
+- Les 89 routes du contrat v2, messagerie comprise (13 routes, voir
+  `docs/MESSAGERIE.md`), plus
   6 routes hors contrat : sante (2), Le Mur (3, voir `docs/CANVAS.md`) et
   creation de signalement.
 - Droits, regles metier (R-xx), persistance.
@@ -44,7 +45,8 @@ src/
                sessions), stockage, frontiere IA, mappers entite -> contrat
   modules/     un module par domaine du contrat : auth, users, tags, projects,
                highfives, memberships, announcements, comments, tasks, wall,
-               files, notifications, search, admin, maintenance
+               files, notifications, conversations, search,
+               admin, maintenance
 ```
 
 ## Conventions
@@ -78,6 +80,7 @@ node scripts/smoke.mjs          # parcours de bout en bout (~75 verifications)
 | Fichier | Contenu |
 | --- | --- |
 | `docs/REFACTO-V2.md` | Ce qui a ete supprime et pourquoi, ce qui est implemente, la frontiere IA, les ecarts assumes. |
+| `docs/MESSAGERIE.md` | La messagerie : etapes, choix retenus, verifications, decisions ouvertes. |
 | `docs/CANVAS.md` | Inventaire des fonctions du Mur : celles servies au front, celles conservees sans ecran. |
 | `Database.md` | Modele relationnel, table par table. |
 | `openapi.yaml` | Le contrat, copie depuis le front. Servi sur `/api/docs`. |

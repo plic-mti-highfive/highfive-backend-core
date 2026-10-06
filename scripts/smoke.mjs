@@ -68,18 +68,6 @@ const ROUTE_TEMPLATES = (() => {
   }));
 })();
 
-/** Routes volontairement hors perimetre : la messagerie (lot suivant). */
-const OUT_OF_SCOPE = new Set([
-  'GET /conversations',
-  'POST /conversations',
-  'GET /conversations/{conversationId}',
-  'GET /conversations/{conversationId}/messages',
-  'POST /conversations/{conversationId}/messages',
-  'POST /conversations/{conversationId}/read',
-  'PATCH /messages/{messageId}',
-  'DELETE /messages/{messageId}',
-]);
-
 const covered = new Set();
 
 function record(method, path) {
@@ -757,6 +745,544 @@ r = await call('GET', `/users/${alice.username}/projects`);
 check('projets du profil 200', r.status === 200 && r.body.created.length >= 1, r.body?.created?.length);
 check('R-V4 : projets prives comptes sans etre nommes', typeof r.body.privateProjectsCount === 'number', r.body);
 
+section('messagerie : conversations');
+r = await call('GET', '/conversations');
+check('liste anonyme 401', r.status === 401, r.body);
+
+// Les canaux des projets crees plus haut existent deja (R-MSG3) : ces
+// scenarios ne regardent que les conversations directes et les groupes.
+const personal = (body) => (Array.isArray(body) ? body : []).filter((c) => c.type !== 'channel');
+
+r = await call('GET', '/conversations', { token: aliceToken });
+check('aucune conversation directe ni groupe au depart', r.status === 200 && Array.isArray(r.body) && personal(r.body).length === 0, r.body);
+
+r = await call('POST', '/conversations', {
+  token: aliceToken,
+  body: { participantIds: [bobId], title: 'Ignore', message: 'Salut Bob !' },
+});
+check('R-MSG1 : conversation directe 201', r.status === 201 && r.body.type === 'direct', r.body);
+check('R-MSG1 : deux participants, createur compris', r.body?.participantIds?.length === 2 && r.body.participantIds.includes(aliceId), r.body);
+check('R-MSG1 : une conversation directe ne se nomme pas', r.body?.title === undefined, r.body);
+const directId = r.body?.id;
+
+r = await call('POST', '/conversations', {
+  token: aliceToken,
+  body: { participantIds: [bobId, aliceId, bobId], message: 'Tu as vu le projet ?' },
+});
+check('R-MSG1 : meme paire = meme fil, doublons et soi-meme ignores', r.status === 201 && r.body.id === directId, r.body);
+
+r = await call('POST', '/conversations', {
+  token: aliceToken,
+  body: { participantIds: [aliceId], message: 'Moi seule' },
+});
+check('conversation avec soi-meme seulement 400', r.status === 400, r.body);
+
+r = await call('POST', '/conversations', {
+  token: aliceToken,
+  body: { participantIds: ['00000000-0000-4000-8000-000000000000'], message: 'Il y a quelqu un ?' },
+});
+check('participant inconnu 400', r.status === 400, r.body);
+
+r = await call('POST', '/conversations', { token: aliceToken, body: { participantIds: [bobId] } });
+check('premier message obligatoire 400', r.status === 400, r.body);
+
+r = await call('POST', '/conversations', {
+  token: aliceToken,
+  body: { participantIds: [bobId, carolId], title: 'Atelier peinture', message: 'Bienvenue a tous' },
+});
+check('R-MSG2 : groupe 201', r.status === 201 && r.body.type === 'group' && r.body.participantIds.length === 3, r.body);
+check('R-MSG2 : titre libre conserve', r.body?.title === 'Atelier peinture', r.body);
+const groupId = r.body?.id;
+
+r = await call('GET', '/conversations', { token: bobToken });
+const bobDirect = r.body?.find?.((c) => c.id === directId);
+const bobGroup = r.body?.find?.((c) => c.id === groupId);
+check('bob voit les deux conversations', r.status === 200 && personal(r.body).length === 2, r.body);
+check('la plus recemment active d abord', r.body?.[0]?.id === groupId, r.body?.map?.((c) => c.id));
+check('participants resolus', bobDirect?.participants?.some((p) => p.username === alice.username), bobDirect);
+check('dernier message resolu', bobDirect?.lastMessage?.body === 'Tu as vu le projet ?' && bobDirect.lastMessage.authorId === aliceId, bobDirect?.lastMessage);
+check('non lus : les deux messages d alice', bobDirect?.unreadCount === 2, bobDirect);
+check('R-MSG7 : demande de message tant que bob n a pas repondu', bobDirect?.isMessageRequest === true, bobDirect);
+check('R-MSG7 : un groupe n est jamais une demande', bobGroup?.isMessageRequest === false && bobGroup.unreadCount === 1, bobGroup);
+
+r = await call('GET', '/conversations', { token: aliceToken });
+const aliceDirect = r.body?.find?.((c) => c.id === directId);
+check('ses propres messages ne sont pas des non lus', aliceDirect?.unreadCount === 0, aliceDirect);
+check('R-MSG7 : jamais une demande pour qui l a ouverte', aliceDirect?.isMessageRequest === false, aliceDirect);
+
+r = await call('POST', '/conversations', {
+  token: bobToken,
+  body: { participantIds: [aliceId], message: 'Oui, super !' },
+});
+check('repondre par la meme paire reprend le fil', r.status === 201 && r.body.id === directId, r.body);
+
+r = await call('GET', '/conversations', { token: bobToken });
+check('R-MSG7 : la reponse leve la demande', r.body?.find?.((c) => c.id === directId)?.isMessageRequest === false, r.body);
+
+r = await call('GET', `/conversations/${groupId}`, { token: carolToken });
+check('detail 200', r.status === 200 && r.body.title === 'Atelier peinture', r.body);
+check('detail : participants resolus', r.body?.participants?.length === 3, r.body?.participants);
+
+r = await call('GET', `/conversations/${directId}`, { token: carolToken });
+check('conversation d autrui 404, existence non revelee', r.status === 404, r.body);
+
+r = await call('GET', '/conversations/00000000-0000-4000-8000-000000000000', { token: aliceToken });
+check('conversation inexistante 404', r.status === 404, r.body);
+
+r = await call('GET', '/conversations/pas-un-uuid', { token: aliceToken });
+check('identifiant mal forme 400', r.status === 400, r.body);
+
+section('messagerie : messages');
+r = await call('GET', `/conversations/${directId}/messages`, { token: bobToken });
+check('fil 200', r.status === 200 && r.body.total === 3 && r.body.nextCursor === null, r.body);
+check('ordre chronologique dans la page', r.body?.items?.map((m) => m.body).join(' / ') === 'Salut Bob ! / Tu as vu le projet ? / Oui, super !', r.body?.items?.map((m) => m.body));
+check('auteur resolu', r.body?.items?.[0]?.author?.username === alice.username, r.body?.items?.[0]);
+check('readBy : bob a lu ce a quoi il a repondu', r.body?.items?.[0]?.readBy?.includes(bobId) && r.body.items[0].readBy.includes(aliceId), r.body?.items?.[0]);
+
+r = await call('GET', `/conversations/${directId}/messages`, { token: carolToken });
+check('fil d autrui 404', r.status === 404, r.body);
+
+r = await call('POST', `/conversations/${directId}/messages`, { token: aliceToken, body: { body: 'Je passe demain' } });
+check('envoi 201', r.status === 201 && r.body.body === 'Je passe demain' && r.body.author?.id === aliceId, r.body);
+check('a l envoi, lu par son auteur seul', r.body?.readBy?.length === 1 && r.body.readBy[0] === aliceId, r.body?.readBy);
+check('ni modifie ni supprime', r.body?.editedAt === undefined && r.body?.deleted === false, r.body);
+const sentId = r.body?.id;
+
+r = await call('POST', `/conversations/${directId}/messages`, { token: carolToken, body: { body: 'Intrusion' } });
+check('ecrire dans le fil d autrui 404', r.status === 404, r.body);
+
+r = await call('POST', `/conversations/${directId}/messages`, { token: aliceToken, body: { body: '' } });
+check('message vide 400', r.status === 400, r.body);
+
+r = await call('GET', '/conversations', { token: bobToken });
+check('un non lu de plus pour bob', r.body?.find?.((c) => c.id === directId)?.unreadCount === 1, r.body);
+check('le fil remonte en tete', r.body?.[0]?.id === directId, r.body?.map?.((c) => c.id));
+
+r = await call('POST', `/conversations/${directId}/read`, { token: bobToken });
+check('marquer lu 204', r.status === 204, r.body);
+
+r = await call('GET', '/conversations', { token: bobToken });
+check('plus aucun non lu', r.body?.find?.((c) => c.id === directId)?.unreadCount === 0, r.body);
+
+r = await call('GET', `/conversations/${directId}/messages`, { token: aliceToken });
+check('readBy : bob a lu le dernier message', r.body?.items?.at(-1)?.readBy?.includes(bobId), r.body?.items?.at(-1));
+
+r = await call('POST', `/conversations/${directId}/read`, { token: carolToken });
+check('marquer lu le fil d autrui 404', r.status === 404, r.body);
+
+r = await call('PATCH', `/messages/${sentId}`, { token: aliceToken, body: { body: 'Je passe apres-demain' } });
+check('R-MSG5 : modification 200', r.status === 200 && r.body.body === 'Je passe apres-demain' && r.body.editedAt, r.body);
+
+r = await call('PATCH', `/messages/${sentId}`, { token: bobToken, body: { body: 'Pirate' } });
+check('R-MSG5 : modifier le message d autrui 404', r.status === 404, r.body);
+
+r = await call('PATCH', `/messages/${sentId}`, { token: aliceToken, body: { body: '' } });
+check('modification vide 400', r.status === 400, r.body);
+
+r = await call('DELETE', `/messages/${sentId}`, { token: bobToken });
+check('R-MSG6 : supprimer le message d autrui 404', r.status === 404, r.body);
+
+r = await call('DELETE', `/messages/${sentId}`, { token: aliceToken });
+check('R-MSG6 : suppression 204', r.status === 204, r.body);
+
+r = await call('DELETE', `/messages/${sentId}`, { token: aliceToken });
+check('R-MSG6 : supprimer deux fois 204', r.status === 204, r.body);
+
+r = await call('GET', `/conversations/${directId}/messages`, { token: bobToken });
+const deletedMessage = r.body?.items?.find?.((m) => m.id === sentId);
+check('R-MSG6 : le message reste dans le fil, vide', deletedMessage?.deleted === true && deletedMessage.body === '', deletedMessage);
+check('R-MSG6 : rien n est efface', r.body?.total === 4, r.body?.total);
+
+r = await call('GET', '/conversations', { token: bobToken });
+check('R-MSG6 : dernier message signale supprime', r.body?.find?.((c) => c.id === directId)?.lastMessage?.deleted === true, r.body);
+
+r = await call('PATCH', `/messages/${sentId}`, { token: aliceToken, body: { body: 'Ressuscite' } });
+check('un message supprime ne se modifie plus 403', r.status === 403, r.body);
+
+r = await call('PATCH', '/messages/00000000-0000-4000-8000-000000000000', { token: aliceToken, body: { body: 'Rien' } });
+check('message inexistant 404', r.status === 404, r.body);
+
+// Pagination : 25 messages de plus dans le groupe, qui en comptait 1.
+for (let i = 1; i <= 25; i += 1) {
+  await call('POST', `/conversations/${groupId}/messages`, { token: aliceToken, body: { body: `Message ${i}` } });
+}
+r = await call('GET', `/conversations/${groupId}/messages`, { token: carolToken });
+const firstPage = r.body;
+check('premiere page : les 20 plus recents', firstPage?.items?.length === 20 && firstPage.total === 26, { n: firstPage?.items?.length, total: firstPage?.total });
+check('premiere page : se termine par le dernier envoye', firstPage?.items?.at(-1)?.body === 'Message 25' && firstPage.items[0].body === 'Message 6', firstPage?.items?.map?.((m) => m.body));
+check('premiere page : un curseur vers les plus anciens', typeof firstPage?.nextCursor === 'string', firstPage?.nextCursor);
+
+await call('POST', `/conversations/${groupId}/messages`, { token: bobToken, body: { body: 'Arrive pendant la lecture' } });
+
+r = await call('GET', `/conversations/${groupId}/messages?cursor=${firstPage?.nextCursor}`, { token: carolToken });
+check('seconde page : la suite exacte, malgre le message arrive entre-temps', r.body?.items?.map((m) => m.body).join(' / ') === 'Bienvenue a tous / Message 1 / Message 2 / Message 3 / Message 4 / Message 5', r.body?.items?.map?.((m) => m.body));
+check('seconde page : derniere', r.body?.nextCursor === null, r.body?.nextCursor);
+
+r = await call('GET', `/conversations/${groupId}/messages?cursor=nimportequoi`, { token: carolToken });
+check('curseur invalide 400', r.status === 400, r.body);
+
+section('messagerie : pieces jointes');
+r = await call('POST', `/conversations/${directId}/messages`, {
+  token: aliceToken,
+  body: { body: 'Regarde ce projet', attachment: { kind: 'project', projectId } },
+});
+check('R-MSG4 : projet joint 201', r.status === 201 && r.body.attachment?.projectId === projectId, r.body);
+check('R-MSG4 : apercu resolu a l envoi', r.body?.attachmentPreview?.kind === 'project' && r.body.attachmentPreview.projectSlug === slug, r.body?.attachmentPreview);
+const publicAttachmentId = r.body?.id;
+
+r = await call('GET', `/conversations/${directId}/messages`, { token: bobToken });
+const seenByBob = r.body?.items?.find?.((m) => m.id === publicAttachmentId);
+check('R-MSG4 : apercu resolu a la lecture', seenByBob?.attachmentPreview?.projectTitle === projectTitle && typeof seenByBob.attachmentPreview.projectTagline === 'string', seenByBob);
+
+r = await call('POST', '/projects', {
+  token: aliceToken,
+  body: { title: `Atelier secret ${stamp}`, tagline: 'Entre nous', tags: ['code'], visibility: 'private', participation: 'on_invite' },
+});
+const secretSlug = r.body?.slug;
+const secretId = r.body?.id;
+r = await call('POST', `/projects/${secretSlug}/transition`, { token: aliceToken, body: { transition: 'publish' } });
+check('projet prive publie pour les pieces jointes', r.status === 200 && r.body.visibility === 'private', r.body);
+
+r = await call('POST', `/conversations/${directId}/messages`, {
+  token: aliceToken,
+  body: { body: 'Et celui-ci, en secret', attachment: { kind: 'project', projectId: secretId } },
+});
+check('joindre son projet prive 201', r.status === 201 && r.body.attachmentPreview?.projectSlug === secretSlug, r.body);
+const privateAttachmentId = r.body?.id;
+
+r = await call('GET', `/conversations/${directId}/messages`, { token: bobToken });
+const hiddenForBob = r.body?.items?.find?.((m) => m.id === privateAttachmentId);
+check('R-V3 : un non-membre recoit le message...', hiddenForBob?.body === 'Et celui-ci, en secret', hiddenForBob);
+check('R-V3 : ...sans apercu du projet prive', hiddenForBob && hiddenForBob.attachmentPreview === undefined, hiddenForBob);
+
+r = await call('POST', `/conversations/${directId}/messages`, {
+  token: bobToken,
+  body: { body: 'Je sonde', attachment: { kind: 'project', projectId: secretId } },
+});
+const probePrivate = r;
+r = await call('POST', `/conversations/${directId}/messages`, {
+  token: bobToken,
+  body: { body: 'Je sonde', attachment: { kind: 'project', projectId: '00000000-0000-4000-8000-000000000000' } },
+});
+check('joindre un projet invisible 400', probePrivate.status === 400, probePrivate.body);
+check('invisible ou inexistant : meme reponse', r.status === 400 && r.body?.message === probePrivate.body?.message, [r.body, probePrivate.body]);
+
+r = await call('POST', `/conversations/${directId}/messages`, {
+  token: aliceToken,
+  body: { body: 'Fichier fantome', attachment: { kind: 'file', fileId: '00000000-0000-4000-8000-000000000000' } },
+});
+check('joindre un fichier inexistant 400', r.status === 400, r.body);
+
+r = await call('POST', `/projects/${slug}/files`, { token: aliceToken, form: upload('file', 'esquisse.png', png(), 'image/png') });
+if (r.status === 201) {
+  const publicFileId = r.body.id;
+  r = await call('POST', `/projects/${secretSlug}/files`, { token: aliceToken, form: upload('file', 'secret.png', png(), 'image/png') });
+  const secretFileId = r.body?.id;
+
+  r = await call('POST', `/conversations/${directId}/messages`, {
+    token: aliceToken,
+    body: { body: 'Le croquis', attachment: { kind: 'file', fileId: publicFileId } },
+  });
+  check('R-MSG4 : fichier joint 201', r.status === 201 && r.body.attachment?.fileId === publicFileId, r.body);
+  const fileMessageId = r.body?.id;
+
+  r = await call('GET', `/conversations/${directId}/messages`, { token: bobToken });
+  const fileForBob = r.body?.items?.find?.((m) => m.id === fileMessageId);
+  check('R-MSG4 : apercu du fichier (nom, taille)', fileForBob?.attachmentPreview?.kind === 'file' && fileForBob.attachmentPreview.fileName === 'esquisse.png' && fileForBob.attachmentPreview.fileSize > 0, fileForBob?.attachmentPreview);
+
+  r = await call('POST', `/conversations/${directId}/messages`, {
+    token: bobToken,
+    body: { body: 'Je sonde', attachment: { kind: 'file', fileId: secretFileId } },
+  });
+  check('R-F4 : joindre un fichier d un projet invisible 400', r.status === 400, r.body);
+
+  r = await call('DELETE', `/files/${publicFileId}`, { token: aliceToken });
+  r = await call('GET', `/conversations/${directId}/messages`, { token: bobToken });
+  const orphan = r.body?.items?.find?.((m) => m.id === fileMessageId);
+  check('fichier supprime : le message reste, sans apercu', orphan?.body === 'Le croquis' && orphan.attachmentPreview === undefined, orphan);
+} else {
+  skip('pieces jointes de type fichier', `stockage objet indisponible (HTTP ${r.status})`);
+}
+
+r = await call('DELETE', `/messages/${publicAttachmentId}`, { token: aliceToken });
+r = await call('GET', `/conversations/${directId}/messages`, { token: bobToken });
+const emptied = r.body?.items?.find?.((m) => m.id === publicAttachmentId);
+check('R-MSG6 : la suppression retire aussi la piece jointe', emptied?.deleted === true && emptied.attachment === undefined && emptied.attachmentPreview === undefined, emptied);
+
+section('messagerie : medias');
+const mp4 = (size = 256) =>
+  Buffer.concat([Buffer.from([0x00, 0x00, 0x00, 0x18]), Buffer.from('ftypisom', 'latin1'), Buffer.alloc(size, 3)]);
+
+r = await call('POST', `/conversations/${directId}/attachments`, { token: aliceToken, form: upload('file', 'photo.png', png(), 'image/png') });
+if (r.status === 201) {
+  check('R-MSG8 : depot d une image 201', r.body.mimeType === 'image/png' && r.body.fileName === 'photo.png' && r.body.fileSize === png().length, r.body);
+  const photoId = r.body.id;
+
+  r = await call('POST', `/conversations/${directId}/messages`, { token: aliceToken, body: { attachment: { kind: 'upload', uploadId: photoId } } });
+  check('R-MSG8 : message sans texte, avec une image 201', r.status === 201 && r.body.body === '' && r.body.attachment?.uploadId === photoId, r.body);
+  const photoMessageId = r.body?.id;
+
+  r = await call('GET', `/conversations/${directId}/messages`, { token: bobToken });
+  const photoForBob = r.body?.items?.find?.((m) => m.id === photoMessageId)?.attachmentPreview;
+  check('R-MSG8 : apercu complet pour l autre participant', photoForBob?.kind === 'upload' && photoForBob.mimeType === 'image/png' && photoForBob.fileName === 'photo.png', photoForBob);
+
+  const signed = photoForBob?.url ? await fetch(photoForBob.url) : undefined;
+  const signedBytes = signed?.ok ? Buffer.from(await signed.arrayBuffer()) : undefined;
+  check('R-MSG8 : l URL signee rend le fichier depose', signed?.status === 200 && signedBytes?.equals(png()), signed?.status);
+
+  const bare = photoForBob?.url ? await fetch(photoForBob.url.split('?')[0]) : undefined;
+  check('R-MSG8 : sans signature, le stockage refuse', bare !== undefined && bare.status === 403, bare?.status);
+
+  r = await call('GET', '/conversations', { token: bobToken });
+  const withPhoto = r.body?.find?.((c) => c.id === directId)?.lastMessage;
+  check('R-MSG8 : la liste annonce la piece jointe d un message sans texte', withPhoto?.body === '' && withPhoto.attachmentKind === 'upload', withPhoto);
+
+  r = await call('POST', `/conversations/${directId}/messages`, { token: aliceToken, body: { body: 'Encore', attachment: { kind: 'upload', uploadId: photoId } } });
+  check('R-MSG8 : un depot ne se joint qu une fois 400', r.status === 400, r.body);
+
+  r = await call('POST', `/conversations/${directId}/attachments`, { token: aliceToken, form: upload('file', 'clip.mov', mp4(), 'application/octet-stream') });
+  check('R-MSG8 : video reconnue a son contenu, pas a son nom', r.status === 201 && r.body.mimeType === 'video/mp4', r.body);
+
+  r = await call('POST', `/conversations/${directId}/attachments`, { token: aliceToken, form: upload('file', 'notes.pdf', Buffer.from('%PDF-1.4 test'), 'application/pdf') });
+  const pdfId = r.body?.id;
+  check('R-MSG8 : depot d un fichier 201', r.status === 201 && r.body.mimeType === 'application/pdf', r.body);
+
+  r = await call('POST', `/conversations/${directId}/messages`, { token: bobToken, body: { attachment: { kind: 'upload', uploadId: pdfId } } });
+  check('R-MSG8 : joindre le depot d autrui 400', r.status === 400, r.body);
+
+  r = await call('POST', `/conversations/${groupId}/attachments`, { token: aliceToken, form: upload('file', 'groupe.png', png(), 'image/png') });
+  r = await call('POST', `/conversations/${directId}/messages`, { token: aliceToken, body: { attachment: { kind: 'upload', uploadId: r.body?.id } } });
+  check('R-MSG8 : joindre le depot d une autre conversation 400', r.status === 400, r.body);
+
+  r = await call('POST', `/conversations/${directId}/attachments`, { token: carolToken, form: upload('file', 'intrus.png', png(), 'image/png') });
+  check('deposer dans le fil d autrui 404', r.status === 404, r.body);
+
+  r = await call('POST', `/conversations/${directId}/attachments`, { token: aliceToken, form: upload('file', 'virus.png', Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03]), 'image/png') });
+  check('R-F2 : executable deguise refuse 400', r.status === 400, r.body);
+
+  r = await call('POST', `/conversations/${directId}/attachments`, { token: aliceToken, form: upload('file', 'logo.svg', Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>'), 'image/svg+xml') });
+  check('R-MSG8 : SVG refuse (script possible) 400', r.status === 400, r.body);
+
+  r = await call('POST', `/conversations/${directId}/attachments`, { token: aliceToken, form: upload('file', 'grande.png', Buffer.concat([png(), Buffer.alloc(11 * 1024 * 1024, 1)]), 'image/png') });
+  check('R-MSG8 : image au-dela de 10 Mo refusee 400', r.status === 400, r.body);
+
+  r = await call('POST', `/conversations/${directId}/attachments`, { token: aliceToken, form: upload('file', 'film.mp4', mp4(51 * 1024 * 1024), 'video/mp4') });
+  check('R-MSG8 : video au-dela de 50 Mo refusee, message en francais', r.status === 413 && r.body?.message === 'Ce fichier est trop volumineux.', r.body);
+
+  r = await call('POST', `/conversations/${directId}/attachments`, { token: aliceToken, form: new FormData() });
+  check('depot sans fichier 400', r.status === 400, r.body);
+
+  r = await call('POST', `/conversations/${directId}/messages`, { token: aliceToken, body: {} });
+  check('R-MSG8 : ni texte ni piece jointe 400', r.status === 400, r.body);
+
+  r = await call('DELETE', `/messages/${photoMessageId}`, { token: aliceToken });
+  const afterDelete = photoForBob?.url ? await fetch(photoForBob.url) : undefined;
+  check('R-MSG6/R-MSG8 : supprimer le message supprime le fichier', r.status === 204 && afterDelete !== undefined && afterDelete.status === 404, afterDelete?.status);
+} else {
+  skip('medias des messages', `stockage objet indisponible (HTTP ${r.status})`);
+  await call('POST', `/conversations/${directId}/attachments`, { token: aliceToken, form: new FormData() });
+}
+
+section('messagerie : notifications et signalements');
+const messageNotifications = (body, conversationId) =>
+  (body?.items ?? []).filter((n) => n.type === 'message_received' && n.target?.conversationId === conversationId);
+
+r = await call('GET', '/notifications', { token: carolToken });
+let groupNotifications = messageNotifications(r.body, groupId);
+check('message_received : une seule notification pour tout le groupe (R-N2)', groupNotifications.length === 1, groupNotifications);
+check('R-N2 : les auteurs regroupes en acteurs', groupNotifications[0]?.actors?.length === 2 && groupNotifications[0].actorIds.includes(aliceId) && groupNotifications[0].actorIds.includes(bobId), groupNotifications[0]?.actorIds);
+check('R-N3 : cible resolue vers la conversation, avec son titre', groupNotifications[0]?.target?.type === 'message' && groupNotifications[0].target.conversationTitle === 'Atelier peinture', groupNotifications[0]?.target);
+
+r = await call('GET', '/notifications', { token: bobToken });
+const directNotification = messageNotifications(r.body, directId)[0];
+check('conversation directe : notifiee, sans titre', directNotification?.read === false && directNotification.target.conversationTitle === undefined, directNotification);
+
+r = await call('GET', '/notifications', { token: aliceToken });
+check('alice notifiee du message de bob dans le groupe', messageNotifications(r.body, groupId).some((n) => !n.read && n.actorIds.includes(bobId)), messageNotifications(r.body, groupId));
+
+r = await call('POST', `/conversations/${groupId}/read`, { token: carolToken });
+r = await call('GET', '/notifications', { token: carolToken });
+check('lire la conversation eteint ses notifications', messageNotifications(r.body, groupId).every((n) => n.read), messageNotifications(r.body, groupId));
+
+r = await call('POST', `/conversations/${groupId}/messages`, { token: aliceToken, body: { body: 'Une nouvelle apres lecture' } });
+r = await call('GET', '/notifications', { token: aliceToken });
+check('ecrire dans une conversation eteint ses propres notifications', messageNotifications(r.body, groupId).every((n) => n.read), messageNotifications(r.body, groupId));
+
+r = await call('GET', '/notifications', { token: carolToken });
+groupNotifications = messageNotifications(r.body, groupId).filter((n) => !n.read);
+check('R-N2 : apres lecture, un nouveau message ouvre une nouvelle notification', groupNotifications.length === 1 && groupNotifications[0].actorIds.length === 1 && groupNotifications[0].actorIds[0] === aliceId, groupNotifications);
+
+r = await call('GET', `/conversations/${groupId}/messages`, { token: bobToken });
+const reportedMessage = r.body?.items?.at(-1);
+
+r = await call('POST', '/reports', { token: aliceToken, body: { targetType: 'message', targetId: sentId, reason: 'spam' } });
+check('signaler un message supprime 404', r.status === 404, r.body);
+
+r = await call('POST', '/reports', { token: carolToken, body: { targetType: 'message', targetId: publicAttachmentId, reason: 'spam' } });
+check('signaler un message d une conversation dont on n est pas 404', r.status === 404, r.body);
+const probeReport = r;
+r = await call('POST', '/reports', { token: carolToken, body: { targetType: 'message', targetId: '00000000-0000-4000-8000-000000000000', reason: 'spam' } });
+check('message d autrui ou inexistant : meme reponse', r.status === 404 && r.body?.message === probeReport.body?.message, [r.body, probeReport.body]);
+
+r = await call('POST', '/reports', { token: bobToken, body: { targetType: 'message', targetId: reportedMessage?.id, reason: 'harassment', detail: 'Insistant' } });
+check('signaler un message de sa conversation 201', r.status === 201 && r.body.targetType === 'message', r.body);
+const reportedMessageBody = reportedMessage?.body;
+
+section('messagerie : canaux de projet');
+const dave = person('dave');
+r = await call('POST', '/auth/register', { body: dave });
+const daveToken = r.body?.token;
+const daveId = r.body?.user?.id;
+
+const channelTitle = `Atelier velo ${stamp}`;
+r = await call('POST', '/projects', {
+  token: aliceToken,
+  body: { title: channelTitle, tagline: 'On repare ensemble', tags: ['code'], visibility: 'public', participation: 'open' },
+});
+const channelSlug = r.body?.slug;
+const channelProjectId = r.body?.id;
+await call('POST', `/projects/${channelSlug}/transition`, { token: aliceToken, body: { transition: 'publish' } });
+const channelOf = (body) => (Array.isArray(body) ? body : []).find((c) => c.type === 'channel' && c.projectId === channelProjectId);
+
+r = await call('GET', '/conversations', { token: aliceToken });
+check('R-MSG3 : porteur encore seul, canal non liste', r.status === 200 && channelOf(r.body) === undefined, r.body?.map?.((c) => c.type));
+
+r = await call('POST', `/projects/${channelSlug}/join-requests`, { token: bobToken, body: {} });
+check('rejoindre un projet ouvert 201', r.status === 201, r.body);
+
+r = await call('GET', '/conversations', { token: aliceToken });
+let channel = channelOf(r.body);
+check('R-MSG3 : la premiere arrivee fait apparaitre le canal', channel?.participantIds?.length === 2 && channel.participantIds.includes(bobId), channel);
+check('R-MSG3 : le canal porte le nom de son projet', channel?.projectSlug === channelSlug && channel.projectTitle === channelTitle && channel.title === undefined, channel);
+const channelId = channel?.id;
+
+r = await call('GET', '/conversations', { token: bobToken });
+check('R-MSG3 : le nouvel arrivant voit le canal', channelOf(r.body)?.id === channelId, r.body?.map?.((c) => c.type));
+
+r = await call('POST', `/conversations/${channelId}/messages`, { token: aliceToken, body: { body: 'Bienvenue dans l equipe !' } });
+check('ecrire dans le canal 201', r.status === 201, r.body);
+
+r = await call('GET', '/notifications', { token: bobToken });
+const channelNotification = messageNotifications(r.body, channelId)[0];
+check('notification du canal, titree du nom du projet', channelNotification?.target?.conversationTitle === channelTitle, channelNotification?.target);
+
+r = await call('POST', `/projects/${channelSlug}/invitations`, { token: aliceToken, body: { recipientId: carolId, proposedRole: 'observer' } });
+r = await call('POST', `/invitations/${r.body?.id}/accept`, { token: carolToken });
+check('accepter une invitation 204', r.status === 204, r.body);
+
+r = await call('GET', '/conversations', { token: carolToken });
+channel = channelOf(r.body);
+check('R-MSG3 : invitation acceptee = dans le canal, observateurs compris', channel?.participantIds?.length === 3, channel);
+check('l historique d avant l arrivee ne compte pas comme non lu', channel?.unreadCount === 0, channel);
+
+r = await call('GET', `/conversations/${channelId}/messages`, { token: carolToken });
+check('...mais il reste lisible', r.body?.items?.some?.((m) => m.body === 'Bienvenue dans l equipe !'), r.body?.items);
+
+r = await call('POST', `/projects/${channelSlug}/join-requests`, { token: daveToken, body: {} });
+r = await call('DELETE', `/projects/${channelSlug}/members/${daveId}`, { token: aliceToken });
+check('exclusion 204', r.status === 204, r.body);
+r = await call('GET', `/conversations/${channelId}`, { token: daveToken });
+check('R-MSG3 : exclu du projet, exclu du canal', r.status === 404, r.body);
+
+r = await call('POST', `/projects/${channelSlug}/leave`, { token: carolToken });
+r = await call('GET', '/conversations', { token: carolToken });
+check('R-MSG3 : quitter le projet fait quitter le canal', r.status === 200 && channelOf(r.body) === undefined, r.body?.map?.((c) => c.type));
+
+r = await call('POST', '/conversations', { token: aliceToken, body: { participantIds: [bobId, carolId], message: 'Pas un canal' } });
+check('aucune route ne cree de canal : POST /conversations ouvre un groupe', r.body?.type === 'group', r.body);
+
+r = await call('DELETE', `/projects/${channelSlug}`, { token: aliceToken, body: { confirmTitle: channelTitle } });
+check('suppression du projet 204', r.status === 204, r.body);
+
+r = await call('GET', `/conversations/${channelId}`, { token: bobToken });
+check('R-MSG3 : le canal disparait avec son projet', r.status === 404, r.body);
+
+r = await call('GET', '/notifications', { token: bobToken });
+check('ses notifications aussi', messageNotifications(r.body, channelId).length === 0, messageNotifications(r.body, channelId));
+
+section('messagerie : gestion des groupes');
+r = await call('POST', '/conversations', { token: aliceToken, body: { participantIds: [bobId, carolId], title: 'Club', message: 'On lance le club' } });
+const clubId = r.body?.id;
+check('R-MSG9 : le createur administre le groupe', r.body?.adminId === aliceId, r.body);
+
+r = await call('PATCH', `/conversations/${clubId}`, { token: bobToken, body: { title: 'Club lecture' } });
+check('R-MSG9 : tout participant renomme 200', r.status === 200 && r.body.title === 'Club lecture' && r.body.adminId === aliceId, r.body);
+
+r = await call('PATCH', `/conversations/${clubId}`, { token: bobToken, body: { title: '' } });
+check('titre vide 400', r.status === 400, r.body);
+
+r = await call('PATCH', `/conversations/${directId}`, { token: aliceToken, body: { title: 'Nous deux' } });
+check('R-MSG1 : une conversation directe ne se renomme pas 403', r.status === 403, r.body);
+
+r = await call('PATCH', `/conversations/${clubId}`, { token: daveToken, body: { title: 'Intrus' } });
+check('renommer le groupe d autrui 404', r.status === 404, r.body);
+
+r = await call('POST', `/conversations/${clubId}/participants`, { token: bobToken, body: { participantIds: [daveId] } });
+check('R-MSG9 : tout participant ajoute 200', r.status === 200 && r.body.participantIds.length === 4 && r.body.participants.some((p) => p.id === daveId), r.body);
+
+r = await call('GET', '/conversations', { token: daveToken });
+const clubForDave = r.body?.find?.((c) => c.id === clubId);
+check('le nouvel arrivant voit le groupe, sans non lus', clubForDave?.title === 'Club lecture' && clubForDave.unreadCount === 0, clubForDave);
+
+r = await call('GET', `/conversations/${clubId}/messages`, { token: daveToken });
+check('...et lit son historique', r.body?.items?.some?.((m) => m.body === 'On lance le club'), r.body?.items);
+
+r = await call('POST', `/conversations/${clubId}/participants`, { token: bobToken, body: { participantIds: [carolId] } });
+check('ajouter quelqu un deja present ne change rien', r.status === 200 && r.body.participantIds.length === 4, r.body);
+
+r = await call('POST', `/conversations/${clubId}/participants`, { token: bobToken, body: { participantIds: ['00000000-0000-4000-8000-000000000000'] } });
+check('ajouter une personne inconnue 400', r.status === 400, r.body);
+
+r = await call('DELETE', `/conversations/${clubId}/participants/${daveId}`, { token: bobToken });
+check('R-MSG9 : retirer sans etre administrateur 403', r.status === 403, r.body);
+
+r = await call('DELETE', `/conversations/${clubId}/participants/${daveId}`, { token: aliceToken });
+check('R-MSG9 : l administrateur retire 204', r.status === 204, r.body);
+
+r = await call('GET', `/conversations/${clubId}`, { token: daveToken });
+check('retire du groupe : plus d acces', r.status === 404, r.body);
+
+r = await call('DELETE', `/conversations/${clubId}/participants/${daveId}`, { token: aliceToken });
+check('retirer quelqu un d absent 404', r.status === 404, r.body);
+
+r = await call('DELETE', `/conversations/${clubId}/participants/${aliceId}`, { token: aliceToken });
+check('se retirer soi-meme : c est quitter 400', r.status === 400, r.body);
+
+r = await call('POST', `/conversations/${directId}/leave`, { token: aliceToken });
+check('R-MSG1 : une conversation directe ne se quitte pas 403', r.status === 403, r.body);
+
+r = await call('GET', '/conversations', { token: aliceToken });
+const someChannel = r.body?.find?.((c) => c.type === 'channel');
+if (someChannel) {
+  r = await call('POST', `/conversations/${someChannel.id}/leave`, { token: aliceToken });
+  check('R-MSG3 : un canal se quitte avec son projet, pas ici 403', r.status === 403, r.body);
+  r = await call('POST', `/conversations/${someChannel.id}/participants`, { token: aliceToken, body: { participantIds: [daveId] } });
+  check('R-MSG3 : on n ajoute personne a un canal 403', r.status === 403, r.body);
+} else {
+  skip('gestion refusee sur un canal', 'aucun canal liste pour alice');
+}
+
+r = await call('POST', `/conversations/${clubId}/leave`, { token: aliceToken });
+check('R-MSG9 : l administrateur quitte 204', r.status === 204, r.body);
+
+r = await call('GET', `/conversations/${clubId}`, { token: bobToken });
+const successor = r.body?.adminId;
+check('R-MSG9 : l administration passe au plus ancien participant restant', r.status === 200 && [bobId, carolId].includes(successor) && !r.body.participantIds.includes(aliceId), r.body);
+
+r = await call('GET', `/conversations/${clubId}`, { token: aliceToken });
+check('qui part perd l acces', r.status === 404, r.body);
+
+const successorToken = successor === bobId ? bobToken : carolToken;
+const otherId = successor === bobId ? carolId : bobId;
+r = await call('DELETE', `/conversations/${clubId}/participants/${otherId}`, { token: successorToken });
+check('le nouvel administrateur retire 204', r.status === 204, r.body);
+
+r = await call('GET', '/conversations', { token: successorToken });
+check('seul dans le groupe : il n est plus liste', r.body?.find?.((c) => c.id === clubId) === undefined, r.body?.map?.((c) => c.id));
+
+r = await call('POST', `/conversations/${clubId}/leave`, { token: successorToken });
+check('le dernier quitte : groupe efface 204', r.status === 204, r.body);
+
 section('signalements et administration');
 r = await call('POST', '/reports', {
   token: bobToken,
@@ -805,7 +1331,12 @@ if (!isAdmin) {
   check('R-S2 : signalements comptes par cible', r.body.items.every((s) => s.similarReportsCount >= 1), r.body.items?.[0]);
   check('signaleur resolu', r.body.items.every((s) => s.reporter?.username), r.body.items?.[0]);
   check('apercu de la cible construit', r.body.items.some((s) => s.target?.excerpt), r.body.items?.[0]);
-  const [firstReport, secondReport] = r.body.items;
+  const messageReport = r.body.items.find((s) => s.targetType === 'message');
+  check('signalement de message : extrait et auteur resolus', messageReport?.target?.excerpt === reportedMessageBody && messageReport.target.author?.id === aliceId, messageReport);
+  const [firstReport, secondReport] = r.body.items.filter((s) => s.targetType !== 'message');
+
+  r = await call('POST', `/admin/reports/${messageReport?.id}/resolve`, { token: adminToken, body: { reason: 'Averti' } });
+  check('signalement de message traite 200', r.status === 200 && r.body.status === 'handled', r.body);
 
   r = await call('POST', `/admin/reports/${firstReport.id}/resolve`, {
     token: adminToken,
@@ -861,6 +1392,24 @@ if (!isAdmin) {
 
   r = await call('POST', `/projects/${gardenSlug}/comments`, { token: suspendedToken, body: { body: 'Coucou' } });
   check('R-C2 : commentaire interdit pendant la suspension 403', r.status === 403, r.body);
+
+  r = await call('POST', '/conversations', { token: suspendedToken, body: { participantIds: [aliceId], message: 'Coucou' } });
+  check('message interdit pendant la suspension 403', r.status === 403, r.body);
+
+  r = await call('POST', `/conversations/${groupId}/messages`, { token: suspendedToken, body: { body: 'Coucou' } });
+  check('envoi dans un groupe interdit pendant la suspension 403', r.status === 403, r.body);
+
+  r = await call('POST', `/conversations/${groupId}/attachments`, { token: suspendedToken, form: upload('file', 'photo.png', png(), 'image/png') });
+  check('R-MSG8 : depot interdit pendant la suspension 403', r.status === 403, r.body);
+
+  r = await call('PATCH', `/conversations/${groupId}`, { token: suspendedToken, body: { title: 'Suspendu' } });
+  check('R-MSG9 : renommer interdit pendant la suspension 403', r.status === 403, r.body);
+
+  r = await call('GET', `/conversations/${groupId}/messages`, { token: suspendedToken });
+  check('un compte suspendu lit encore ses conversations', r.status === 200, r.body);
+
+  r = await call('POST', '/conversations', { token: aliceToken, body: { participantIds: [carolId], message: 'Coucou' } });
+  check('ecrire a un compte suspendu 400, etat non revele', r.status === 400, r.body);
 
   r = await call('POST', `/admin/users/${carolId}/reactivate`, { token: adminToken, body: {} });
   check('reactivation 204', r.status === 204, r.body);
@@ -943,10 +1492,9 @@ check('jeton invalide apres deconnexion 401', r.status === 401, r.body);
 section('couverture des routes');
 const all = ROUTE_TEMPLATES.map((route) => `${route.method} ${route.template}`);
 const unique = [...new Set(all)];
-const untested = unique.filter((route) => !covered.has(route) && !OUT_OF_SCOPE.has(route));
+const untested = unique.filter((route) => !covered.has(route));
 
-console.log(`  ${covered.size} / ${unique.length - OUT_OF_SCOPE.size} routes exercees`);
-console.log(`  ${OUT_OF_SCOPE.size} hors perimetre (messagerie)`);
+console.log(`  ${covered.size} / ${unique.length} routes exercees`);
 
 for (const route of untested.sort()) {
   failures += 1;

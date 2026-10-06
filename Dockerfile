@@ -32,7 +32,7 @@ RUN pnpm install --prod --frozen-lockfile
 
 COPY --from=builder /app/dist ./dist
 # Le contrat est servi tel quel sur /api/docs : il fait partie du livrable.
-# `schemas/` porte les 94 JSON Schema vers lesquels il renvoie ; sans eux, la
+# `schemas/` porte les 99 JSON Schema vers lesquels il renvoie ; sans eux, la
 # documentation s'affiche avec des schemas non resolus.
 COPY openapi.yaml ./openapi.yaml
 COPY schemas ./schemas

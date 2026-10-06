@@ -4,8 +4,8 @@
  * (`openapi.yaml`, copie du front).
  *
  * C'est le garde-fou de la regle de travail : le backend suit le contrat. Toute
- * divergence doit etre voulue et listee ci-dessous — la messagerie et les
- * routes hors contrat le sont (`docs/REFACTO-V2.md`).
+ * divergence doit etre voulue et listee ci-dessous — les routes hors contrat
+ * le sont (`docs/REFACTO-V2.md`).
  *
  * La lecture se fait sur les sources plutot que sur une API demarree : le
  * controle reste utilisable en integration continue, sans base ni Redis.
@@ -20,17 +20,7 @@ import { parse } from 'yaml';
 const ROOT = new URL('..', import.meta.url).pathname;
 
 /** Absences et ajouts assumes : tout le reste est une derive. */
-const EXPECTED_MISSING = [
-  // Messagerie : lot suivant (docs/REFACTO-V2.md §3).
-  'GET /conversations',
-  'POST /conversations',
-  'GET /conversations/:conversationId',
-  'GET /conversations/:conversationId/messages',
-  'POST /conversations/:conversationId/messages',
-  'POST /conversations/:conversationId/read',
-  'PATCH /messages/:messageId',
-  'DELETE /messages/:messageId',
-];
+const EXPECTED_MISSING = [];
 
 const EXPECTED_EXTRA = [
   'GET /health',

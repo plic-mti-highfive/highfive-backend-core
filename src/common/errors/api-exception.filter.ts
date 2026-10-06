@@ -69,6 +69,21 @@ function toBody(exception: HttpException, status: number): ApiErrorBody {
     return raw as ApiErrorBody;
   }
 
+  // Leves par multer (413) et par la limitation de debit (429) avec un
+  // message anglais : le front affiche `message` tel quel.
+  if (status === 413) {
+    return {
+      code: CODE_BY_STATUS[status],
+      message: 'Ce fichier est trop volumineux.',
+    };
+  }
+  if (status === 429) {
+    return {
+      code: CODE_BY_STATUS[status],
+      message: 'Trop de requetes : patiente un instant avant de recommencer.',
+    };
+  }
+
   const nested =
     typeof raw === 'string'
       ? raw
