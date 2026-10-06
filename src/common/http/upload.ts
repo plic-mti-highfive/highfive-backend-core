@@ -25,7 +25,31 @@ const MAGIC: { bytes: number[]; mime: string }[] = [
   { bytes: [0x37, 0x7a, 0xbc, 0xaf], mime: 'application/x-7z-compressed' },
   { bytes: [0x49, 0x44, 0x33], mime: 'audio/mpeg' },
   { bytes: [0x4f, 0x67, 0x67, 0x53], mime: 'audio/ogg' },
+  // EBML : WebM (et Matroska, meme conteneur).
+  { bytes: [0x1a, 0x45, 0xdf, 0xa3], mime: 'video/webm' },
 ];
+
+/**
+ * Famille ISO BMFF (MP4, MOV, HEIC, M4A) : pas de signature en tete, mais
+ * `ftyp` au decalage 4, suivi d'une marque qui dit ce que contient la boite.
+ * Une marque inconnue est traitee en MP4, de loin le plus courant.
+ */
+const FTYP_BRANDS: { brands: string[]; mime: string }[] = [
+  { brands: ['qt  '], mime: 'video/quicktime' },
+  { brands: ['heic', 'heix', 'mif1', 'msf1'], mime: 'image/heic' },
+  { brands: ['M4A ', 'M4B '], mime: 'audio/mp4' },
+];
+
+function detectIsoBmff(buffer: Buffer): string | undefined {
+  if (buffer.length < 12 || buffer.toString('latin1', 4, 8) !== 'ftyp') {
+    return undefined;
+  }
+  const brand = buffer.toString('latin1', 8, 12);
+  return (
+    FTYP_BRANDS.find((entry) => entry.brands.includes(brand))?.mime ??
+    'video/mp4'
+  );
+}
 
 /** Signatures d'executables : refusees quel que soit le type annonce. */
 const FORBIDDEN_MAGIC: { bytes: number[]; label: string }[] = [
@@ -47,11 +71,13 @@ export function detectMimeType(file: UploadedFile): string {
     }
   }
 
-  const detected = MAGIC.find((entry) => startsWith(file.buffer, entry.bytes));
+  const detected =
+    MAGIC.find((entry) => startsWith(file.buffer, entry.bytes))?.mime ??
+    detectIsoBmff(file.buffer);
   // `webp`, `svg` et quelques formats audio n'ont pas de signature dans cette
   // table : on retombe sur le type annonce, qui sera confronte a la liste
   // blanche juste apres.
-  return detected?.mime ?? file.mimetype;
+  return detected ?? file.mimetype;
 }
 
 export function assertAllowed(

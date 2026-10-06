@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 import configuration from './common/config/configuration.js';
 import { DatabaseModule } from './common/database/database.module.js';
@@ -10,11 +11,13 @@ import { AuthGuard } from './common/auth/auth.guard.js';
 import { StorageModule } from './common/storage/storage.service.js';
 import { AiModule } from './common/ai/ai.module.js';
 import { HealthModule } from './common/health/health.controller.js';
+import { UserThrottlerGuard } from './common/http/user-throttler.guard.js';
 
 import { AdminModule } from './modules/admin/admin.module.js';
 import { AnnouncementsModule } from './modules/announcements/announcements.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CommentsModule } from './modules/comments/comments.module.js';
+import { ConversationsModule } from './modules/conversations/conversations.module.js';
 import { FilesModule } from './modules/files/files.module.js';
 import { HighfivesModule } from './modules/highfives/highfives.module.js';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module.js';
@@ -32,13 +35,13 @@ import { WallModule } from './modules/wall/wall.module.js';
  * `highfive-frontend`), et rien d'autre : plus de decoupage en « bounded
  * contexts » qui ne correspondaient a aucun ecran.
  *
- * La messagerie (`/conversations`, `/messages`) n'est volontairement pas ici :
- * elle est prevue dans un second temps, voir `docs/REFACTO-V2.md`.
+ * La messagerie (`/conversations`, `/messages`) : voir `docs/MESSAGERIE.md`.
  */
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 200 }]),
+    EventEmitterModule.forRoot(),
     DatabaseModule,
     AuthCoreModule,
     StorageModule,
@@ -57,13 +60,14 @@ import { WallModule } from './modules/wall/wall.module.js';
     WallModule,
     FilesModule,
     NotificationsModule,
+    ConversationsModule,
     SearchModule,
     AdminModule,
     MaintenanceModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: AuthGuard },
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: UserThrottlerGuard },
   ],
 })
 export class AppModule {}

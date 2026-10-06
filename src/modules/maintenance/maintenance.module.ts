@@ -5,11 +5,13 @@ import {
   ProjectEntity,
   UserEntity,
 } from '../../entities/index.js';
+import { ConversationsModule } from '../conversations/conversations.module.js';
 import { MaintenanceService } from './maintenance.service.js';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([ProjectEntity, InvitationEntity, UserEntity]),
+    ConversationsModule,
   ],
   providers: [MaintenanceService],
 })

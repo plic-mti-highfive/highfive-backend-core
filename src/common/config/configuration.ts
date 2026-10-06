@@ -107,4 +107,22 @@ export default () => ({
       'application/x-7z-compressed',
     ],
   },
+
+  /** R-MSG8 : depots joints aux messages. */
+  messages: {
+    maxImageBytes: 10 * 1024 * 1024,
+    maxVideoBytes: 50 * 1024 * 1024,
+    maxOtherBytes: 20 * 1024 * 1024,
+    /** Les familles des fichiers de projet (R-F2), plus la video. */
+    allowedMimePrefixes: ['image/', 'audio/', 'video/'],
+    /**
+     * Un SVG peut porter du script : ouvert dans un onglet, il s'executerait
+     * sur l'origine du stockage. Rien ne justifie ce risque dans un message.
+     */
+    deniedMimeTypes: ['image/svg+xml'],
+    /** Duree de vie de `attachmentPreview.url`, relue a chaque lecture. */
+    signedUrlTtlSeconds: 60 * 60,
+    /** Un depot jamais joint a un message est purge passe ce delai. */
+    orphanUploadTtlHours: 24,
+  },
 });

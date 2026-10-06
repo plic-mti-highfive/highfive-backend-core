@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import type {
@@ -25,6 +26,7 @@ import {
 } from '../../common/mappers/index.js';
 import type { UserSummary } from '../../contracts/index.js';
 import { AiEventsService } from '../../common/ai/ai-events.service.js';
+import { PROJECT_TEAM_CHANGED } from '../../common/events/project-events.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { ProjectAccessService } from '../projects/project-access.service.js';
 
@@ -53,7 +55,16 @@ export class MembershipsService {
     private readonly access: ProjectAccessService,
     private readonly notifications: NotificationsService,
     private readonly ai: AiEventsService,
+    private readonly events: EventEmitter2,
   ) {}
+
+  /**
+   * R-MSG3 : toute arrivee ou tout depart d'equipe realigne le canal du
+   * projet. Appele apres l'ecriture, hors de sa transaction.
+   */
+  private async teamChanged(projectId: string): Promise<void> {
+    await this.events.emitAsync(PROJECT_TEAM_CHANGED, { projectId });
+  }
 
   async listMembers(
     slug: string,
@@ -132,6 +143,7 @@ export class MembershipsService {
     }
 
     await this.memberships.delete({ projectId: project.id, userId });
+    await this.teamChanged(project.id);
     await this.access.touch(project.id);
   }
 
@@ -171,6 +183,7 @@ export class MembershipsService {
         }),
       );
     }
+    await this.teamChanged(project.id);
   }
 
   /** R-M3 : le porteur transfere ou archive avant de partir. */
@@ -184,6 +197,7 @@ export class MembershipsService {
     }
 
     await this.memberships.delete({ projectId: project.id, userId: user.id });
+    await this.teamChanged(project.id);
   }
 
   async listJoinRequests(
@@ -280,6 +294,7 @@ export class MembershipsService {
     });
 
     if (autoAccepted) {
+      await this.teamChanged(project.id);
       await this.announceNewMember(project, user.id);
     } else {
       await this.notifications.notifyMany(await this.leadersOf(project.id), {
@@ -332,6 +347,7 @@ export class MembershipsService {
       }
     });
 
+    await this.teamChanged(project.id);
     await this.notifications.notify({
       recipientId: request.userId,
       actorId: actor.id,
@@ -473,6 +489,7 @@ export class MembershipsService {
       }
     });
 
+    await this.teamChanged(project.id);
     await this.announceNewMember(project, user.id);
     await this.access.touch(project.id);
   }

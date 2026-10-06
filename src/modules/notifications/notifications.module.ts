@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import {
   ColumnEntity,
   CommentEntity,
+  ConversationEntity,
+  ConversationParticipantEntity,
   NotificationEntity,
   NotificationPreferenceEntity,
   ProjectEntity,
@@ -27,6 +29,8 @@ import { NotificationsService } from './notifications.service.js';
       TaskEntity,
       ColumnEntity,
       CommentEntity,
+      ConversationEntity,
+      ConversationParticipantEntity,
     ]),
   ],
   controllers: [NotificationsController],

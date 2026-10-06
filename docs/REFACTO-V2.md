@@ -39,8 +39,9 @@ front v2, et cout de maintenance mis a part, nourrissait surtout la confusion :
 
 ## 2. Ce qui est implemente
 
-**76 des 84 operations du contrat.** Les 8 manquantes sont celles de la
-messagerie (§3). S'y ajoutent 6 routes hors contrat, toutes documentees : deux
+**Les 89 operations du contrat** (84 a l'origine, plus le depot de medias
+de la messagerie, R-MSG8, et la gestion des groupes, R-MSG9), messagerie
+comprise (§3). S'y ajoutent 6 routes hors contrat, toutes documentees : deux
 sondes de sante, trois routes du Mur (`docs/CANVAS.md` §2) et `POST /reports`
 (§6). Un module par domaine, sous `src/modules/` :
 
@@ -67,25 +68,28 @@ Verifiable de bout en bout :
 | Commande | Ce qu'elle prouve |
 | --- | --- |
 | `pnpm check:contract` | Aucune derive entre les controleurs et `openapi.yaml`. Ne demande rien de demarre. |
-| `pnpm smoke` | ~200 verifications sur une API demarree, chacune rattachee a une regle du contrat (R-PR1, R-H1/H2, R-M1/M2/M3/M4, R-I1/I2/I3, R-D2/D3, R-A1/A2, R-C2/C3/C4, R-K1/K3/K4/K5, R-W1/W2, R-F1/F2/F3/F4, R-N2/N3/N4, R-P1, R-S2/S4, R-PR7, R-V4/V8, R-X3). Le script **echoue si une route servie n'est exercee par aucun scenario** : 82 sur 82 le sont. |
+| `pnpm smoke` | ~200 verifications sur une API demarree, chacune rattachee a une regle du contrat (R-PR1, R-H1/H2, R-M1/M2/M3/M4, R-I1/I2/I3, R-D2/D3, R-A1/A2, R-C2/C3/C4, R-K1/K3/K4/K5, R-W1/W2, R-F1/F2/F3/F4, R-N2/N3/N4, R-P1, R-S2/S4, R-PR7, R-V4/V8, R-X3). Le script **echoue si une route servie n'est exercee par aucun scenario** : 95 sur 95 le sont. |
 | `pnpm smoke:integration` | La chaine complete du Mur — le core emet un jeton, un vrai client Yjs se connecte au service canvas, ecrit des records tldraw, et la conversion en taches reprend leur texte reel — puis le depot effectif des jobs sur les files du service IA. |
 
 Ce que ces scripts ne couvrent volontairement pas est liste dans
 `scripts/README.md`.
 
-## 3. Ce qui n'est pas implemente : la messagerie
+## 3. Messagerie
 
-`/conversations`, `/messages` et leurs huit routes sont **volontairement
-absents** — c'est le lot suivant. Concretement :
+Livree en 2.1.0, en neuf etapes documentees dans `MESSAGERIE.md` (choix,
+verifications, et ce qui reste ouvert). Treize routes : conversations
+directes, groupes et canaux de projet ; messages texte ; pieces jointes
+(projet, fichier de projet) ; medias deposes (image, video, fichier —
+R-MSG8) ; gestion des groupes (R-MSG9). R-MSG8 et R-MSG9 ont ete ajoutees
+au contrat cote front, selon la regle de travail.
 
-- `src/contracts/conversation.ts` n'a pas ete copie depuis le front ;
-- aucune table `conversations` / `messages` n'existe ;
-- le type de notification `message_received` existe dans le contrat mais n'est
-  jamais emis, et `NotificationTarget` de type `message` n'est jamais resolu
-  (une telle notification serait ecartee de la liste plutot que renvoyee sans
-  lien exploitable) ;
-- l'apercu d'un signalement visant un message renvoie « rien », jamais une
-  invention.
+Effets de bord en place : notifications `message_received` regroupees par
+conversation, signalement d'un message, canaux synchronises par evenements
+depuis Projets et Equipe (`common/events/project-events.ts`).
+
+Ce qui manque : le courriel (`message_received` n'est notifiee que dans
+l'application — aucun envoi n'existe dans le backend) et le temps reel (le
+front interroge, `SPEC.md` §5).
 
 Le **chat du Mur**, lui, existe deja cote service canvas et n'a pas ete
 touche : voir `CANVAS.md` §2.

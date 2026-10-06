@@ -28,6 +28,21 @@ export const atLeast = (
 ): boolean => !!role && ROLE_RANK[role] >= ROLE_RANK[minimum];
 
 /**
+ * R-PR2 (un brouillon n'appartient qu'a son porteur) et R-V3 (un projet prive
+ * n'est lisible que par son equipe) ; l'administration voit tout. La regle
+ * vit ici une seule fois : `assertCanView` l'applique a un projet, et
+ * `visibleIds` a un lot.
+ */
+export const canViewWith = (
+  project: ProjectEntity,
+  role: MembershipRole | undefined,
+  user: UserEntity | undefined,
+): boolean =>
+  user?.platformRole === 'admin' ||
+  ((project.state !== 'draft' || role === 'owner') &&
+    (project.visibility !== 'private' || !!role));
+
+/**
  * Lecture des projets et des droits qui vont avec.
  *
  * Centralise ici parce que presque tous les domaines (annonces, taches,
@@ -75,23 +90,50 @@ export class ProjectAccessService {
   }
 
   /**
-   * R-PR2 (un brouillon n'appartient qu'a son porteur) et R-V3 (un projet
-   * prive n'est lisible que par son equipe).
+   * Voir `canViewWith`. Un brouillon d'autrui repond 404 (son existence n'est
+   * pas revelee), un projet prive 403.
    */
   async assertCanView(
     project: ProjectEntity,
     user: UserEntity | undefined,
   ): Promise<MembershipRole | undefined> {
     const role = await this.roleOf(project.id, user?.id);
-    if (user?.platformRole === 'admin') return role;
+    if (canViewWith(project, role, user)) return role;
 
-    if (project.state === 'draft' && role !== 'owner') {
+    if (project.state === 'draft') {
       throw ApiError.notFound("Ce projet n'existe pas.");
     }
-    if (project.visibility === 'private' && !role) {
-      throw ApiError.forbidden('Ce projet est prive.');
-    }
-    return role;
+    throw ApiError.forbidden('Ce projet est prive.');
+  }
+
+  /**
+   * Les projets du lot que la personne peut voir, en une requete. Sert aux
+   * apercus embarques (pieces jointes de messages), ou un projet invisible
+   * ne doit pas faire echouer toute la lecture mais seulement ne pas
+   * s'afficher.
+   */
+  async visibleIds(
+    projects: ProjectEntity[],
+    user: UserEntity | undefined,
+  ): Promise<Set<string>> {
+    if (projects.length === 0) return new Set();
+
+    const memberships = user
+      ? await this.memberships.find({
+          where: {
+            userId: user.id,
+            projectId: In(projects.map((project) => project.id)),
+            blocked: false,
+          },
+        })
+      : [];
+    const roles = new Map(memberships.map((m) => [m.projectId, m.role]));
+
+    return new Set(
+      projects
+        .filter((project) => canViewWith(project, roles.get(project.id), user))
+        .map((project) => project.id),
+    );
   }
 
   /** Exige un role minimal, sans jamais reveler l'existence d'un projet cache. */

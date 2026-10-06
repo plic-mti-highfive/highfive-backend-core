@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, ILike, In, IsNull, Repository } from 'typeorm';
 import { randomUUID } from 'node:crypto';
@@ -28,6 +29,10 @@ import {
 } from '../../common/http/pagination.js';
 import { toProject } from '../../common/mappers/index.js';
 import { AiEventsService } from '../../common/ai/ai-events.service.js';
+import {
+  PROJECT_DELETED,
+  PROJECT_TEAM_CHANGED,
+} from '../../common/events/project-events.js';
 import { ProjectAccessService } from './project-access.service.js';
 import { TagsService } from '../tags/tags.service.js';
 import { slugify } from './slug.js';
@@ -62,6 +67,7 @@ export class ProjectsService {
     private readonly access: ProjectAccessService,
     private readonly tags: TagsService,
     private readonly ai: AiEventsService,
+    private readonly events: EventEmitter2,
   ) {}
 
   /** `GET /api/projects` — fil public (R-V1). */
@@ -221,6 +227,11 @@ export class ProjectsService {
       return created;
     });
 
+    // R-MSG3 : le canal nait avec le projet (le porteur seul, pour l'instant).
+    await this.events.emitAsync(PROJECT_TEAM_CHANGED, {
+      projectId: project.id,
+    });
+
     const full = await this.access.findByIdOrFail(project.id);
     await this.ai.projectIdentityChanged({
       projectId: full.id,
@@ -367,6 +378,7 @@ export class ProjectsService {
     }
 
     await this.projects.update({ id: project.id }, { deletedAt: new Date() });
+    await this.events.emitAsync(PROJECT_DELETED, { projectId: project.id });
   }
 
   /**
@@ -424,6 +436,10 @@ export class ProjectsService {
       );
     });
 
+    // Le nouveau porteur n'etait peut-etre pas dans l'equipe.
+    await this.events.emitAsync(PROJECT_TEAM_CHANGED, {
+      projectId: project.id,
+    });
     return toProject(await this.access.findByIdOrFail(project.id));
   }
 

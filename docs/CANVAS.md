@@ -51,7 +51,7 @@ aujourd'hui ; toutes restent joignables et testables.
 | **Sonde de sante** | canvas | `GET /health` | — |
 | **Proposition de taches par un modele de langage** a partir du Mur (post-its, formes, fleches, discussion) — rien n'est persiste | core | `POST /api/projects/{slug}/wall/suggest-tasks` | Fonction complete et testee ; il ne manque que l'ecran. |
 | **Acceptation des taches proposees** (la personne tranche avant toute ecriture, R-IA-1) | core | `POST /api/projects/{slug}/wall/suggested-tasks` | Idem. |
-| **Chat du Mur** : message publie en `stateless`, persiste dans le document Yjs (`Y.Array` « chat »), rediffuse aux connectes, et publie sur la file BullMQ `canvas_events` | canvas | hook `onStateless` | Explicitement **reporte** : la messagerie est le lot suivant. Le code n'a pas ete touche. |
+| **Chat du Mur** : message publie en `stateless`, persiste dans le document Yjs (`Y.Array` « chat »), rediffuse aux connectes, et publie sur la file BullMQ `canvas_events` | canvas | hook `onStateless` | Explicitement **reporte**, code non touche. La messagerie a depuis un canal par projet (R-MSG3, `MESSAGERIE.md` etape 7) : les deux font double emploi, a trancher cote produit. |
 | **Plusieurs documents par projet** (le modele distingue `canvasId` de `projectId`) | core + canvas | — | Le front n'expose qu'un seul Mur par projet ; le modele, lui, n'interdit pas d'en ouvrir un second plus tard. |
 
 ---

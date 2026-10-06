@@ -128,12 +128,14 @@ const PROJECTS = [
 ];
 
 const sessions = new Map();
+const userIds = new Map();
 
 console.log(`Seed sur ${API}`);
 
 for (const person of PEOPLE) {
   const session = await ensureAccount(person);
   sessions.set(person.username, session.token);
+  userIds.set(person.username, session.user.id);
   await call('PATCH', '/me', {
     token: session.token,
     body: { bio: person.bio, interests: person.interests },
@@ -203,6 +205,80 @@ for (const slug of slugs.slice(0, 3)) {
       // Deja membre, ou porteur du projet.
     }
   }
+}
+
+// Messagerie : alignee sur src/mocks/data/conversations.ts du front, avec les
+// personnes de ce jeu. Chaque conversation n'est ecrite que si elle manque :
+// une conversation directe se reprend (R-MSG1), et relancer le seed ajouterait
+// sinon les memes messages a chaque demarrage.
+const DIRECTS = [
+  { from: 'sophie.b', to: 'alex.rivera', message: 'On se voit samedi pour la fresque ?', reply: 'Oui, a samedi 9 h alors.' },
+  { from: 'marc.leroy', to: 'alex.rivera', message: 'Tu as les dimensions du mur ?', reply: 'Trente metres sur quatre, a peu pres.' },
+  // R-MSG7 : sans reponse, elle reste dans les « demandes de message » d'alex.
+  { from: 'yanis.f', to: 'alex.rivera', message: "Salut, je peux filer un coup de main sur la fresque, tu geres l'equipe ?" },
+];
+
+const conversationsOf = (username) =>
+  call('GET', '/conversations', { token: sessions.get(username) });
+
+for (const direct of DIRECTS) {
+  const otherId = userIds.get(direct.to);
+  const existing = (await conversationsOf(direct.from)).find(
+    (c) => c.type === 'direct' && c.participantIds.includes(otherId),
+  );
+  if (existing) {
+    console.log(`  conversation ${direct.from} -> ${direct.to} (deja presente)`);
+    continue;
+  }
+  const created = await call('POST', '/conversations', {
+    token: sessions.get(direct.from),
+    body: { participantIds: [otherId], message: direct.message },
+  });
+  if (direct.reply) {
+    await call('POST', `/conversations/${created.id}/messages`, {
+      token: sessions.get(direct.to),
+      body: { body: direct.reply },
+    });
+  }
+  console.log(`  conversation ${direct.from} -> ${direct.to}`);
+}
+
+const GROUP = {
+  creator: 'lea.m',
+  title: 'Chorale du mardi',
+  members: ['alex.rivera', 'sophie.b'],
+  message: 'On decale a 19 h 30 cette semaine.',
+};
+if ((await conversationsOf(GROUP.creator)).some((c) => c.type === 'group' && c.title === GROUP.title)) {
+  console.log(`  groupe ${GROUP.title} (deja present)`);
+} else {
+  await call('POST', '/conversations', {
+    token: sessions.get(GROUP.creator),
+    body: {
+      participantIds: GROUP.members.map((username) => userIds.get(username)),
+      title: GROUP.title,
+      message: GROUP.message,
+    },
+  });
+  console.log(`  groupe ${GROUP.title}`);
+}
+
+// R-MSG3 : le canal de la fresque existe deja (son equipe vient d'etre
+// formee) ; on y depose un premier message s'il est encore vide.
+const fresqueSlug = slugify(PROJECTS[0].title);
+const canal = (await conversationsOf('marc.leroy')).find(
+  (c) => c.type === 'channel' && c.projectSlug === fresqueSlug,
+);
+if (!canal) {
+  console.log(`  canal ${fresqueSlug} introuvable (equipe incomplete ?)`);
+} else if (canal.lastMessage) {
+  console.log(`  canal ${fresqueSlug} (deja anime)`);
+} else {
+  await call('POST', `/conversations/${canal.id}/messages`, {
+    token: sessions.get('marc.leroy'),
+    body: { body: 'La peinture est commandee, livraison jeudi.' },
+  });
+  console.log(`  canal ${fresqueSlug}`);
 }
 
 console.log('\nTermine.');

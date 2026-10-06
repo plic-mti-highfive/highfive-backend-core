@@ -12,6 +12,8 @@ import {
   UserEntity,
 } from '../../entities/index.js';
 import { SessionService } from '../../common/auth/session.service.js';
+import { ChannelsService } from '../conversations/channels.service.js';
+import { MessageAttachmentsService } from '../conversations/message-attachments.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -49,6 +51,8 @@ export class MaintenanceService implements OnModuleInit, OnModuleDestroy {
     private readonly users: Repository<UserEntity>,
     private readonly sessions: SessionService,
     private readonly notifications: NotificationsService,
+    private readonly messageAttachments: MessageAttachmentsService,
+    private readonly channels: ChannelsService,
   ) {}
 
   onModuleInit(): void {
@@ -69,6 +73,11 @@ export class MaintenanceService implements OnModuleInit, OnModuleDestroy {
       await this.warnBeforeArchive();
       await this.archiveInactive();
       await this.purgeDeleted();
+      // R-MSG8 : depots de messages jamais joints, passe 24 h.
+      await this.messageAttachments.purgeOrphans();
+      // R-MSG3 : cree les canaux manquants (projets anterieurs a la
+      // messagerie) et rattrape une synchronisation qui aurait echoue.
+      await this.channels.reconcileAll();
     } catch (error) {
       this.logger.error(`Entretien periodique en echec: ${String(error)}`);
     }
