@@ -25,13 +25,14 @@ const setup = (
   const reply = vi.fn().mockResolvedValue({
     id: uuid(9),
     text: 'ok',
-    timestamp: 5,
+    sentAt: new Date(5),
     failed: false,
   });
   const post = vi.fn().mockResolvedValue(true);
   const chat = {
     saveIfAbsent: save,
     recent: vi.fn(),
+    conversationIdOf: vi.fn().mockResolvedValue(uuid(7)),
     findById: vi
       .fn()
       .mockResolvedValue(
@@ -78,10 +79,11 @@ const job = (
     name,
     data: {
       id: uuid(3),
-      text: '@ia salut',
       authorId: uuid(4),
+      body: '@ia salut',
+      sentAt: new Date(1).toISOString(),
+      deleted: false,
       canvasId: uuid(2),
-      timestamp: 1,
       ...data,
     },
   }) as unknown as Job<CanvasChatJobData>;
@@ -117,7 +119,12 @@ describe('CanvasChatConsumer', () => {
     expect(reply).not.toHaveBeenCalled();
     expect(post).toHaveBeenCalledWith(
       uuid(2),
-      expect.objectContaining({ id: uuid(9), text: 'deja repondu' }),
+      expect.objectContaining({
+        id: uuid(9),
+        body: 'deja repondu',
+        conversationId: uuid(7),
+        deleted: false,
+      }),
     );
   });
 
@@ -129,7 +136,7 @@ describe('CanvasChatConsumer', () => {
 
   it("sauvegarde sans repondre quand l'assistant n'est pas sollicite", async () => {
     const { consumer, save, reply } = setup({ reply: false });
-    await consumer.process(job({ text: 'bonjour' }));
+    await consumer.process(job({ body: 'bonjour' }));
     expect(save).toHaveBeenCalled();
     expect(reply).not.toHaveBeenCalled();
   });

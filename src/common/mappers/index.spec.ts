@@ -156,6 +156,7 @@ describe('toConversation', () => {
   ): ConversationEntity => ({
     id: '77777777-7777-4777-8777-777777777777',
     type: 'direct',
+    kind: 'messaging',
     projectId: null,
     title: null,
     adminId: null,

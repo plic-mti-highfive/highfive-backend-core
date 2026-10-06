@@ -72,15 +72,14 @@ export class CanvasChatConsumer extends WorkerHost {
     const created = await this.chat.saveIfAbsent({
       id: data.id,
       projectId: project.id,
-      canvasId: data.canvasId,
       authorId: data.authorId,
       role: 'user',
-      body: data.text.slice(0, 4000),
-      sentAt: new Date(data.timestamp),
+      body: data.body.slice(0, 4000),
+      sentAt: new Date(data.sentAt),
     });
 
     if (data.authorId === ASSISTANT_USER_ID) return;
-    if (!this.assistant.shouldReply(data.text)) return;
+    if (!this.assistant.shouldReply(data.body)) return;
 
     // Job rejoue (le message existait deja) : la reponse a peut-etre deja ete
     // donnee. Si oui, on la re-diffuse (le canvas est idempotent sur l'id) sans
@@ -88,17 +87,16 @@ export class CanvasChatConsumer extends WorkerHost {
     const replyId = assistantReplyId(data.id);
     const existing = created ? undefined : await this.chat.findById(replyId);
     const reply = existing
-      ? {
-          id: existing.id,
-          text: existing.body,
-          timestamp: existing.sentAt.getTime(),
-        }
-      : await this.assistant.reply(project, data.canvasId, replyId);
+      ? { id: existing.id, text: existing.body, sentAt: existing.sentAt }
+      : await this.assistant.reply(project, replyId);
+    const conversationId = await this.chat.conversationIdOf(project.id);
     const delivered = await this.canvas.postChatMessage(data.canvasId, {
       id: reply.id,
-      text: reply.text,
+      ...(conversationId ? { conversationId } : {}),
       authorId: ASSISTANT_USER_ID,
-      timestamp: reply.timestamp,
+      body: reply.text,
+      sentAt: reply.sentAt.toISOString(),
+      deleted: false,
       isAssistant: true,
     });
     if (!delivered) {

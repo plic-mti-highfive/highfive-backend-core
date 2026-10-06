@@ -204,7 +204,11 @@ export class ConversationsService {
     if (memberships.length === 0) return [];
 
     const conversations = await this.conversations.find({
-      where: { id: In(memberships.map((row) => row.conversationId)) },
+      // Le chat du Mur (`kind = 'wall'`) n'est pas dans la messagerie.
+      where: {
+        id: In(memberships.map((row) => row.conversationId)),
+        kind: 'messaging',
+      },
       order: { lastActivityAt: 'DESC', id: 'ASC' },
     });
     const ids = conversations.map((conversation) => conversation.id);
@@ -273,7 +277,9 @@ export class ConversationsService {
       where: { conversationId, userId },
     });
     const conversation = membership
-      ? await this.conversations.findOne({ where: { id: conversationId } })
+      ? await this.conversations.findOne({
+          where: { id: conversationId, kind: 'messaging' },
+        })
       : null;
     if (!conversation) {
       throw ApiError.notFound('Cette conversation est introuvable.');

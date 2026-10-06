@@ -162,7 +162,7 @@ const buildUserPrompt = (
     lines.push(
       '',
       'Discussion :',
-      ...canvas.chat.map((message) => `- ${message.text}`),
+      ...canvas.chat.map((message) => `- ${message.body}`),
     );
   }
 

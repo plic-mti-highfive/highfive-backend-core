@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource, In, IsNull } from 'typeorm';
+import { DataSource, EntityManager, In, IsNull } from 'typeorm';
 import {
   PROJECT_DELETED,
   PROJECT_TEAM_CHANGED,
@@ -9,6 +9,7 @@ import {
 } from '../../common/events/project-events.js';
 import {
   ConversationEntity,
+  type ConversationKind,
   ConversationParticipantEntity,
   MembershipEntity,
   ProjectEntity,
@@ -25,6 +26,10 @@ import { deleteConversation } from './delete-conversation.js';
  * a chaque evenement, a la creation, et au rattrapage periodique. Rejouer
  * une synchronisation ne change rien, en manquer une se rattrape au passage
  * suivant de l'entretien.
+ *
+ * La conversation `wall` du projet (chat du Mur, `kind = 'wall'`) suit la
+ * meme regle : meme equipe, memes synchronisations, mais jamais exposee par
+ * les routes de la messagerie.
  */
 @Injectable()
 export class ChannelsService {
@@ -57,58 +62,93 @@ export class ChannelsService {
         where: { id: projectId, deletedAt: IsNull() },
       });
       if (!project) return;
+      await this.syncConversation(manager, projectId, 'messaging');
+      await this.syncConversation(manager, projectId, 'wall');
+    });
+  }
 
-      // `ON CONFLICT DO NOTHING` puis relecture : deux synchronisations
-      // simultanees du meme projet aboutissent au meme canal.
+  /**
+   * Identifiant de la conversation `wall` du projet (creee et alignee sur
+   * l'equipe si elle manque), ou `undefined` si le projet n'existe plus.
+   * Chemin rapide : une lecture quand elle existe deja.
+   */
+  async wallConversationId(projectId: string): Promise<string | undefined> {
+    const existing = await this.dataSource
+      .getRepository(ConversationEntity)
+      .findOne({
+        select: { id: true },
+        where: { kind: 'wall', projectId },
+      });
+    if (existing) return existing.id;
+    await this.dataSource.transaction(async (manager) => {
+      const project = await manager.findOne(ProjectEntity, {
+        where: { id: projectId, deletedAt: IsNull() },
+      });
+      if (project) await this.syncConversation(manager, projectId, 'wall');
+    });
+    return (
+      await this.dataSource.getRepository(ConversationEntity).findOne({
+        select: { id: true },
+        where: { kind: 'wall', projectId },
+      })
+    )?.id;
+  }
+
+  private async syncConversation(
+    manager: EntityManager,
+    projectId: string,
+    kind: ConversationKind,
+  ): Promise<void> {
+    // `ON CONFLICT DO NOTHING` puis relecture : deux synchronisations
+    // simultanees du meme projet aboutissent au meme canal.
+    await manager
+      .createQueryBuilder()
+      .insert()
+      .into(ConversationEntity)
+      .values({ type: 'channel', kind, projectId })
+      .orIgnore()
+      .execute();
+    const channel = (await manager.findOne(ConversationEntity, {
+      where: { type: 'channel', kind, projectId },
+    }))!;
+
+    const [team, participants] = await Promise.all([
+      manager.find(MembershipEntity, {
+        where: { projectId, blocked: false },
+      }),
+      manager.find(ConversationParticipantEntity, {
+        where: { conversationId: channel.id },
+      }),
+    ]);
+    const teamIds = new Set(team.map((membership) => membership.userId));
+    const currentIds = new Set(participants.map((row) => row.userId));
+
+    const arrivals = [...teamIds].filter((id) => !currentIds.has(id));
+    const departures = [...currentIds].filter((id) => !teamIds.has(id));
+
+    if (arrivals.length) {
+      const now = new Date();
       await manager
         .createQueryBuilder()
         .insert()
-        .into(ConversationEntity)
-        .values({ type: 'channel', projectId })
+        .into(ConversationParticipantEntity)
+        .values(
+          arrivals.map((userId) => ({
+            conversationId: channel.id,
+            userId,
+            joinedAt: now,
+            lastReadAt: now,
+          })),
+        )
         .orIgnore()
         .execute();
-      const channel = (await manager.findOne(ConversationEntity, {
-        where: { type: 'channel', projectId },
-      }))!;
-
-      const [team, participants] = await Promise.all([
-        manager.find(MembershipEntity, {
-          where: { projectId, blocked: false },
-        }),
-        manager.find(ConversationParticipantEntity, {
-          where: { conversationId: channel.id },
-        }),
-      ]);
-      const teamIds = new Set(team.map((membership) => membership.userId));
-      const currentIds = new Set(participants.map((row) => row.userId));
-
-      const arrivals = [...teamIds].filter((id) => !currentIds.has(id));
-      const departures = [...currentIds].filter((id) => !teamIds.has(id));
-
-      if (arrivals.length) {
-        const now = new Date();
-        await manager
-          .createQueryBuilder()
-          .insert()
-          .into(ConversationParticipantEntity)
-          .values(
-            arrivals.map((userId) => ({
-              conversationId: channel.id,
-              userId,
-              joinedAt: now,
-              lastReadAt: now,
-            })),
-          )
-          .orIgnore()
-          .execute();
-      }
-      if (departures.length) {
-        await manager.delete(ConversationParticipantEntity, {
-          conversationId: channel.id,
-          userId: In(departures),
-        });
-      }
-    });
+    }
+    if (departures.length) {
+      await manager.delete(ConversationParticipantEntity, {
+        conversationId: channel.id,
+        userId: In(departures),
+      });
+    }
   }
 
   /**
@@ -118,11 +158,15 @@ export class ChannelsService {
    */
   async remove(projectId: string): Promise<void> {
     const storageKeys = await this.dataSource.transaction(async (manager) => {
-      const channel = await manager.findOne(ConversationEntity, {
+      // Canal d'equipe et chat du Mur : tout part avec le projet.
+      const channels = await manager.find(ConversationEntity, {
         where: { type: 'channel', projectId },
       });
-      if (!channel) return [];
-      return deleteConversation(manager, channel.id);
+      const keys: string[] = [];
+      for (const channel of channels) {
+        keys.push(...(await deleteConversation(manager, channel.id)));
+      }
+      return keys;
     });
     for (const key of storageKeys) await this.storage.remove(key);
   }
@@ -142,7 +186,7 @@ export class ChannelsService {
     const orphans = await this.dataSource
       .getRepository(ConversationEntity)
       .createQueryBuilder('c')
-      .select('c.project_id', 'projectId')
+      .select('DISTINCT c.project_id', 'projectId')
       .where("c.type = 'channel'")
       .andWhere(
         'NOT EXISTS (SELECT 1 FROM projects p WHERE p.id = c.project_id AND p.deleted_at IS NULL)',

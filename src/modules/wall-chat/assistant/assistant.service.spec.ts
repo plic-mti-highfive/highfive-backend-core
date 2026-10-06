@@ -27,7 +27,6 @@ const msg = (
 ): WallChatMessage => ({
   id: uuid(n),
   projectId: project.id,
-  canvasId: uuid(2),
   authorId,
   role,
   body,
@@ -95,7 +94,7 @@ describe('AssistantService.reply', () => {
       msg(3, '@ia resume'),
     ];
     const { service, llm, saved } = setup({}, history);
-    const reply = await service.reply(project, uuid(2));
+    const reply = await service.reply(project);
 
     const turns = (llm.complete as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(turns[0].role).toBe('system');
@@ -124,7 +123,7 @@ describe('AssistantService.reply', () => {
       { 'assistant.contextTokenBudget': 500 },
       history,
     );
-    await service.reply(project, uuid(2));
+    await service.reply(project);
     const turns = (llm.complete as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(turns.length).toBeLessThan(10);
     expect(turns.at(-1).content).toContain('message numero 30');
@@ -134,7 +133,7 @@ describe('AssistantService.reply', () => {
     const { service, chat } = setup({ 'assistant.contextMaxMessages': 7 }, [
       msg(1, 'a'),
     ]);
-    await service.reply(project, uuid(2));
+    await service.reply(project);
     expect(chat.recent).toHaveBeenCalledWith(project.id, 7);
   });
 
@@ -142,7 +141,7 @@ describe('AssistantService.reply', () => {
     const { service, saved } = setup({}, [msg(1, '@ia')], () =>
       Promise.reject(new LlmUnavailableError('LLM indisponible')),
     );
-    const reply = await service.reply(project, uuid(2));
+    const reply = await service.reply(project);
     expect(reply).toMatchObject({ failed: true, text: 'LLM indisponible' });
     expect(saved[0].body).toBe('LLM indisponible');
   });
@@ -151,7 +150,7 @@ describe('AssistantService.reply', () => {
     const { service } = setup({}, [msg(1, '@ia')], () =>
       Promise.reject(new Error('kaboom')),
     );
-    const reply = await service.reply(project, uuid(2));
+    const reply = await service.reply(project);
     expect(reply.failed).toBe(true);
     expect(reply.text).toContain('Desole');
     expect(reply.text).not.toContain('kaboom');
@@ -161,7 +160,7 @@ describe('AssistantService.reply', () => {
     const { service, saved } = setup({}, [msg(1, '@ia')], () =>
       Promise.resolve('y'.repeat(5000)),
     );
-    const reply = await service.reply(project, uuid(2));
+    const reply = await service.reply(project);
     expect(reply.text).toHaveLength(4000);
     expect(saved[0].body).toHaveLength(4000);
   });
@@ -171,6 +170,6 @@ describe('AssistantService.reply', () => {
     (chat.saveIfAbsent as ReturnType<typeof vi.fn>).mockRejectedValue(
       new Error('db down'),
     );
-    await expect(service.reply(project, uuid(2))).rejects.toThrow('db down');
+    await expect(service.reply(project)).rejects.toThrow('db down');
   });
 });

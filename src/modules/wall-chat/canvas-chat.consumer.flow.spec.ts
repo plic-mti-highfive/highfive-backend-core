@@ -47,6 +47,9 @@ class MemoryRepo extends WallChatRepository {
   findById(id: string): Promise<WallChatMessage | undefined> {
     return Promise.resolve(this.rows.get(id));
   }
+  conversationIdOf(): Promise<string | undefined> {
+    return Promise.resolve(uuid(7));
+  }
 }
 
 const setup = (config: Record<string, unknown> = {}) => {
@@ -83,10 +86,11 @@ const job = (text: string, extra: Partial<CanvasChatJobData> = {}) =>
     name: 'canvas_chat_message',
     data: {
       id: uuid(seq++),
-      text,
       authorId: uuid(4),
+      body: text,
+      sentAt: new Date(seq).toISOString(),
+      deleted: false,
       canvasId: uuid(2),
-      timestamp: seq,
       ...extra,
     },
   }) as unknown as Job<CanvasChatJobData>;
@@ -103,7 +107,7 @@ describe('chat du Mur : consommateur + assistant + depot (LLM fake)', () => {
       authorId: ASSISTANT_USER_ID,
       isAssistant: true,
     });
-    expect(post.mock.calls[0][1].text).toContain('Contexte : 1 message(s)');
+    expect(post.mock.calls[0][1].body).toContain('Contexte : 1 message(s)');
   });
 
   it("contextualisation : l'historique grandit d'un message a l'autre", async () => {
@@ -112,10 +116,10 @@ describe('chat du Mur : consommateur + assistant + depot (LLM fake)', () => {
     await consumer.process(job('deuxieme message'));
     await consumer.process(job('@ia resume'));
     // 2 humains + @ia = 3 ; l'assistant n'a pas encore repondu avant.
-    expect(post.mock.calls[0][1].text).toContain('Contexte : 3 message(s)');
+    expect(post.mock.calls[0][1].body).toContain('Contexte : 3 message(s)');
     await consumer.process(job('@ia encore'));
     // + sa reponse precedente + le nouveau message = 5
-    expect(post.mock.calls[1][1].text).toContain('Contexte : 5 message(s)');
+    expect(post.mock.calls[1][1].body).toContain('Contexte : 5 message(s)');
   });
 
   it('sans @ia : sauvegarde seule, ni LLM ni canvas', async () => {
@@ -155,7 +159,7 @@ describe('chat du Mur : consommateur + assistant + depot (LLM fake)', () => {
     await consumer.process(job('@ia ?'));
     const reply = [...repo.rows.values()].find((r) => r.role === 'assistant');
     expect(reply?.body).toMatch(/pas disponible/);
-    expect(post.mock.calls[0][1].text).toBe(reply?.body);
+    expect(post.mock.calls[0][1].body).toBe(reply?.body);
   });
 
   it('panne de base pendant la reponse puis rejeu : la reponse est quand meme donnee', async () => {

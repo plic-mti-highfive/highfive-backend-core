@@ -1,11 +1,14 @@
-import type { WallChatRole } from '../../entities/wall-chat-message.entity.js';
+export type WallChatRole = 'user' | 'assistant';
 
 export interface WallChatMessage {
-  /** Identifiant du message dans le Y.Doc du Mur : cle d'idempotence. */
+  /**
+   * Identifiant du message dans le Y.Doc du Mur : devient l'id du
+   * `MessageEntity`, donc cle d'idempotence.
+   */
   id: string;
   projectId: string;
-  canvasId: string;
   authorId: string;
+  /** Derive de l'auteur (`ASSISTANT_USER_ID`) : pas de colonne dediee. */
   role: WallChatRole;
   body: string;
   sentAt: Date;
@@ -14,9 +17,8 @@ export interface WallChatMessage {
 /**
  * Persistance des messages du chat du Mur.
  *
- * Interface plutot qu'implementation : la messagerie (conversations) est
- * developpee a part, et c'est elle qui devra, le moment venu, stocker ces
- * messages. Il suffira de fournir une autre implementation sous ce jeton.
+ * Implementee sur la messagerie (`ConversationEntity` de `kind = 'wall'` +
+ * `MessageEntity`) ; l'interface reste le point de substitution des tests.
  */
 export abstract class WallChatRepository {
   /** Renvoie `false` sans rien ecrire si l'`id` existe deja (idempotent). */
@@ -27,4 +29,7 @@ export abstract class WallChatRepository {
 
   /** Les `limit` derniers messages du projet, en ordre chronologique. */
   abstract recent(projectId: string, limit: number): Promise<WallChatMessage[]>;
+
+  /** Identifiant de la conversation `wall` du projet (creee au besoin). */
+  abstract conversationIdOf(projectId: string): Promise<string | undefined>;
 }

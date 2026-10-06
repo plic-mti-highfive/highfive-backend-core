@@ -3,10 +3,12 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import {
   ProjectEntity,
+  ConversationEntity,
+  MessageEntity,
   UserEntity,
-  WallChatMessageEntity,
   WallEntity,
 } from '../../entities/index.js';
+import { ConversationsModule } from '../conversations/conversations.module.js';
 import { CanvasClientService } from '../wall/canvas-client.service.js';
 import { AssistantService } from './assistant/assistant.service.js';
 import { LlmService } from './assistant/llm.service.js';
@@ -17,17 +19,20 @@ import { TypeormWallChatRepository } from './typeorm-wall-chat.repository.js';
 
 /**
  * Chat du Mur : consommateur de `canvas_events` + assistant LLM. Le stockage
- * est derriere `WallChatRepository`, a rebrancher sur la messagerie.
+ * est derriere `WallChatRepository`, implemente sur la messagerie
+ * (conversation `kind = 'wall'`, voir `ChannelsService`).
  */
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      WallChatMessageEntity,
+      ConversationEntity,
+      MessageEntity,
       WallEntity,
       ProjectEntity,
       UserEntity,
     ]),
     BullModule.registerQueue({ name: CANVAS_EVENTS_QUEUE }),
+    ConversationsModule,
   ],
   providers: [
     { provide: WallChatRepository, useClass: TypeormWallChatRepository },

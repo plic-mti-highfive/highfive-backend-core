@@ -2,6 +2,13 @@ import { Check, Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 import type { ConversationType } from '../contracts/index.js';
 
 /**
+ * Nature de la messagerie : `messaging` (directes, groupes, canal d'equipe
+ * exposes par `/conversations`) ou `wall` (chat du Mur d'un projet, expose
+ * par le seul canvas). Interne : absent du contrat, jamais renvoye par l'API.
+ */
+export type ConversationKind = 'messaging' | 'wall';
+
+/**
  * Conversation (doc 04 §13). Les participants vivent dans
  * `conversation_participants` : le `participantIds[]` du contrat est une forme
  * d'API, recalculee a la lecture.
@@ -10,15 +17,22 @@ import type { ConversationType } from '../contracts/index.js';
  * unique la conversation directe entre deux personnes — ecrire a quelqu'un
  * qu'on a deja contacte reprend le fil au lieu d'en ouvrir un second.
  * R-MSG3 : un canal par projet au plus, garanti par l'index partiel.
+ * Chat du Mur : une conversation `wall` par projet au plus (`type = 'channel'`
+ * pour satisfaire le CHECK du projet, mais `kind = 'wall'` : elle n'est ni le
+ * canal d'equipe, ni visible dans la messagerie).
  */
 @Entity('conversations')
 @Index('uq_conversations_channel_project', ['projectId'], {
   unique: true,
-  where: "type = 'channel'",
+  where: "type = 'channel' AND kind = 'messaging'",
+})
+@Index('uq_conversations_wall_project', ['projectId'], {
+  unique: true,
+  where: "kind = 'wall'",
 })
 // Sans nom explicite : voir `message.entity.ts`.
 @Check(
-  "(type = 'channel') = (project_id IS NOT NULL) AND (type = 'direct') = (direct_key IS NOT NULL)",
+  "(type = 'channel') = (project_id IS NOT NULL) AND (type = 'direct') = (direct_key IS NOT NULL) AND (kind = 'messaging' OR type = 'channel')",
 )
 export class ConversationEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -26,6 +40,9 @@ export class ConversationEntity {
 
   @Column({ type: 'varchar', length: 16 })
   type!: ConversationType;
+
+  @Column({ type: 'varchar', length: 16, default: 'messaging' })
+  kind!: ConversationKind;
 
   @Column({ name: 'project_id', type: 'uuid', nullable: true })
   projectId!: string | null;

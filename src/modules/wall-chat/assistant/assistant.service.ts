@@ -17,7 +17,7 @@ const FALLBACK_REPLY =
 export interface AssistantReply {
   id: string;
   text: string;
-  timestamp: number;
+  sentAt: Date;
   /** Vrai quand le texte est un message d'erreur, pas une reponse du LLM. */
   failed: boolean;
 }
@@ -55,7 +55,6 @@ export class AssistantService {
    */
   async reply(
     project: ProjectEntity,
-    canvasId: string,
     replyId: string = crypto.randomUUID(),
   ): Promise<AssistantReply> {
     const limit = this.config.get<number>('assistant.contextMaxMessages') ?? 50;
@@ -107,7 +106,6 @@ export class AssistantService {
     const message = {
       id: replyId,
       projectId: project.id,
-      canvasId,
       authorId: ASSISTANT_USER_ID,
       role: 'assistant' as const,
       body: text.slice(0, 4000),
@@ -117,7 +115,7 @@ export class AssistantService {
     return {
       id: message.id,
       text: message.body,
-      timestamp: message.sentAt.getTime(),
+      sentAt: message.sentAt,
       failed,
     };
   }
