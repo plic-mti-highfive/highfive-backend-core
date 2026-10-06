@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "default": "",
+            "type": "string",
+            "maxLength": 1000
+          },
+          "sourceHints": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["title", "description", "sourceHints"],
+        "additionalProperties": false
+      }
+    },
+    "empty": {
+      "type": "boolean"
+    }
+  },
+  "required": ["tasks", "empty"],
+  "additionalProperties": false,
+  "title": "WallSuggestions"
+}

@@ -97,8 +97,7 @@ export class WallService {
    *
    * C'est ici que les droits projet deviennent des droits document : le
    * service canvas ne connait rien des projets, il ne sait que verifier ce
-   * jeton. Non appelee par le front actuel (qui fait tourner tldraw en local),
-   * conservee parce que sans elle le service canvas est injoignable.
+   * jeton. Appelee par le front (`useWallSync`) avant d'ouvrir le provider.
    */
   async openSession(slug: string, user: UserEntity): Promise<WallSession> {
     const { project, wall, role } = await this.wallFor(slug, user, 'observer');
@@ -135,8 +134,8 @@ export class WallService {
   }
 
   /**
-   * Propose des taches a partir du Mur, sans rien persister. Non appelee par
-   * le front actuel — voir `docs/REFACTO-V2.md`.
+   * Propose des taches a partir du Mur, sans rien persister. Appelee par le
+   * bouton « Suggerer des taches (IA) » du Mur.
    */
   async suggestTasks(slug: string, user: UserEntity): Promise<WallSuggestions> {
     const { project, wall } = await this.wallFor(slug, user, 'member');

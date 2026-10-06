@@ -1,30 +1,20 @@
 import { Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
-import { z } from 'zod';
 import { CurrentUser } from '../../common/auth/decorators.js';
 import { ZodBody } from '../../common/http/zod.pipe.js';
 import {
+  acceptSuggestedTasksInputSchema,
   wallToTasksInputSchema,
+  type AcceptSuggestedTasksInput,
   type Task,
   type Wall,
   type WallToTasksInput,
 } from '../../contracts/index.js';
 import type { UserEntity } from '../../entities/index.js';
-import type { ProposedTask } from './canvas.types.js';
 import {
   WallService,
   type WallSession,
   type WallSuggestions,
 } from './wall.service.js';
-
-const proposedTaskSchema = z.object({
-  title: z.string().min(1).max(120),
-  description: z.string().max(1000).default(''),
-  sourceHints: z.array(z.string()).default([]),
-});
-
-const acceptSuggestionsSchema = z.object({
-  tasks: z.array(proposedTaskSchema).min(1).max(50),
-});
 
 @Controller('projects/:slug/wall')
 export class WallController {
@@ -51,8 +41,8 @@ export class WallController {
   }
 
   /**
-   * Hors contrat front : jeton d'acces au document collaboratif. Conservee
-   * parce que le service canvas n'est joignable que par ce biais.
+   * Jeton d'acces au document collaboratif (`WallSession`, contrat front) :
+   * le service canvas n'est joignable que par ce biais.
    */
   @Get('session')
   openSession(
@@ -62,7 +52,7 @@ export class WallController {
     return this.wall.openSession(slug, user);
   }
 
-  /** Hors contrat front : propositions de taches deduites du Mur (rien n'est persiste). */
+  /** Propositions de taches deduites du Mur par l'IA (rien n'est persiste). */
   @Post('suggest-tasks')
   @HttpCode(200)
   suggestTasks(
@@ -72,13 +62,13 @@ export class WallController {
     return this.wall.suggestTasks(slug, user);
   }
 
-  /** Hors contrat front : creation des taches retenues parmi les propositions. */
+  /** Creation des taches retenues parmi les propositions de l'IA. */
   @Post('suggested-tasks')
   @HttpCode(201)
   acceptSuggestedTasks(
     @Param('slug') slug: string,
     @CurrentUser() user: UserEntity,
-    @ZodBody(acceptSuggestionsSchema) body: { tasks: ProposedTask[] },
+    @ZodBody(acceptSuggestedTasksInputSchema) body: AcceptSuggestedTasksInput,
   ): Promise<Task[]> {
     return this.wall.acceptSuggestedTasks(slug, user, body.tasks);
   }

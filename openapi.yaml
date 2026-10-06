@@ -1144,6 +1144,81 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ApiErrorBody" }
 
+  /projects/{slug}/wall/session:
+    get:
+      operationId: getWallSession
+      tags: [wall]
+      summary: Session d'acces au document collaboratif du Mur (observateur+)
+      description: >-
+        Emet un jeton court (JWT, 1 h par defaut) a presenter au serveur
+        Hocuspocus (`websocketUrl`) pour ouvrir le document nomme `canvasId`.
+        `role: viewer` => connexion en lecture seule.
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      responses:
+        "200":
+          description: Session de synchronisation.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WallSession" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /projects/{slug}/wall/suggest-tasks:
+    post:
+      operationId: suggestWallTasks
+      tags: [wall]
+      summary: Proposer des taches a partir du Mur (IA, membre+) — rien n'est persiste
+      description: >-
+        Le core lit l'export du Mur puis interroge le LLM. Mur trop pauvre :
+        `{ tasks: [], empty: true }`.
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      responses:
+        "200":
+          description: Propositions (a faire valider par l'utilisateur).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WallSuggestions" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503":
+          description: IA non configuree ou indisponible (message en francais).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+
+  /projects/{slug}/wall/suggested-tasks:
+    post:
+      operationId: acceptSuggestedTasks
+      tags: [wall]
+      summary: Creer les taches retenues parmi les propositions de l'IA (membre+)
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AcceptSuggestedTasksInput" }
+      responses:
+        "201":
+          description: Taches creees dans la colonne "A faire".
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Task" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: Projet introuvable, ou aucune colonne disponible.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+
   # -------------------------------------------------------------- Files
   /projects/{slug}/files:
     get:
@@ -1960,6 +2035,7 @@ components:
     # --- par fichier de docs/v2/backend/schemas/. Ne pas editer a la main :
     # --- regenerer le script si le domaine change.
     AccountStatus: { $ref: "./schemas/AccountStatus.json" }
+    AcceptSuggestedTasksInput: { $ref: "./schemas/AcceptSuggestedTasksInput.json" }
     AdminAction: { $ref: "./schemas/AdminAction.json" }
     AdminActionType: { $ref: "./schemas/AdminActionType.json" }
     AdminStats: { $ref: "./schemas/AdminStats.json" }
@@ -2035,6 +2111,7 @@ components:
     ProjectSummary: { $ref: "./schemas/ProjectSummary.json" }
     ProjectTransition: { $ref: "./schemas/ProjectTransition.json" }
     ProjectUpdateInput: { $ref: "./schemas/ProjectUpdateInput.json" }
+    ProposedTask: { $ref: "./schemas/ProposedTask.json" }
     RegisterInput: { $ref: "./schemas/RegisterInput.json" }
     Report: { $ref: "./schemas/Report.json" }
     ReportCreateInput: { $ref: "./schemas/ReportCreateInput.json" }
@@ -2063,6 +2140,9 @@ components:
     Username: { $ref: "./schemas/Username.json" }
     Visibility: { $ref: "./schemas/Visibility.json" }
     Wall: { $ref: "./schemas/Wall.json" }
+    WallRole: { $ref: "./schemas/WallRole.json" }
+    WallSession: { $ref: "./schemas/WallSession.json" }
+    WallSuggestions: { $ref: "./schemas/WallSuggestions.json" }
     WallToTasksInput: { $ref: "./schemas/WallToTasksInput.json" }
 
     # --- Formes composites definies dans src/api/*.ts (pas dans src/domain),

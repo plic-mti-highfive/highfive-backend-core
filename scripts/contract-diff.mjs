@@ -25,10 +25,6 @@ const EXPECTED_MISSING = [];
 const EXPECTED_EXTRA = [
   'GET /health',
   'GET /health/ready',
-  // Le Mur : fonctions conservees sans ecran (docs/CANVAS.md §2).
-  'GET /projects/:slug/wall/session',
-  'POST /projects/:slug/wall/suggest-tasks',
-  'POST /projects/:slug/wall/suggested-tasks',
   // Sans creation de signalement, la file de moderation est vide.
   'POST /reports',
 ];
