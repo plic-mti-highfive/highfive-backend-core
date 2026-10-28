@@ -68,6 +68,10 @@ jobs:
       - name: Run linter
         run: pnpm lint
 
+      # Verifie aussi que la sortie reste dist/main.js (point d'entree de l'image Docker).
+      - name: Build
+        run: pnpm build && test -f dist/main.js
+
       - name: Check API contract drift
         run: pnpm check:contract
 
