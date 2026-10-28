@@ -35,11 +35,21 @@ export class ProjectImageEntity {
   @JoinColumn({ name: 'project_id' })
   project!: ProjectEntity;
 
-  @Column({ name: 'uploaded_by', type: 'uuid' })
-  uploadedBy!: string;
+  /**
+   * Nullable pour les seules lignes heritees de la premiere implementation
+   * (PR #5), qui ne le notait pas : la synchronisation ne peut pas ajouter
+   * une colonne `NOT NULL` a une table non vide. Complete au demarrage par
+   * `LegacyCustomizationService`.
+   */
+  @Column({ name: 'uploaded_by', type: 'uuid', nullable: true })
+  uploadedBy!: string | null;
 
-  /** Type reel, detecte a la reception (JPEG, PNG, WebP ou AVIF). */
-  @Column({ name: 'mime_type', type: 'varchar', length: 32 })
+  /**
+   * Type reel, detecte a la reception (JPEG, PNG, WebP ou AVIF). Longueur
+   * reprise de la PR #5 : la changer ferait recreer la colonne par la
+   * synchronisation, donnees comprises.
+   */
+  @Column({ name: 'mime_type', type: 'varchar', length: 64 })
   mimeType!: string;
 
   /** 2 Mo au plus : un `int` suffit. */
@@ -49,9 +59,13 @@ export class ProjectImageEntity {
   @Column({ name: 'storage_key', type: 'text' })
   storageKey!: string;
 
-  /** Variante WebP de 640 px de large au plus, pour les cartes de projet. */
-  @Column({ name: 'thumb_key', type: 'text' })
-  thumbKey!: string;
+  /**
+   * Variante WebP de 640 px de large au plus, pour les cartes de projet.
+   * Nulle seulement pour une ligne heritee dont la miniature n'a pas pu etre
+   * produite : la carte sert alors l'original.
+   */
+  @Column({ name: 'thumb_key', type: 'text', nullable: true })
+  thumbKey!: string | null;
 
   @Column({ name: 'uploaded_at', type: 'timestamptz', default: () => 'now()' })
   uploadedAt!: Date;

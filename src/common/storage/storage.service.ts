@@ -91,6 +91,15 @@ export class StorageService implements OnModuleInit {
     await this.allowPublicReads();
   }
 
+  /** Lit un objet en entier (images de quelques Mo au plus). */
+  async read(key: string): Promise<Buffer> {
+    const object = await this.client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+    if (!object.Body) throw new Error(`Objet ${key} vide`);
+    return Buffer.from(await object.Body.transformToByteArray());
+  }
+
   /** Depose un contenu et renvoie sa cle et son URL publique. */
   async put(
     folder: string,

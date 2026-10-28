@@ -145,7 +145,12 @@ export class CustomizationReaderService {
         ? []
         : await this.images.find({
             where: { id: In(banners.map((banner) => banner.imageId)) },
-            select: { id: true, projectId: true, thumbKey: true },
+            select: {
+              id: true,
+              projectId: true,
+              thumbKey: true,
+              storageKey: true,
+            },
           });
     const thumbs = new Map(
       await Promise.all(
@@ -153,7 +158,8 @@ export class CustomizationReaderService {
           async (row) =>
             [
               `${row.projectId}:${row.id}`,
-              await this.urlFor(row.thumbKey),
+              // Original a defaut de miniature (ligne heritee, voir l'entite).
+              await this.urlFor(row.thumbKey ?? row.storageKey),
             ] as const,
         ),
       ),

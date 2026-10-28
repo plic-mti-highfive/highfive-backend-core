@@ -187,7 +187,7 @@ export class CustomizationService {
         );
       }
       await images.delete({ id: image.id });
-      return [image.storageKey, image.thumbKey];
+      return [image.storageKey, image.thumbKey].filter((key) => key !== null);
     });
 
     await Promise.all(keys.map((key) => this.storage.remove(key)));
@@ -231,11 +231,14 @@ export class CustomizationService {
       // ignore sans erreur ce qu'elle ne reconnait pas (pas de RETURNING).
       .returning('storage_key, thumb_key')
       .execute();
-    const rows = result.raw as { storage_key: string; thumb_key: string }[];
+    const rows = result.raw as {
+      storage_key: string;
+      thumb_key: string | null;
+    }[];
     await Promise.all(
       rows.flatMap((row) => [
         this.storage.remove(row.storage_key),
-        this.storage.remove(row.thumb_key),
+        ...(row.thumb_key ? [this.storage.remove(row.thumb_key)] : []),
       ]),
     );
     if (rows.length) {
@@ -324,7 +327,9 @@ export class CustomizationService {
       if (dropped.length > 0) {
         await images.delete({ id: In(dropped.map((image) => image.id)) });
       }
-      return dropped.flatMap((image) => [image.storageKey, image.thumbKey]);
+      return dropped.flatMap((image) =>
+        [image.storageKey, image.thumbKey].filter((key) => key !== null),
+      );
     });
 
     // Apres le commit : un objet supprime pour une transaction annulee

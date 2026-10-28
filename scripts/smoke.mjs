@@ -1486,6 +1486,24 @@ if (r.status === 201) {
   check('SVG refuse 400', r.status === 400, r.body);
   r = await call('POST', customizationImages, { token: aliceToken, form: upload('file', 'faux.png', png(), 'image/png') });
   check('image illisible refusee 400', r.status === 400, r.body);
+  r = await call('POST', customizationImages, {
+    token: aliceToken,
+    form: upload('file', 'virus.png', Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03]), 'image/png'),
+  });
+  check('executable deguise en image 400', r.status === 400, r.body);
+  r = await call('POST', customizationImages, { token: aliceToken, form: upload('file', 'anim.gif', Buffer.from('GIF89a-----------'), 'image/gif') });
+  check('GIF refuse 400', r.status === 400, r.body);
+  r = await call('POST', customizationImages, {
+    token: aliceToken,
+    form: upload('file', 'gros.png', Buffer.concat([realPng(), Buffer.alloc(2 * 1024 * 1024, 1)]), 'image/png'),
+  });
+  check('plus de 2 Mo 400', r.status === 400, r.body);
+  r = await call('POST', customizationImages, { token: aliceToken, form: new FormData() });
+  check('depot sans fichier 400', r.status === 400, r.body);
+  r = await call('PATCH', `/projects/${slug}/customization`, { body: { sections, gallery: [] } });
+  check('enregistrement sans jeton 401', r.status === 401, r.body);
+  r = await call('PATCH', `/projects/inconnu-${stamp}/customization`, { token: aliceToken, body: { sections, gallery: [] } });
+  check('projet inconnu 404', r.status === 404, r.body);
 
   const photos = [];
   for (const rgb of [[47, 125, 79], [255, 107, 26]]) {

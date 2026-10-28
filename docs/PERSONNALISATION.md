@@ -634,6 +634,44 @@ cles inconnues. A couvrir par un test.
   s'affiche « a pris une decision concernant ton compte » meme quand la
   cible est un projet.
 
+## Fusion avec la PR #5
+
+Une premiere implementation de la meme fonctionnalite (PR #5,
+`modules/projects/customization.*` et `project-images.service.ts`) a ete
+fusionnee dans `dev` pendant ce lot. Les deux servaient les memes routes et
+la meme table, avec un format stocke different (`id` au lieu de `imageId`
+dans le `jsonb`, ni `uploaded_by`, ni `thumb_key`, ni `attached_at`).
+Decision : garder celle-ci (miniatures, URL stables, compte actif, verrous,
+purge R-X3 de tous les fichiers). A la fusion :
+
+- **Repris de la PR #5** : la detection RIFF stricte (un WAV ou un AVI
+  annonce `image/webp` n'est plus cru ; AVI rendu `video/x-msvideo`), le
+  test du contrat `contracts/customization.spec.ts`, ses tests de
+  detection, et six cas de smoke (anonyme 401, sans fichier, executable
+  deguise, GIF, plus de 2 Mo, projet inconnu).
+- **Retire** : son module (controleur, services, logique et leurs tests),
+  qui doublait les routes.
+- **Compatibilite avec une base qui l'a fait tourner** (le projet n'a pas
+  de migrations, le schema vit de la synchronisation) :
+  - `uploaded_by` et `thumb_key` nullables (la synchronisation ne peut pas
+    ajouter une colonne `NOT NULL` a une table non vide), `mime_type` garde
+    sa longueur de 64 (la changer ferait recreer la colonne) ;
+  - `LegacyCustomizationService.onModuleInit`, idempotent, avant le premier
+    passage de l'entretien : `id` → `imageId`, `attached_at` deduit des
+    references (sans cela la purge des orphelins supprimerait les images
+    enregistrees), deposant = porteur, miniatures produites a partir des
+    originaux (`StorageService.read`) ; a defaut, la carte sert l'original.
+  - Limite connue : la cle etrangere ajoutee par la synchronisation echoue
+    si une image reference un projet deja purge — impossible en pratique,
+    la purge intervient 30 jours apres la suppression.
+- Verifie : image Docker de `dev` (PR #5) sur une base neuve, seed (deux
+  fiches a son format), images vieillies de 25 h et un depot orphelin ;
+  puis image de la fusion sur la meme base : demarrage sans erreur, 2
+  fiches converties, 4 images rattachees et conservees, 5 miniatures,
+  l'orphelin seul purge ; fiche et cartes conformes aux schemas, images et
+  miniatures lisibles ; seed relance sans effet ; smoke complet 391
+  controles, 99 routes sur 99. Tests unitaires : 167.
+
 ## Decisions prises
 
 1. **URL signees pour toutes les images (D2)**, a fenetre fixe pour le

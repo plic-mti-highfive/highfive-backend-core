@@ -64,12 +64,24 @@ function detectIsoBmff(buffer: Buffer): string | undefined {
   );
 }
 
-/** Conteneur RIFF : seul WebP nous interesse (WAV et AVI gardent le type annonce). */
+/**
+ * Conteneur RIFF (WebP, WAV, AVI) : la signature seule ne dit rien, le format
+ * est aux octets 8..12. Un RIFF qui n'est pas du WebP ne doit pas passer pour
+ * une image sur la foi du type annonce.
+ */
+const RIFF_FORMATS: Record<string, string> = {
+  WEBP: 'image/webp',
+  WAVE: 'audio/wav',
+  'AVI ': 'video/x-msvideo',
+};
+
 function detectRiff(buffer: Buffer): string | undefined {
   if (buffer.length < 12 || buffer.toString('latin1', 0, 4) !== 'RIFF') {
     return undefined;
   }
-  return buffer.toString('latin1', 8, 12) === 'WEBP' ? 'image/webp' : undefined;
+  return (
+    RIFF_FORMATS[buffer.toString('latin1', 8, 12)] ?? 'application/octet-stream'
+  );
 }
 
 /** Signatures d'executables : refusees quel que soit le type annonce. */

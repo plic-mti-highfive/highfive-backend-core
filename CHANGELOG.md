@@ -32,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `detectMimeType`.
 - Seed : deux fiches personnalisees ; smoke : scenarios de personnalisation
   (99 routes exercees sur 99).
+- Remplace l'implementation de la meme fonctionnalite fusionnee par la PR #5
+  (`modules/projects/customization.*`, `project-images.service.ts`), dont
+  elle reprend la detection RIFF stricte (un WAV ou un AVI n'est jamais pris
+  pour du WebP), le test du contrat (`contracts/customization.spec.ts`) et
+  des scenarios de smoke. Une base qui a fait tourner la PR #5 est convertie
+  au demarrage (references d'images, rattachement, miniatures).
 
 ### Changed
 
