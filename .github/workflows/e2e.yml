@@ -1,0 +1,17 @@
+name: e2e
+
+# Tests end-to-end de toute la plateforme, a chaque merge sur main uniquement.
+# Le workflow (stack jetable + Playwright) vit dans highfive-infra ; on lui passe
+# le commit de ce depot, les autres depots sont pris sur main.
+# Prerequis : secret d'organisation REPOS_TOKEN (voir README de highfive-infra).
+on:
+  push:
+    branches: [main]
+
+jobs:
+  e2e:
+    uses: plic-mti-highfive/highfive-infra/.github/workflows/e2e.yml@main
+    with:
+      core_ref: ${{ github.sha }}
+    secrets:
+      REPOS_TOKEN: ${{ secrets.REPOS_TOKEN }}
