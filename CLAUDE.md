@@ -70,6 +70,8 @@ pnpm start:dev                  # developpement (watch)
 pnpm build && pnpm start:prod   # production
 pnpm typecheck                  # tsc --noEmit
 pnpm lint                       # eslint --fix
+pnpm test                       # unitaires (sans docker)
+pnpm test:int                   # integration : app reelle + bases jetables (docker), voir docs/CAHIER-DE-TESTS.md
 docker compose up -d db redis   # dependances locales
 node scripts/seed.mjs           # jeu de demonstration
 node scripts/smoke.mjs          # parcours de bout en bout (~380 verifications)
@@ -83,5 +85,6 @@ node scripts/smoke.mjs          # parcours de bout en bout (~380 verifications)
 | `docs/MESSAGERIE.md` | La messagerie : etapes, choix retenus, verifications, decisions ouvertes. |
 | `docs/PERSONNALISATION.md` | La personnalisation de la fiche : etapes, choix retenus, verifications. |
 | `docs/CANVAS.md` | Inventaire des fonctions du Mur : celles servies au front, celles conservees sans ecran. |
+| `docs/CAHIER-DE-TESTS.md` | Cahier de tests : types, strategie des bases jetables, tests par module, couverture. |
 | `Database.md` | Modele relationnel, table par table. |
 | `openapi.yaml` | Le contrat, copie depuis le front. Servi sur `/api/docs`. |
