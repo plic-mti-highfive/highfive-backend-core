@@ -24,6 +24,7 @@ import { MaintenanceModule } from './modules/maintenance/maintenance.module.js';
 import { MembershipsModule } from './modules/memberships/memberships.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { ProjectsModule } from './modules/projects/projects.module.js';
+import { CustomizationModule } from './modules/customization/customization.module.js';
 import { SearchModule } from './modules/search/search.module.js';
 import { TagsModule } from './modules/tags/tags.module.js';
 import { TasksModule } from './modules/tasks/tasks.module.js';
@@ -53,6 +54,7 @@ import { WallModule } from './modules/wall/wall.module.js';
     AuthModule,
     UsersModule,
     ProjectsModule,
+    CustomizationModule,
     HighfivesModule,
     MembershipsModule,
     AnnouncementsModule,

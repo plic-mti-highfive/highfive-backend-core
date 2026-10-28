@@ -100,7 +100,12 @@ export class StorageService implements OnModuleInit {
       ? `.${originalName.split('.').pop()!.toLowerCase()}`
       : '';
     const key = `${folder}/${randomUUID()}${extension}`;
+    await this.putAt(key, body, mimeType);
+    return { key, url: `${this.publicEndpoint}/${this.bucket}/${key}` };
+  }
 
+  /** Depose sous une cle choisie : une variante rangee a cote de son original. */
+  async putAt(key: string, body: Buffer, mimeType: string): Promise<void> {
     await this.client.send(
       new PutObjectCommand({
         Bucket: this.bucket,
@@ -109,8 +114,6 @@ export class StorageService implements OnModuleInit {
         ContentType: mimeType,
       }),
     );
-
-    return { key, url: `${this.publicEndpoint}/${this.bucket}/${key}` };
   }
 
   /**
@@ -152,6 +155,29 @@ export class StorageService implements OnModuleInit {
         ResponseContentDisposition: `inline; filename*=UTF-8''${encodeURIComponent(fileName)}`,
       }),
       { expiresIn: ttlSeconds },
+    );
+  }
+
+  /**
+   * Lecture signee d'une image affichee a chaque visite (personnalisation
+   * des fiches). Une URL signee change avec l'heure de signature : resignee
+   * a chaque lecture, la meme image aurait une adresse neuve a chaque
+   * chargement et ne serait jamais servie depuis le cache du navigateur.
+   * On signe donc avec le debut de la fenetre courante, et pour deux
+   * fenetres : l'URL reste identique toute une fenetre, et une URL copiee
+   * cesse de fonctionner au plus tard deux fenetres apres.
+   */
+  stableSignedUrlFor(
+    key: string,
+    windowSeconds: number,
+    now: Date = new Date(),
+  ): Promise<string> {
+    const windowMs = windowSeconds * 1000;
+    const windowStart = Math.floor(now.getTime() / windowMs) * windowMs;
+    return getSignedUrl(
+      this.signer,
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+      { signingDate: new Date(windowStart), expiresIn: 2 * windowSeconds },
     );
   }
 

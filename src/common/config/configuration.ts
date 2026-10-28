@@ -140,6 +140,22 @@ export default () => ({
     ],
   },
 
+  /** Personnalisation des fiches : images de banniere et de galerie. */
+  customization: {
+    /** Le client compresse en WebP avant l'envoi ; 2 Mo au plus. */
+    maxImageBytes: 2 * 1024 * 1024,
+    /** Pas de GIF : la compression cote client en perdrait l'animation. */
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif'],
+    /** Depots non enregistres par projet, contre l'accumulation. */
+    maxPendingImages: 20,
+    /** Un depot jamais reference est purge passe ce delai. */
+    orphanImageTtlHours: 24,
+    /** Largeur maximale de la variante servie aux cartes (SPEC). */
+    thumbnailWidth: 640,
+    /** Une URL d'image reste identique sur cette fenetre (cache navigateur). */
+    signedUrlWindowSeconds: 6 * 60 * 60,
+  },
+
   /** R-MSG8 : depots joints aux messages. */
   messages: {
     maxImageBytes: 10 * 1024 * 1024,

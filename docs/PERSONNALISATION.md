@@ -13,7 +13,7 @@ serveur.
 | # | Etape | Statut |
 | --- | --- | --- |
 | 1 | Contrat : recopie depuis le front | Fait |
-| 2 | Socle : modele, configuration, detection WebP/AVIF, URL signees stables, `sharp` | A faire |
+| 2 | Socle : modele, configuration, detection WebP/AVIF, URL signees stables, `sharp` | Fait |
 | 3 | Depot d'image et miniature (`POST .../customization/images`) | A faire |
 | 4 | Enregistrement (`PATCH .../customization`) et lecture dans `Project` | A faire |
 | 5 | Cartes : `ProjectSummary.accent` et `banner` (miniature) | A faire |
@@ -230,6 +230,40 @@ cles inconnues. A couvrir par un test.
   l'image `node:22-alpine` (build Docker).
 - Verification : demarrage contre Postgres, la synchronisation cree la
   table et la colonne ; `typecheck`, `lint`, `test`, build Docker.
+- **Fait.** Choix retenus :
+  - `StoredCustomization` (type de stockage, pas de domaine) dans
+    `project.entity.ts` : le `jsonb` ne reference les images que par id.
+  - `ProjectImageEntity` : FK `ON DELETE CASCADE` vers `projects`, index
+    partiel nomme `ix_project_images_pending` (`WHERE attached_at IS NULL`).
+  - Module `customization` cree vide (il enregistre l'entite), branche dans
+    `app.module.ts`.
+  - `detectMimeType` : WebP par son conteneur RIFF ; AVIF par la marque
+    principale **ou les marques compatibles** de la boite `ftyp` (un AVIF
+    annonce souvent `mif1` en principale) ; lecture bornee a la boite.
+    Effet sur les fichiers de projet et les pieces jointes : un AVIF n'est
+    plus pris pour une video MP4, un WebP n'est plus cru sur parole.
+  - `StorageService` : `putAt` (cle choisie, pour la miniature) et
+    `stableSignedUrlFor` (signature au debut de la fenetre de 6 h, valable
+    12 h).
+  - `sharp` 0.34.5 ajoute **avec pnpm 10** : le lockfile ne gagne que des
+    lignes (pnpm 9 retirait des annotations `libc`, pnpm 12 reecrivait les
+    suffixes de dependances). `allowBuilds: sharp: false` : binaires
+    precompiles, aucun script a lancer.
+- Verifie : `typecheck`, `lint`, `test` (129, dont 4 de detection et 3 de
+  signature stable) ; `check:contract` sans derive ; build Docker
+  (`node:22-alpine`, pnpm 9.15.9 `--frozen-lockfile`) ; dans l'image,
+  `sharp` decode un AVIF et produit une miniature WebP 640 px ; l'image
+  demarree contre la base de demo cree `project_images`, ses deux index et
+  la FK, et ajoute `projects.customization`.
+- **Constate en passant, sans lien avec ce lot** : l'entretien periodique
+  echoue sur `dev` (« Cannot read properties of null (reading 'id') »,
+  `ChannelsService.syncConversation`). Dans une base creee avant le chat du
+  Mur, l'index `uq_conversations_channel_project` garde son ancienne
+  condition (`type = 'channel'`) : TypeORM ne compare les index que par leur
+  nom. La conversation `wall` du projet entre en conflit avec le canal,
+  l'insertion est ignoree, la relecture rend `null`. Les etapes de
+  l'entretien qui precedent `reconcileAll` (purges) s'executent ; le
+  rattrapage des canaux et du Mur, non.
 
 ## Etape 3 — Depot d'image
 
@@ -295,10 +329,9 @@ cles inconnues. A couvrir par un test.
   `banner` = banniere resolue **sur sa miniature** (la fiche garde
   l'originale). Resolution **en lot** : la colonne est deja
   chargee avec le projet, les signatures sont locales — aucune requete de
-  plus par carte (doc 11 C1). Les lignes `project_images` ne sont pas
-  necessaires si le `jsonb` porte la cle de stockage avec l'id (a decider a
-  l'etape 2 : soit `storageKey` dans le `jsonb`, soit une requete `IN` par
-  lot).
+  plus par carte (doc 11 C1). Tranche a l'etape 2 : le `jsonb` ne porte
+  que l'id des images ; une requete `IN` sur `project_images` donne les cles
+  pour tout le lot (une requete par lot, pas par carte).
 - Toutes les listes en profitent (fil, Decouvrir, recherche, profil, « Mes
   projets », administration).
 - Verification : `GET /feed/discover`, `/search`, `/me/projects`,

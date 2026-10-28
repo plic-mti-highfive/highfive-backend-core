@@ -14,6 +14,7 @@ export * from './column.entity.js';
 export * from './task.entity.js';
 export * from './wall.entity.js';
 export * from './project-file.entity.js';
+export * from './project-image.entity.js';
 export * from './conversation.entity.js';
 export * from './conversation-participant.entity.js';
 export * from './message.entity.js';
