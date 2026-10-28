@@ -18,7 +18,7 @@ serveur.
 | 4 | Enregistrement (`PATCH .../customization`) et lecture dans `Project` | Fait |
 | 5 | Cartes : `ProjectSummary.accent` et `banner` (miniature) | Fait |
 | 6 | Retrait d'image et moderation (`DELETE`, `GET /admin/.../media`, notification) | Fait |
-| 7 | Cycle de vie : orphelins, transfert, purge R-X3 de tous les fichiers | A faire |
+| 7 | Cycle de vie : orphelins, transfert, purge R-X3 de tous les fichiers | Fait |
 | 8 | Finitions, documentation, branchement du front | A faire |
 
 Decisions du 28/10/2026 (voir « Decisions prises ») : URL signees pour
@@ -530,6 +530,59 @@ cles inconnues. A couvrir par un test.
   depot rattache conserve ; transfert puis `PATCH` par le nouveau porteur
   200, par l'ancien 403 ; projet purge → plus aucun objet sous ses
   prefixes dans le seau (images, miniatures, fichiers de projet).
+- **Inventaire** de ce que le stockage garde au nom d'un projet ou d'un
+  compte :
+
+  | Prefixe | Ecrit par | Avant ce lot | Maintenant |
+  | --- | --- | --- | --- |
+  | `customization/<projet>/` | depot d'image (originale + miniature) | — | supprime a la purge R-X3 |
+  | `projects/<projet>/` | fichiers de projet | lignes **et** objets survivaient a la purge (`project_files` n'a pas de cle etrangere) | lignes et objets supprimes |
+  | `messages/<conversation>/` (canal, chat du Mur) | pieces jointes | supprimees des la suppression du projet (`PROJECT_DELETED`) | inchange |
+  | `avatars/<compte>/` | photo de profil | gardees a l'anonymisation, `avatar_url` pointait encore dessus | supprimees, avatar par defaut du pseudo anonyme |
+  | seau `hocuspocus-bucket` | service canvas (document du Mur) | hors du core | **reste a traiter** cote canvas |
+
+- **Fait.** Choix retenus :
+  - `StorageService.removePrefix` : liste et supprime tout un prefixe
+    (objets sans ligne compris), par pages ; **leve** en cas d'echec,
+    contrairement a `remove`. Le `/` final est force (`projects/abc`
+    n'emporte pas `projects/abcd`).
+  - Purge R-X3 projet par projet : `customization/<id>/`, puis
+    `projects/<id>/` et les lignes `project_files`, puis la ligne du projet
+    (les `project_images` partent en cascade). Un echec de stockage laisse
+    **ce** projet en place pour le passage suivant (la ligne est le seul
+    fil vers ses objets) ; les autres sont purges.
+  - Anonymisation : photos supprimees d'abord ; en cas d'echec, le compte
+    attend le passage suivant. `defaultAvatar` est exporte par
+    `auth.service.ts`.
+  - Orphelins (`CustomizationService.purgeOrphans`, dans `run` apres celle
+    des messages) : `DELETE ... WHERE attached_at IS NULL AND uploaded_at <
+    seuil RETURNING`, puis les objets des lignes rendues. Lignes d'abord :
+    un `PATCH` qui rattache l'image au meme moment tient le verrou de sa
+    ligne, et Postgres reevalue la condition — l'image reste, avec ses
+    objets. En une requete plutot que par lots : au plus 20 depots en
+    attente par projet.
+  - Transfert : rien a faire, verifie.
+- **Corrige pendant la verification** : `.returning([...])` de TypeORM
+  attend des noms de **proprietes** et ignore sans erreur les noms de
+  colonnes : la requete partait sans `RETURNING`, les lignes etaient
+  supprimees et les objets restaient. Passe en SQL
+  (`.returning('storage_key, thumb_key')`), revérifie.
+- Verifie : 3 tests unitaires de plus (`removePrefix` : pages, prefixe
+  vide, echec leve) ; contre la stack de demo, l'entretien declenche par
+  le redemarrage du conteneur de test : depots de plus de 24 h purges
+  (lignes et objets — dont les 10 depots laisses a l'etape 3), depot
+  recent et image rattachee ancienne conserves ; projet supprime depuis
+  31 jours (banniere rattachee, depot en attente, fichier de projet) :
+  ligne, images, `project_files` et tous les objets sous ses deux
+  prefixes supprimes ; compte supprime depuis 31 jours avec deux photos
+  deposees : anonymise, avatar par defaut, plus aucun objet sous
+  `avatars/<id>/` ; transfert : personnalisation conservee, `PATCH` de la
+  nouvelle porteuse 200, de l'ancien porteur 403, transfert retour. Base
+  de demo remise en etat (roles, personnalisation, notifications, compte
+  et depots de test supprimes).
+- Non traite : le document du Mur, range par le service canvas dans son
+  propre seau, survit a la purge du projet ; et un avatar remplace reste
+  dans le stockage jusqu'a l'anonymisation du compte (inchange).
 
 ## Etape 8 — Finitions et branchement du front
 

@@ -211,6 +211,50 @@ export class CustomizationService {
     }
   }
 
+  /**
+   * Depots jamais enregistres, passe le delai de grace (entretien
+   * periodique, idempotent). Les lignes partent d'abord, sous condition :
+   * un `PATCH` qui rattache l'image au meme moment verrouille sa ligne, et
+   * Postgres reevalue `attached_at IS NULL` avant de supprimer — l'image
+   * rattachee reste, avec ses objets.
+   */
+  async purgeOrphans(): Promise<number> {
+    const hours = this.setting<number>('orphanImageTtlHours');
+    const result = await this.images
+      .createQueryBuilder()
+      .delete()
+      .where('attached_at IS NULL')
+      .andWhere('uploaded_at < :limit', {
+        limit: new Date(Date.now() - hours * 3_600_000),
+      })
+      // Colonnes en SQL : la forme tableau attend des noms de proprietes et
+      // ignore sans erreur ce qu'elle ne reconnait pas (pas de RETURNING).
+      .returning('storage_key, thumb_key')
+      .execute();
+    const rows = result.raw as { storage_key: string; thumb_key: string }[];
+    await Promise.all(
+      rows.flatMap((row) => [
+        this.storage.remove(row.storage_key),
+        this.storage.remove(row.thumb_key),
+      ]),
+    );
+    if (rows.length) {
+      this.logger.log(
+        `${rows.length} image(s) jamais enregistree(s) purgee(s).`,
+      );
+    }
+    return rows.length;
+  }
+
+  /**
+   * Purge definitive d'un projet (R-X3) : tout son prefixe, objets sans
+   * ligne compris. Les lignes partent avec le projet (cascade). Leve en cas
+   * d'echec, pour que le projet soit repris au passage suivant.
+   */
+  async purgeProject(projectId: string): Promise<void> {
+    await this.storage.removePrefix(`customization/${projectId}`);
+  }
+
   /** Ce que la fiche affiche, quels que soient visibilite et etat. */
   async adminMedia(slug: string): Promise<AdminProjectMedia> {
     const project = await this.access.findBySlugOrFail(slug);

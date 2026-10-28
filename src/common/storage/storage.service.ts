@@ -9,8 +9,10 @@ import { ConfigService } from '@nestjs/config';
 import {
   CreateBucketCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadBucketCommand,
+  ListObjectsV2Command,
   PutBucketPolicyCommand,
   PutObjectCommand,
   S3Client,
@@ -131,6 +133,48 @@ export class StorageService implements OnModuleInit {
         `Objet ${key} non supprime du stockage: ${String(error)}`,
       );
     }
+  }
+
+  /**
+   * Supprime tout ce qui est range sous un prefixe (purge d'un projet ou
+   * d'un compte), y compris les objets qu'aucune ligne ne reference plus.
+   * Contrairement a `remove`, un echec est leve : l'appelant garde alors
+   * ses lignes pour reessayer au passage suivant, plutot que de perdre la
+   * trace d'objets restes dans le seau.
+   */
+  async removePrefix(prefix: string): Promise<number> {
+    // Le `/` final evite que `projects/abc` emporte `projects/abcd`.
+    const folder = prefix.endsWith('/') ? prefix : `${prefix}/`;
+    let removed = 0;
+    let token: string | undefined;
+    do {
+      const page = await this.client.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucket,
+          Prefix: folder,
+          ContinuationToken: token,
+        }),
+      );
+      const keys = (page.Contents ?? []).flatMap((object) =>
+        object.Key ? [{ Key: object.Key }] : [],
+      );
+      if (keys.length > 0) {
+        const result = await this.client.send(
+          new DeleteObjectsCommand({
+            Bucket: this.bucket,
+            Delete: { Objects: keys, Quiet: true },
+          }),
+        );
+        if (result.Errors?.length) {
+          throw new Error(
+            `${result.Errors.length} objet(s) non supprime(s) sous ${folder}`,
+          );
+        }
+        removed += keys.length;
+      }
+      token = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (token);
+    return removed;
   }
 
   urlFor(key: string): string {

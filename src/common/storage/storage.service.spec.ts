@@ -62,3 +62,69 @@ describe('stableSignedUrlFor', () => {
     expect(url.searchParams.get('X-Amz-Expires')).toBe(String(2 * SIX_HOURS));
   });
 });
+
+describe('removePrefix', () => {
+  /** Client S3 simule : deux pages de liste, puis la suppression. */
+  const withClient = (
+    pages: { keys: string[]; next?: string }[],
+    deleteErrors: unknown[] = [],
+  ) => {
+    const service = new StorageService({
+      get: (key: string) => settings[key],
+    } as unknown as ConfigService);
+    const sent: { name: string; input: Record<string, unknown> }[] = [];
+    let page = 0;
+    const send = (command: {
+      constructor: { name: string };
+      input: Record<string, unknown>;
+    }) => {
+      sent.push({ name: command.constructor.name, input: command.input });
+      if (command.constructor.name === 'ListObjectsV2Command') {
+        const current = pages[page++];
+        return Promise.resolve({
+          Contents: current.keys.map((Key) => ({ Key })),
+          IsTruncated: !!current.next,
+          NextContinuationToken: current.next,
+        });
+      }
+      return Promise.resolve({ Errors: deleteErrors });
+    };
+    (service as unknown as { client: { send: typeof send } }).client = {
+      send,
+    };
+    return { service, sent };
+  };
+
+  it('parcourt toutes les pages et supprime par lot', async () => {
+    const { service, sent } = withClient([
+      { keys: ['projects/p/a', 'projects/p/b'], next: 'suite' },
+      { keys: ['projects/p/c'] },
+    ]);
+    expect(await service.removePrefix('projects/p')).toBe(3);
+    const lists = sent.filter((c) => c.name === 'ListObjectsV2Command');
+    expect(lists.map((c) => c.input.Prefix)).toEqual([
+      'projects/p/',
+      'projects/p/',
+    ]);
+    expect(lists[1].input.ContinuationToken).toBe('suite');
+    expect(sent.filter((c) => c.name === 'DeleteObjectsCommand')).toHaveLength(
+      2,
+    );
+  });
+
+  it("n'envoie aucune suppression pour un prefixe vide", async () => {
+    const { service, sent } = withClient([{ keys: [] }]);
+    expect(await service.removePrefix('avatars/u/')).toBe(0);
+    expect(sent.map((c) => c.name)).toEqual(['ListObjectsV2Command']);
+  });
+
+  it('leve si un objet resiste', async () => {
+    const { service } = withClient(
+      [{ keys: ['customization/p/a.webp'] }],
+      [{ Key: 'customization/p/a.webp', Code: 'AccessDenied' }],
+    );
+    await expect(service.removePrefix('customization/p')).rejects.toThrow(
+      /non supprime/,
+    );
+  });
+});

@@ -13,7 +13,7 @@ document de domaine).
 
 | Table | Colonnes cles | Contraintes / notes |
 | --- | --- | --- |
-| `users` | `id` uuid PK, `username` unique, `display_name`, `email` unique, `avatar_url`, `bio`, `account_status`, `platform_role`, `password_hash`, `last_visit_at`, `deleted_at` | R-P2 : `deleted_at` declenche l'anonymisation (pseudo remplace par `compte-supprime-<id>` pour garder l'unicite, courriel et mot de passe vides). Mot de passe hache en argon2. |
+| `users` | `id` uuid PK, `username` unique, `display_name`, `email` unique, `avatar_url`, `bio`, `account_status`, `platform_role`, `password_hash`, `last_visit_at`, `deleted_at` | R-P2 : `deleted_at` declenche l'anonymisation (pseudo remplace par `compte-supprime-<id>` pour garder l'unicite, courriel et mot de passe vides, avatar par defaut ; les photos deposees sous `avatars/<id>/` sont supprimees du stockage). Mot de passe hache en argon2. |
 | `user_interests` | `user_id`, `tag_id`, PK composite | 0 a 10 lignes par personne. Table de jointure plutot qu'un tableau : integrite referentielle vers `tags`. |
 | `sessions` | `token_hash` PK, `user_id`, `expires_at` | Jeton opaque, jamais stocke en clair. `POST /auth/logout` supprime la ligne. |
 | `password_reset_tokens` | `token_hash` PK, `user_id`, `expires_at`, `used_at` | Usage unique, une heure de validite. |
@@ -38,7 +38,7 @@ document de domaine).
 | --- | --- | --- |
 | `announcements` | `id` uuid PK, `project_id`, `author_id`, `title`, `body`, `pinned`, `published_at` | R-A2 : index unique partiel `WHERE pinned = true` ; epingler depingle l'ancienne dans la meme transaction. |
 | `comments` | `id` uuid PK, `project_id`, `author_id`, `body`, `parent_id`, `hidden`, `published_at` | R-C4 : un `parent_id` pointant un commentaire deja repondu est refuse a l'ecriture. |
-| `project_files` | `id` uuid PK, `project_id`, `uploaded_by`, `name`, `size` bigint, `mime_type`, `storage_key` | R-F1 : 20 Mo par fichier, 200 Mo par projet. `storage_key` renvoie au stockage objet, le contenu n'est jamais en base. |
+| `project_files` | `id` uuid PK, `project_id`, `uploaded_by`, `name`, `size` bigint, `mime_type`, `storage_key` | R-F1 : 20 Mo par fichier, 200 Mo par projet. `storage_key` renvoie au stockage objet (`projects/<project_id>/`), le contenu n'est jamais en base. Pas de cle etrangere vers `projects` : la purge R-X3 supprime explicitement lignes et objets. |
 
 ## Le Lab
 
