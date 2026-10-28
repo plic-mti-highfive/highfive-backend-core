@@ -11,6 +11,7 @@ import type {
   MessageAttachment,
   Need,
   Project,
+  ProjectCustomization,
   ProjectFile,
   Report,
   Tag,
@@ -103,7 +104,14 @@ export const visibleNeeds = (needs: NeedEntity[] | undefined): NeedEntity[] =>
     )
     .sort((a, b) => a.label.localeCompare(b.label, 'fr'));
 
-export const toProject = (project: ProjectEntity): Project => ({
+/**
+ * `customization` est passee a part : ses URL d'image sont signees (asynchrone)
+ * et ne peuvent pas se deduire de l'entite seule.
+ */
+export const toProject = (
+  project: ProjectEntity,
+  customization?: ProjectCustomization,
+): Project => ({
   id: project.id,
   slug: project.slug,
   title: project.title,
@@ -115,6 +123,7 @@ export const toProject = (project: ProjectEntity): Project => ({
   participation: project.participation,
   state: project.state,
   ownerId: project.ownerId,
+  customization,
   highfiveCount: project.highfiveCount,
   createdAt: iso(project.createdAt),
   updatedAt: iso(project.updatedAt),

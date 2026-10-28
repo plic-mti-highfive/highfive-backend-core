@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "x": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "y": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    }
+  },
+  "required": ["x", "y"],
+  "additionalProperties": false,
+  "title": "BannerFocal"
+}

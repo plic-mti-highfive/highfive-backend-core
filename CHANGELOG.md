@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Personnalisation de la fiche projet** (`modules/projects/customization.*`,
+  4 routes, contrat copie de `docs/v2/customization-scope.md` du front) :
+  - `PATCH /projects/:slug/customization` (porteur seul, remplace l'objet
+    entier), `POST .../customization/images` (multipart, JPEG/PNG/WebP/AVIF,
+    2 Mo, type reel verifie, 20 images par projet), `DELETE
+    .../customization/images/:imageId` (porteur ou administration) et
+    `GET /admin/projects/:slug/media` ;
+  - `Project.customization`, `ProjectSummary.accent` et `ProjectSummary.banner`
+    renvoyes partout ou le projet l'est ; la personnalisation suit le transfert ;
+  - images en stockage prive, lues par URL signee (6 h, R-V3) ; images jamais
+    referencees purgees apres 24 h ;
+  - retrait d'un media par un admin sur le projet d'autrui : journal
+    `remove_project_media` et notification au porteur.
+- Detection WebP et AVIF dans `detectMimeType` ; un RIFF qui n'est pas du WebP
+  n'est plus accepte sur la foi du type annonce.
+
+### Known gaps
+
+- Les cartes servent la banniere en pleine taille : pas de variante miniature
+  (~640 px) tant qu'aucune bibliotheque de redimensionnement n'est ajoutee.
+
 ## [2.1.0] - 2026-10-06
 
 ### Added

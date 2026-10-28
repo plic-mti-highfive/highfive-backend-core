@@ -84,3 +84,38 @@ describe('garde-fous', () => {
     expect(() => requireFile(undefined)).toThrow();
   });
 });
+
+describe('detectMimeType : formats image du site', () => {
+  const riff = (format: string) => [
+    ...Buffer.from('RIFF', 'latin1'),
+    0x24,
+    0x00,
+    0x00,
+    0x00,
+    ...Buffer.from(`${format}VP8 `, 'latin1'),
+  ];
+  const ftyp = (brand: string) => [
+    0x00,
+    0x00,
+    0x00,
+    0x1c,
+    ...Buffer.from(`ftyp${brand}`, 'latin1'),
+  ];
+
+  it('reconnait un WebP a son en-tete RIFF/WEBP', () => {
+    expect(detectMimeType(file(riff('WEBP'), 'application/octet-stream'))).toBe(
+      'image/webp',
+    );
+  });
+
+  it('un RIFF qui n est pas du WebP (WAV, AVI) n est pas pris pour une image', () => {
+    expect(detectMimeType(file(riff('WAVE'), 'image/webp'))).not.toBe(
+      'image/webp',
+    );
+  });
+
+  it('reconnait un AVIF a sa marque ftyp, pas un MP4', () => {
+    expect(detectMimeType(file(ftyp('avif'), 'video/mp4'))).toBe('image/avif');
+    expect(detectMimeType(file(ftyp('avis'), 'video/mp4'))).toBe('image/avif');
+  });
+});

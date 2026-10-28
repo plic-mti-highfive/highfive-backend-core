@@ -33,6 +33,7 @@ import {
   PROJECT_DELETED,
   PROJECT_TEAM_CHANGED,
 } from '../../common/events/project-events.js';
+import { ProjectImagesService } from './project-images.service.js';
 import { ProjectAccessService } from './project-access.service.js';
 import { TagsService } from '../tags/tags.service.js';
 import { slugify } from './slug.js';
@@ -68,7 +69,12 @@ export class ProjectsService {
     private readonly tags: TagsService,
     private readonly ai: AiEventsService,
     private readonly events: EventEmitter2,
+    private readonly images: ProjectImagesService,
   ) {}
+
+  private async present(project: ProjectEntity): Promise<Project> {
+    return toProject(project, await this.images.hydrate(project.customization));
+  }
 
   /** `GET /api/projects` — fil public (R-V1). */
   async listPublic(params: {
@@ -146,7 +152,7 @@ export class ProjectsService {
   ): Promise<Project> {
     const project = await this.access.findBySlugOrFail(slug);
     await this.access.assertCanView(project, viewer);
-    return toProject(project);
+    return this.present(project);
   }
 
   async create(
@@ -241,7 +247,7 @@ export class ProjectsService {
       visibility: full.visibility,
     });
 
-    return toProject(full);
+    return this.present(full);
   }
 
   async update(
@@ -305,7 +311,7 @@ export class ProjectsService {
       visibility: full.visibility,
     });
 
-    return toProject(full);
+    return this.present(full);
   }
 
   /** R-PR3..R-PR6 : transitions explicites plutot qu'un `state` librement ecrit. */
@@ -357,7 +363,7 @@ export class ProjectsService {
       });
     }
 
-    return toProject(full);
+    return this.present(full);
   }
 
   /** R-PR7 : confirmation nominative, sensible a la casse. R-X3 : differee. */
@@ -440,7 +446,7 @@ export class ProjectsService {
     await this.events.emitAsync(PROJECT_TEAM_CHANGED, {
       projectId: project.id,
     });
-    return toProject(await this.access.findByIdOrFail(project.id));
+    return this.present(await this.access.findByIdOrFail(project.id));
   }
 
   /**

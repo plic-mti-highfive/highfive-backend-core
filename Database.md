@@ -24,6 +24,8 @@ document de domaine).
 | Table | Colonnes cles | Contraintes / notes |
 | --- | --- | --- |
 | `projects` | `id` uuid PK, `slug` unique, `owner_id`, `title`, `tagline`, `description`, `visibility`, `participation`, `state`, `highfive_count`, `last_activity_at`, `deleted_at` | R-PR1 verifiee sur l'etat resultant d'un `PATCH`, pas seulement sur le corps recu. `highfive_count` est un cache, jamais accepte en entree (R-X2). Index `(visibility, state, last_activity_at)` pour le fil. |
+| `projects.customization` | `jsonb` nullable | Personnalisation de la fiche (banniere, theme, sections, galerie), **sans URL** : seuls les id d'image sont stockes, les URL sont signees a la lecture. Suit le projet, donc le transfert. |
+| `project_images` | `id` uuid PK, `project_id`, `mime_type`, `size`, `storage_key`, `uploaded_at` | Image televersee pour la fiche, sous le prefixe prive `customization/<projectId>/` (lue par URL signee, R-V3). Referencee par `projects.customization` au `PATCH` suivant ; purgee apres 24 h si elle ne l'est jamais. 20 par projet au maximum. |
 | `project_tags` | `project_id`, `tag_id`, PK composite | 1 a 5 lignes par projet. |
 | `needs` | `id` uuid PK, `project_id`, `label`, `tag_id`, `fulfilled`, `fulfilled_at` | 6 au maximum. Un besoin pourvu reste renvoye 7 jours, filtre a la lecture — pas de purge planifiee. |
 | `memberships` | `project_id`, `user_id`, PK composite, `role`, `joined_at`, `blocked` | R-M1 : index unique partiel `WHERE role = 'owner'`. Creation et transfert sont transactionnels. |

@@ -1,5 +1,10 @@
 import { z } from 'zod';
 import { idSchema, isoDateTimeSchema, slugSchema } from './common.js';
+import {
+  accentColorSchema,
+  projectBannerSchema,
+  projectCustomizationSchema,
+} from './customization.js';
 import { userSummarySchema } from './user.js';
 
 /**
@@ -62,6 +67,8 @@ const projectBaseFields = {
   participation: participationSchema,
   state: projectStateSchema,
   ownerId: idSchema,
+  /** Personnalisation de la fiche (porteur seul, optionnelle, additif V2-4). */
+  customization: projectCustomizationSchema.optional(),
   highfiveCount: z.number().int().nonnegative(),
   createdAt: isoDateTimeSchema,
   updatedAt: isoDateTimeSchema,
@@ -101,6 +108,16 @@ export const projectSummarySchema = z.object({
   /** Porteur + quelques membres, pour l'AvatarGroup de la carte (max 6). */
   teamPreview: z.array(userSummarySchema).max(6).default([]),
   owner: userSummarySchema,
+  /**
+   * Accent du theme choisi par le porteur (`Project.customization.theme.accent`), additif
+   * V2-4. Absent = la carte retombe sur `getAccent(project.id)`.
+   */
+  accent: accentColorSchema.optional(),
+  /**
+   * Bannière du projet (`Project.customization.banner`), additif V2-4. La
+   * carte la recadre autour du point focal ; absente = carte sans image.
+   */
+  banner: projectBannerSchema.optional(),
 });
 export type ProjectSummary = z.infer<typeof projectSummarySchema>;
 

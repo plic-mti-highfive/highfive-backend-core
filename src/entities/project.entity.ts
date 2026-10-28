@@ -16,6 +16,7 @@ import type {
   ProjectState,
   Visibility,
 } from '../contracts/index.js';
+import type { StoredCustomization } from '../modules/projects/customization.logic.js';
 import { TagEntity } from './tag.entity.js';
 import { UserEntity } from './user.entity.js';
 import { NeedEntity } from './need.entity.js';
@@ -84,6 +85,13 @@ export class ProjectEntity {
 
   @Column({ type: 'varchar', length: 16, default: 'draft' })
   state!: ProjectState;
+
+  /**
+   * Personnalisation de la fiche (porteur seul), sans URL d'image : voir
+   * `StoredCustomization`. Portee par le projet, donc conservee au transfert.
+   */
+  @Column({ type: 'jsonb', nullable: true })
+  customization!: StoredCustomization | null;
 
   @Column({ name: 'highfive_count', type: 'int', default: 0 })
   highfiveCount!: number;
