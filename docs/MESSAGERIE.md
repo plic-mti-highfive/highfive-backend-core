@@ -18,7 +18,7 @@ termine par une verification.
 | 7 | Canaux de projet (R-MSG3) | Fait |
 | 8 | Gestion des groupes (extension du contrat) | Fait |
 | 9 | Finitions et documentation | Fait (sauf migration, voir ci-dessous) |
-| — | Branchement du front | Plus tard |
+| — | Branchement du front | Fait (`highfive-frontend`, branche `feat/messagerie-branchement`) |
 
 ## Point de depart
 
@@ -464,13 +464,24 @@ implementent le contrat tel quel.
     `CLAUDE.md`, `scripts/README.md` a jour ; `CHANGELOG.md` du front
     (section « Non publie »).
 
-## Plus tard — branchement du front
+## Branchement du front
 
-- `VITE_API_MODE=http`.
 - Front : `useInfiniteQuery` pour les messages, `refetchInterval`, interface
   de piece jointe dans `MessageInput`.
 - Temps reel (SSE ou websocket) : seulement ensuite, si le besoin est
   confirme.
+- **Fait** cote front (voir son `CHANGELOG.md`) : polling (fil 5 s, liste et
+  detail 15 s, notifications 30 s), fil pagine avec « Messages precedents »,
+  lecture a l'arrivee d'un message dans la conversation ouverte, piece jointe
+  dans la zone de saisie (depot puis envoi), parametres d'un groupe
+  (renommer, membres, ajouter, retirer, quitter), notifications paginees.
+  Le mock sert desormais les messages les plus recents d'abord.
+- Verifie : la couche API du front (`src/api/conversations.ts`,
+  `src/api/notifications.ts`) contre ce backend, reponses validees par les
+  schemas zod du front — liste et detail, pagination (25 messages, deux
+  pages), notification puis extinction a la lecture, depot d'image et URL
+  signee lisible, modification et suppression, droits de gestion d'un
+  groupe, groupe efface quand tout le monde le quitte.
 
 ## Decisions ouvertes
 
