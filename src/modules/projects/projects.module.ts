@@ -5,10 +5,12 @@ import {
   MembershipEntity,
   NeedEntity,
   ProjectEntity,
+  ProjectImageEntity,
   UserEntity,
   WallEntity,
 } from '../../entities/index.js';
 import { TagsModule } from '../tags/tags.module.js';
+import { CustomizationReaderService } from './customization-reader.service.js';
 import { ProjectAccessService } from './project-access.service.js';
 import { ProjectsController } from './projects.controller.js';
 import { ProjectsService } from './projects.service.js';
@@ -17,6 +19,7 @@ import { ProjectsService } from './projects.service.js';
   imports: [
     TypeOrmModule.forFeature([
       ProjectEntity,
+      ProjectImageEntity,
       MembershipEntity,
       NeedEntity,
       ColumnEntity,
@@ -26,7 +29,11 @@ import { ProjectsService } from './projects.service.js';
     TagsModule,
   ],
   controllers: [ProjectsController],
-  providers: [ProjectAccessService, ProjectsService],
-  exports: [ProjectAccessService, ProjectsService],
+  providers: [
+    ProjectAccessService,
+    CustomizationReaderService,
+    ProjectsService,
+  ],
+  exports: [ProjectAccessService, CustomizationReaderService, ProjectsService],
 })
 export class ProjectsModule {}

@@ -22,7 +22,6 @@ const ROOT = new URL('..', import.meta.url).pathname;
 /** Absences et ajouts assumes : tout le reste est une derive. */
 const EXPECTED_MISSING = [
   // Personnalisation de la fiche, en cours : docs/PERSONNALISATION.md.
-  'PATCH /projects/:slug/customization',
   'DELETE /projects/:slug/customization/images/:imageId',
   'GET /admin/projects/:slug/media',
 ];

@@ -11,6 +11,7 @@ import type {
   MessageAttachment,
   Need,
   Project,
+  ProjectCustomization,
   ProjectFile,
   Report,
   Tag,
@@ -103,7 +104,14 @@ export const visibleNeeds = (needs: NeedEntity[] | undefined): NeedEntity[] =>
     )
     .sort((a, b) => a.label.localeCompare(b.label, 'fr'));
 
-export const toProject = (project: ProjectEntity): Project => ({
+/**
+ * `customization` arrive deja resolue (URL signees, calcul asynchrone) :
+ * le mapper reste pur.
+ */
+export const toProject = (
+  project: ProjectEntity,
+  customization?: ProjectCustomization,
+): Project => ({
   id: project.id,
   slug: project.slug,
   title: project.title,
@@ -119,6 +127,7 @@ export const toProject = (project: ProjectEntity): Project => ({
   createdAt: iso(project.createdAt),
   updatedAt: iso(project.updatedAt),
   lastActivityAt: iso(project.lastActivityAt),
+  customization,
 });
 
 export const toMembership = (membership: MembershipEntity): Membership => ({

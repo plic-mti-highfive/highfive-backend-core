@@ -2,6 +2,7 @@ import {
   Controller,
   HttpCode,
   Param,
+  Patch,
   Post,
   UploadedFile,
   UseInterceptors,
@@ -13,7 +14,13 @@ import {
   requireFile,
   type UploadedFile as Upload,
 } from '../../common/http/upload.js';
-import type { CustomizationImageUpload } from '../../contracts/index.js';
+import {
+  projectCustomizationSchema,
+  type CustomizationImageUpload,
+  type Project,
+  type ProjectCustomization,
+} from '../../contracts/index.js';
+import { ZodBody } from '../../common/http/zod.pipe.js';
 import type { UserEntity } from '../../entities/index.js';
 import { CustomizationService } from './customization.service.js';
 
@@ -29,6 +36,16 @@ const MAX_READ_BYTES = 2 * 2 * 1024 * 1024;
 @Controller()
 export class CustomizationController {
   constructor(private readonly customization: CustomizationService) {}
+
+  /** Remplacement complet ; renvoie la fiche a jour (cache du front). */
+  @Patch('projects/:slug/customization')
+  save(
+    @Param('slug') slug: string,
+    @CurrentUser() user: UserEntity,
+    @ZodBody(projectCustomizationSchema) input: ProjectCustomization,
+  ): Promise<Project> {
+    return this.customization.save(slug, user, input);
+  }
 
   /** Porteur seul ; le `PATCH` suivant reference l'`id` renvoye. */
   @Post('projects/:slug/customization/images')

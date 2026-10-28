@@ -15,7 +15,7 @@ serveur.
 | 1 | Contrat : recopie depuis le front | Fait |
 | 2 | Socle : modele, configuration, detection WebP/AVIF, URL signees stables, `sharp` | Fait |
 | 3 | Depot d'image et miniature (`POST .../customization/images`) | Fait |
-| 4 | Enregistrement (`PATCH .../customization`) et lecture dans `Project` | A faire |
+| 4 | Enregistrement (`PATCH .../customization`) et lecture dans `Project` | Fait |
 | 5 | Cartes : `ProjectSummary.accent` et `banner` (miniature) | A faire |
 | 6 | Retrait d'image et moderation (`DELETE`, `GET /admin/.../media`, notification) | A faire |
 | 7 | Cycle de vie : orphelins, transfert, purge R-X3 de tous les fichiers | A faire |
@@ -359,6 +359,49 @@ cles inconnues. A couvrir par un test.
   co-porteur 403 ; image retiree du brouillon → objet supprime ;
   `PATCH /projects/:slug` puis `transition` renvoient toujours
   `customization` ; reponses validees par `projectSchema` du front.
+- **Fait.** Choix retenus :
+  - La lecture vit dans le module des projets
+    (`CustomizationReaderService.resolve`) et non dans
+    `CustomizationService` : `ProjectsService` (et a l'etape 5
+    `ProjectAccessService.summarize`) en ont besoin, et le module
+    `customization` depend des projets, jamais l'inverse. Elle porte aussi
+    `urlFor`, que le depot reutilise.
+  - `toProject(project, customization?)` reste pur ; les cinq sorties de
+    `ProjectsService` passent par `present(project)`, que le `PATCH` de
+    personnalisation reutilise.
+  - Reponse reconstruite champ a champ : Postgres reordonne les cles d'un
+    `jsonb` (le theme revenait `text, panel, accent, background`).
+  - Verrous : la ligne projet (requete sans jointure — les relations eager
+    de `findOne` rendent `FOR UPDATE` invalide sous Postgres) **et** les
+    images du projet, pour que la purge des orphelins (etape 7) ne retire
+    pas une image en attente pendant son rattachement.
+  - Seules les images **deja rattachees** et plus referencees sont
+    supprimees ; les depots en attente restent (edition en cours dans un
+    autre onglet), la purge s'en charge.
+  - Deux enregistrements simultanes se suivent ; si le premier supprime
+    une image que le second reference encore, le second recoit le 400
+    « Image inconnue pour ce projet » — coherent avec la decision (3).
+  - Erreur d'image etrangere : message general du mock (« La demande n'est
+    pas valide. ») et `details.images`, comme le mock.
+- Verifie : 7 tests unitaires de plus (resolution avec et sans images
+  manquantes, champ absent, ordre des references, URL du corps jamais
+  conservee, `PATCH /projects/:slug` qui ignore `customization`) ; contre
+  la stack de demo (image Docker de la branche, port a part), 41 controles :
+  enregistrement complet (banniere, theme, 5 sections, 8 images) conforme a
+  `projectSchema`, identique au corps aux URL pres, URL du corps ignoree,
+  `jsonb` sans URL, 9 images rattachees, `lastActivityAt` mis a jour ;
+  `GET` porteur et anonyme identiques, projet jamais personnalise sans le
+  champ ; `PATCH /projects/:slug` (avec un `customization` parasite),
+  `complete` et `reopen` renvoient la personnalisation intacte ; image d'un
+  autre projet, id inconnu, 9 images, section en double ou manquante,
+  `#ABCDEF`, theme partiel, `alt` vide, URL `javascript:`, id en double :
+  400, sans rien modifier ; anonyme 401, membre et co-porteur 403, projet
+  inexistant 404 ; deux images retirees : lignes, originaux et miniatures
+  supprimes, depots en attente intacts ; deux `PATCH` simultanes
+  serialises. Base de demo remise en etat (fiche par defaut, 10 depots en
+  attente conserves pour l'etape 7).
+- Non verifie a part : la reponse de `transfer`, qui passe par le meme
+  `present`.
 
 ## Etape 5 — Cartes
 
