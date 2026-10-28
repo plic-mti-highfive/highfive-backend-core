@@ -50,7 +50,7 @@ export type Notification = z.infer<typeof notificationSchema>;
 
 /**
  * Cible resolue d'une notification, pour un routage exact vers une route FR
- * (R-N3) : `/projets/:slug` (project/comment), `/projets/:slug/lab/taches`
+ * (R-N3) : `/projets/:slug` (project/comment), `/projets/:slug/lab/etapes`
  * (task) ou `/messages/:id` (message).
  */
 export const notificationTargetSchema = z.discriminatedUnion('type', [

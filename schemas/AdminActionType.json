@@ -5,6 +5,7 @@
     "suspend_account",
     "reactivate_account",
     "delete_project",
+    "remove_project_media",
     "hide_comment",
     "reject_report",
     "resolve_report"

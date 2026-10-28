@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "banner": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^(https?:\\/\\/|data:image\\/)"
+        },
+        "alt": {
+          "type": "string",
+          "maxLength": 200,
+          "minLength": 1
+        },
+        "focal": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "y": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          },
+          "required": ["x", "y"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["id", "url", "alt", "focal"],
+      "additionalProperties": false
+    },
+    "theme": {
+      "type": "object",
+      "properties": {
+        "background": {
+          "type": "string",
+          "pattern": "^#[0-9a-f]{6}$"
+        },
+        "panel": {
+          "type": "string",
+          "pattern": "^#[0-9a-f]{6}$"
+        },
+        "text": {
+          "type": "string",
+          "pattern": "^#[0-9a-f]{6}$"
+        },
+        "accent": {
+          "type": "string",
+          "pattern": "^#[0-9a-f]{6}$"
+        }
+      },
+      "required": ["background", "panel", "text", "accent"],
+      "additionalProperties": false
+    },
+    "sections": {
+      "minItems": 4,
+      "maxItems": 5,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": ["pinned", "needs", "about", "gallery", "comments"]
+          },
+          "visible": {
+            "type": "boolean"
+          }
+        },
+        "required": ["id", "visible"],
+        "additionalProperties": false
+      }
+    },
+    "gallery": {
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "url": {
+            "type": "string",
+            "pattern": "^(https?:\\/\\/|data:image\\/)"
+          },
+          "alt": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1
+          },
+          "caption": {
+            "type": "string",
+            "maxLength": 140
+          }
+        },
+        "required": ["id", "url", "alt"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["sections", "gallery"],
+  "additionalProperties": false,
+  "title": "ProjectCustomization"
+}

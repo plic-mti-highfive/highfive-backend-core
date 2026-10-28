@@ -20,14 +20,15 @@ import { parse } from 'yaml';
 const ROOT = new URL('..', import.meta.url).pathname;
 
 /** Absences et ajouts assumes : tout le reste est une derive. */
-const EXPECTED_MISSING = [];
-
-const EXPECTED_EXTRA = [
-  'GET /health',
-  'GET /health/ready',
-  // Sans creation de signalement, la file de moderation est vide.
-  'POST /reports',
+const EXPECTED_MISSING = [
+  // Personnalisation de la fiche, en cours : docs/PERSONNALISATION.md.
+  'PATCH /projects/:slug/customization',
+  'POST /projects/:slug/customization/images',
+  'DELETE /projects/:slug/customization/images/:imageId',
+  'GET /admin/projects/:slug/media',
 ];
+
+const EXPECTED_EXTRA = ['GET /health', 'GET /health/ready'];
 
 function sourceFiles(dir) {
   return readdirSync(dir).flatMap((entry) => {
