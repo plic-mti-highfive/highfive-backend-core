@@ -33,5 +33,6 @@ import { AdminService } from './admin.service.js';
   ],
   controllers: [AdminController],
   providers: [AdminService, AdminBootstrapService],
+  exports: [AdminService],
 })
 export class AdminModule {}

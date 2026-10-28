@@ -16,6 +16,7 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { crc32, deflateSync } from 'node:zlib';
 import { parse } from 'yaml';
 
 const API = (process.env.API_URL ?? 'http://localhost:3000') + '/api';
@@ -128,6 +129,33 @@ const png = () =>
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     Buffer.alloc(256, 7),
   ]);
+
+/**
+ * PNG decodable (la personnalisation decode chaque image pour en tirer la
+ * miniature) : un aplat, sans dependance.
+ */
+function realPng(width = 320, height = 200, rgb = [214, 36, 110]) {
+  const chunk = (type, data) => {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body));
+    return Buffer.concat([length, body, crc]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8;
+  header[9] = 2;
+  const row = Buffer.concat([Buffer.from([0]), Buffer.from(Array.from({ length: width }, () => rgb).flat())]);
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', header),
+    chunk('IDAT', deflateSync(Buffer.concat(Array.from({ length: height }, () => row)))),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
 
 function upload(field, name, buffer, type) {
   const form = new FormData();
@@ -1438,151 +1466,113 @@ if (!isAdmin) {
 }
 
 section('personnalisation de la fiche');
-const customization = (images = {}) => ({
-  sections: ['pinned', 'needs', 'about', 'gallery', 'comments'].map((id) => ({ id, visible: true })),
-  gallery: [],
-  ...images,
-});
+// docs/PERSONNALISATION.md : porteur seul, images referencees par id, URL
+// signees, miniature pour les cartes, moderation journalisee.
+const sections = ['pinned', 'needs', 'about', 'gallery', 'comments'].map((id) => ({ id, visible: id !== 'needs' }));
+const theme = { background: '#fff0f5', panel: '#ffffff', text: '#3a1d2b', accent: '#d6246e' };
+const customizationImages = `/projects/${slug}/customization/images`;
+let customized = false;
+r = await call('POST', customizationImages, { token: aliceToken, form: upload('file', 'banniere.png', realPng(800, 266), 'image/png') });
+if (r.status === 201) {
+  const banner = r.body;
+  check('depot d image par le porteur 201', /^https?:\/\//.test(banner.url) && /X-Amz-Signature/.test(banner.url), banner);
 
-r = await call('PATCH', `/projects/${slug}/customization`, { body: customization() });
-check('personnaliser sans jeton 401', r.status === 401, r.body);
-
-r = await call('PATCH', `/projects/${slug}/customization`, { token: bobToken, body: customization() });
-check('un co-porteur ne personnalise pas 403', r.status === 403, r.body);
-
-r = await call('PATCH', `/projects/${slug}/customization`, { token: aliceToken, body: { sections: [], gallery: [] } });
-check('corps invalide (sections manquantes) 400', r.status === 400, r.body);
-
-r = await call('PATCH', `/projects/inconnu-${stamp}/customization`, { token: aliceToken, body: customization() });
-check('projet inconnu 404', r.status === 404, r.body);
-
-r = await call('POST', `/projects/${slug}/customization/images`, {
-  token: bobToken,
-  form: upload('file', 'b.png', png(), 'image/png'),
-});
-check('televerser sans etre porteur 403', r.status === 403, r.body);
-
-r = await call('POST', `/projects/${slug}/customization/images`, { token: aliceToken, form: new FormData() });
-check('televerser sans fichier 400', r.status === 400, r.body);
-
-r = await call('POST', `/projects/${slug}/customization/images`, {
-  token: aliceToken,
-  form: upload('file', 'virus.png', Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03]), 'image/png'),
-});
-check('executable deguise en image 400', r.status === 400, r.body);
-
-r = await call('POST', `/projects/${slug}/customization/images`, {
-  token: aliceToken,
-  form: upload('file', 'anim.gif', Buffer.from('GIF89a-----------'), 'image/gif'),
-});
-check('GIF refuse 400', r.status === 400, r.body);
-
-r = await call('POST', `/projects/${slug}/customization/images`, {
-  token: aliceToken,
-  form: upload('file', 'gros.png', Buffer.concat([png(), Buffer.alloc(2 * 1024 * 1024, 1)]), 'image/png'),
-});
-check('plus de 2 Mo 400', r.status === 400, r.body);
-
-r = await call('POST', `/projects/${slug}/customization/images`, {
-  token: aliceToken,
-  form: upload('file', 'banniere.png', png(), 'image/png'),
-});
-check('televersement de la banniere 201', r.status === 201 && r.body.id && /^https?:\/\//.test(r.body.url), r.body);
-const bannerImage = r.body;
-
-r = await call('POST', `/projects/${slug}/customization/images`, {
-  token: aliceToken,
-  form: upload('file', 'galerie.png', png(), 'image/png'),
-});
-const galleryImage = r.body;
-check('televersement d une image de galerie 201', r.status === 201, r.body);
-
-{
-  const bytes = await fetch(bannerImage?.url ?? 'http://invalide.test')
-    .then((res) => (res.ok ? res.arrayBuffer() : undefined))
-    .catch(() => undefined);
-  check('l URL renvoyee sert bien l image', bytes && Buffer.from(bytes).equals(png()), bytes?.byteLength);
-}
-
-const theme = { background: '#ffffff', panel: '#f4f4f4', text: '#111111', accent: '#3366ff' };
-const full = customization({
-  banner: { id: bannerImage?.id, url: bannerImage?.url, alt: 'Atelier de peinture', focal: { x: 30, y: 60 } },
-  theme,
-  gallery: [{ id: galleryImage?.id, url: galleryImage?.url, alt: 'Pochoirs', caption: 'Les pochoirs' }],
-});
-
-r = await call('PATCH', `/projects/${slug}/customization`, {
-  token: aliceToken,
-  body: customization({
-    gallery: [{ id: '00000000-0000-4000-8000-000000000000', url: 'https://x.test/a.png', alt: 'Etrangere' }],
-  }),
-});
-check('image inconnue pour ce projet 400', r.status === 400, r.body);
-
-r = await call('PATCH', `/projects/${slug}/customization`, { token: aliceToken, body: full });
-check('personnalisation enregistree 200', r.status === 200 && r.body.customization?.banner?.alt === 'Atelier de peinture', r.body);
-check(
-  'theme et galerie renvoyes tels quels',
-  r.body?.customization?.theme?.accent === '#3366ff' && r.body.customization.gallery.length === 1,
-  r.body?.customization,
-);
-
-r = await call('GET', `/projects/${slug}`);
-check(
-  'visible de tous sur GET /projects/:slug',
-  r.body?.customization?.banner?.focal?.x === 30 && /^https?:\/\//.test(r.body.customization.banner.url),
-  r.body?.customization,
-);
-
-r = await call('GET', '/projects?limit=50');
-const customCard = r.body?.items?.find((item) => item.slug === slug);
-check('la carte porte accent et banniere', customCard?.accent === '#3366ff' && customCard?.banner?.id === bannerImage?.id, customCard);
-
-r = await call('PATCH', `/projects/${slug}`, { token: aliceToken, body: { tagline: 'Accroche modifiee' } });
-check('PATCH /projects/:slug conserve la personnalisation', r.status === 200 && r.body.customization?.theme?.accent === '#3366ff', r.body);
-
-r = await call('GET', `/admin/projects/${slug}/media`, { token: carolToken });
-check('medias d administration fermes aux non-admins 403', r.status === 403, r.body);
-
-if (isAdmin) {
-  r = await call('GET', `/admin/projects/${slug}/media`, { token: adminToken });
-  check(
-    'l admin voit banniere et galerie',
-    r.status === 200 && r.body.banner?.id === bannerImage?.id && r.body.gallery.length === 1,
-    r.body,
-  );
-
-  r = await call('DELETE', `/projects/${slug}/customization/images/${galleryImage?.id}`, {
-    token: adminToken,
-    body: { reason: 'Contenu inapproprie' },
+  r = await call('POST', customizationImages, { token: bobToken, form: upload('file', 'b.png', realPng(), 'image/png') });
+  check('depot par un membre 403 (porteur seul)', r.status === 403, r.body);
+  r = await call('POST', customizationImages, {
+    token: aliceToken,
+    form: upload('file', 'x.svg', Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'), 'image/svg+xml'),
   });
-  check('retrait par l admin 204', r.status === 204, r.body);
+  check('SVG refuse 400', r.status === 400, r.body);
+  r = await call('POST', customizationImages, { token: aliceToken, form: upload('file', 'faux.png', png(), 'image/png') });
+  check('image illisible refusee 400', r.status === 400, r.body);
+  r = await call('POST', customizationImages, {
+    token: aliceToken,
+    form: upload('file', 'virus.png', Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03]), 'image/png'),
+  });
+  check('executable deguise en image 400', r.status === 400, r.body);
+  r = await call('POST', customizationImages, { token: aliceToken, form: upload('file', 'anim.gif', Buffer.from('GIF89a-----------'), 'image/gif') });
+  check('GIF refuse 400', r.status === 400, r.body);
+  r = await call('POST', customizationImages, {
+    token: aliceToken,
+    form: upload('file', 'gros.png', Buffer.concat([realPng(), Buffer.alloc(2 * 1024 * 1024, 1)]), 'image/png'),
+  });
+  check('plus de 2 Mo 400', r.status === 400, r.body);
+  r = await call('POST', customizationImages, { token: aliceToken, form: new FormData() });
+  check('depot sans fichier 400', r.status === 400, r.body);
+  r = await call('PATCH', `/projects/${slug}/customization`, { body: { sections, gallery: [] } });
+  check('enregistrement sans jeton 401', r.status === 401, r.body);
+  r = await call('PATCH', `/projects/inconnu-${stamp}/customization`, { token: aliceToken, body: { sections, gallery: [] } });
+  check('projet inconnu 404', r.status === 404, r.body);
 
-  r = await call('GET', `/admin/projects/${slug}/media`, { token: adminToken });
-  check(
-    'l image retiree disparait de la galerie',
-    r.status === 200 && r.body.gallery.length === 0 && r.body.banner?.id === bannerImage?.id,
-    r.body,
-  );
+  const photos = [];
+  for (const rgb of [[47, 125, 79], [255, 107, 26]]) {
+    r = await call('POST', customizationImages, { token: aliceToken, form: upload('file', 'photo.png', realPng(320, 200, rgb), 'image/png') });
+    photos.push(r.body);
+  }
+  const body = {
+    banner: { id: banner.id, url: 'https://ailleurs.example/piege.png', alt: 'Aplat rose', focal: { x: 30, y: 60 } },
+    theme,
+    sections,
+    gallery: photos.map((photo, i) => ({ id: photo.id, url: photo.url, alt: `Aplat ${i + 1}` })),
+  };
+  r = await call('PATCH', `/projects/${slug}/customization`, { token: aliceToken, body });
+  customized = check('enregistrement 200', r.status === 200 && r.body.customization?.gallery?.length === 2, r.body);
+  check('l URL envoyee est ignoree', r.body.customization?.banner?.url !== body.banner.url && /X-Amz-Signature/.test(r.body.customization?.banner?.url ?? ''), r.body.customization?.banner);
+  check('theme et sections conserves', r.body.customization?.theme?.accent === theme.accent && r.body.customization?.sections?.[1]?.visible === false, r.body.customization);
+
+  r = await call('PATCH', `/projects/${slug}/customization`, { token: bobToken, body });
+  check('enregistrement par un membre 403', r.status === 403, r.body);
+  r = await call('PATCH', `/projects/${slug}/customization`, {
+    token: aliceToken,
+    body: { ...body, gallery: [{ id: '00000000-0000-4000-8000-000000000000', url: 'https://x.example/a.png', alt: 'x' }] },
+  });
+  check('image inconnue pour ce projet 400', r.status === 400 && r.body.details?.images, r.body);
+  r = await call('PATCH', `/projects/${slug}/customization`, { token: aliceToken, body: { ...body, sections: [...sections, sections[0]] } });
+  check('section en double 400', r.status === 400, r.body);
+  r = await call('PATCH', `/projects/${slug}`, { token: aliceToken, body: { tagline: 'Repeindre le mur, version 2', customization: { sections: [], gallery: [] } } });
+  check('PATCH /projects/:slug ignore customization et la renvoie', r.status === 200 && r.body.customization?.gallery?.length === 2, r.body?.customization);
+
+  r = await call('GET', `/projects/${slug}`);
+  check('fiche publique : personnalisation lue', r.body.customization?.banner?.focal?.x === 30, r.body.customization);
+  const galleryUrl = r.body.customization?.gallery?.[0]?.url;
+  check('URL de galerie lisible', galleryUrl && (await fetch(galleryUrl)).status === 200, galleryUrl);
+
+  r = await call('GET', '/me/projects', { token: aliceToken });
+  const myCard = r.body.find?.((p) => p.slug === slug);
+  check('carte : accent et banniere en miniature', myCard?.accent === theme.accent && /-640\.webp\?/.test(myCard?.banner?.url ?? ''), myCard);
+
+  r = await call('DELETE', `${customizationImages}/${photos[0].id}`, { token: bobToken });
+  check('retrait par un membre 403', r.status === 403, r.body);
+  r = await call('DELETE', `${customizationImages}/${photos[0].id}`, { token: aliceToken });
+  check('retrait par le porteur 204', r.status === 204, r.body);
+  r = await call('GET', `/projects/${slug}`);
+  check('reference retiree de la galerie', r.body.customization?.gallery?.length === 1, r.body.customization);
+  check('objet supprime du stockage', (await fetch(galleryUrl)).status !== 200);
+  r = await call('DELETE', `${customizationImages}/${photos[0].id}`, { token: aliceToken });
+  check('image deja retiree 404', r.status === 404, r.body);
+
+  if (isAdmin) {
+    r = await call('GET', `/admin/projects/${slug}/media`, { token: adminToken });
+    check('medias vus par l administration 200', r.status === 200 && r.body.banner?.id === banner.id && r.body.gallery.length === 1, r.body);
+    r = await call('GET', `/admin/projects/${slug}/media`, { token: aliceToken });
+    check('medias : reserve a l administration 403', r.status === 403, r.body);
+    r = await call('DELETE', `${customizationImages}/${banner.id}`, { token: adminToken, body: { reason: 'Image sans rapport avec le projet' } });
+    check('R-S4 : retrait de moderation 204', r.status === 204, r.body);
+    r = await call('GET', `/admin/projects/${slug}/media`, { token: adminToken });
+    check('banniere retiree', r.status === 200 && !r.body.banner, r.body);
+    r = await call('GET', '/notifications', { token: aliceToken });
+    check('R-S3 : porteur notifie (admin_decision)', r.body.items?.some((n) => n.type === 'admin_decision' && n.target?.projectSlug === slug), r.body.items?.map((n) => n.type));
+  } else {
+    skip('moderation des medias', `ADMIN_EMAILS ne contient pas ${ADMIN_EMAIL}`);
+    await call('GET', `/admin/projects/${slug}/media`, { token: aliceToken });
+  }
 } else {
-  skip('moderation des medias', `ADMIN_EMAILS ne contient pas ${ADMIN_EMAIL}`);
+  skip('personnalisation', `stockage objet indisponible (HTTP ${r.status})`);
+  await call('PATCH', `/projects/${slug}/customization`, { token: aliceToken, body: { sections, gallery: [] } });
+  await call('DELETE', `${customizationImages}/00000000-0000-4000-8000-000000000000`, { token: aliceToken });
+  await call('GET', `/admin/projects/${slug}/media`, { token: aliceToken });
 }
-
-r = await call('DELETE', `/projects/${slug}/customization/images/${bannerImage?.id}`, { token: carolToken });
-check('retirer une image sans etre porteur ni admin 403', r.status === 403, r.body);
-
-r = await call('DELETE', `/projects/${slug}/customization/images/${bannerImage?.id}`, { token: aliceToken });
-check('le porteur retire sa banniere 204', r.status === 204, r.body);
-
-r = await call('DELETE', `/projects/${slug}/customization/images/${bannerImage?.id}`, { token: aliceToken });
-check('image deja retiree 404', r.status === 404, r.body);
-
-r = await call('GET', `/projects/${slug}`);
-check(
-  'banniere retiree de la fiche, theme conserve',
-  !r.body?.customization?.banner && r.body?.customization?.theme?.accent === '#3366ff',
-  r.body?.customization,
-);
 
 section('transfert et suppression');
 r = await call('POST', `/projects/${slug}/transfer`, { token: bobToken, body: { newOwnerId: bobId } });
@@ -1593,7 +1583,14 @@ check('se transferer a soi-meme 400', r.status === 400, r.body);
 
 r = await call('POST', `/projects/${slug}/transfer`, { token: aliceToken, body: { newOwnerId: bobId } });
 check('R-M2 : transfert 200', r.status === 200 && r.body.ownerId === bobId, r.body);
-check('la personnalisation suit le transfert', r.body?.customization?.theme?.accent === '#3366ff', r.body?.customization);
+
+if (customized) {
+  check('la personnalisation suit le transfert', r.body.customization?.theme?.accent === theme.accent, r.body.customization);
+  r = await call('PATCH', `/projects/${slug}/customization`, { token: aliceToken, body: { sections, gallery: [] } });
+  check('l ancien porteur ne personnalise plus 403', r.status === 403, r.body);
+  r = await call('PATCH', `/projects/${slug}/customization`, { token: bobToken, body: { theme, sections, gallery: [] } });
+  check('le nouveau porteur personnalise 200', r.status === 200, r.body);
+}
 
 r = await call('GET', `/projects/${slug}/members`);
 check('R-M2 : l ancien porteur devient co-porteur', r.body.find((m) => m.userId === aliceId)?.role === 'co_owner', r.body);

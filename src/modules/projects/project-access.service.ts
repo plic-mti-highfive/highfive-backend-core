@@ -7,8 +7,8 @@ import {
   ProjectEntity,
   UserEntity,
 } from '../../entities/index.js';
-import { ProjectImagesService } from './project-images.service.js';
 import { ApiError } from '../../common/errors/api-error.js';
+import { CustomizationReaderService } from './customization-reader.service.js';
 import {
   toUserSummary,
   visibleNeeds,
@@ -59,7 +59,7 @@ export class ProjectAccessService {
     private readonly memberships: Repository<MembershipEntity>,
     @InjectRepository(UserEntity)
     private readonly users: Repository<UserEntity>,
-    private readonly images: ProjectImagesService,
+    private readonly customizations: CustomizationReaderService,
   ) {}
 
   /** R-X3 : un projet supprime n'existe plus pour aucune lecture. */
@@ -199,6 +199,7 @@ export class ProjectAccessService {
     ];
     const users = await this.users.find({ where: { id: In(userIds) } });
     const byUserId = new Map(users.map((user) => [user.id, user]));
+    const cards = await this.customizations.cards(projects);
 
     const byProject = new Map<string, MembershipEntity[]>();
     for (const membership of memberships) {
@@ -207,16 +208,7 @@ export class ProjectAccessService {
       byProject.set(membership.projectId, list);
     }
 
-    // Les bannieres des cartes : une requete pour tout le lot.
-    const bannerUrls = await this.images.urlsFor(
-      projects.flatMap((p) =>
-        p.customization?.banner ? [p.customization.banner.id] : [],
-      ),
-    );
-
     return projects.map((project) => {
-      const banner = project.customization?.banner;
-      const bannerUrl = banner && bannerUrls.get(banner.id);
       const team = byProject.get(project.id) ?? [];
       // Le porteur d'abord, puis les autres par anciennete : un visage connu
       // en tete plutot qu'un ordre de base de donnees.
@@ -246,10 +238,7 @@ export class ProjectAccessService {
         owner: toUserSummary(
           byUserId.get(project.ownerId) ?? ({} as UserEntity),
         ),
-        ...(project.customization?.theme && {
-          accent: project.customization.theme.accent,
-        }),
-        ...(banner && bannerUrl && { banner: { ...banner, url: bannerUrl } }),
+        ...cards.get(project.id),
       };
     });
   }

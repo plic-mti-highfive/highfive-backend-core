@@ -9,8 +9,10 @@ import { ConfigService } from '@nestjs/config';
 import {
   CreateBucketCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadBucketCommand,
+  ListObjectsV2Command,
   PutBucketPolicyCommand,
   PutObjectCommand,
   S3Client,
@@ -89,6 +91,15 @@ export class StorageService implements OnModuleInit {
     await this.allowPublicReads();
   }
 
+  /** Lit un objet en entier (images de quelques Mo au plus). */
+  async read(key: string): Promise<Buffer> {
+    const object = await this.client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+    if (!object.Body) throw new Error(`Objet ${key} vide`);
+    return Buffer.from(await object.Body.transformToByteArray());
+  }
+
   /** Depose un contenu et renvoie sa cle et son URL publique. */
   async put(
     folder: string,
@@ -100,7 +111,12 @@ export class StorageService implements OnModuleInit {
       ? `.${originalName.split('.').pop()!.toLowerCase()}`
       : '';
     const key = `${folder}/${randomUUID()}${extension}`;
+    await this.putAt(key, body, mimeType);
+    return { key, url: `${this.publicEndpoint}/${this.bucket}/${key}` };
+  }
 
+  /** Depose sous une cle choisie : une variante rangee a cote de son original. */
+  async putAt(key: string, body: Buffer, mimeType: string): Promise<void> {
     await this.client.send(
       new PutObjectCommand({
         Bucket: this.bucket,
@@ -109,8 +125,6 @@ export class StorageService implements OnModuleInit {
         ContentType: mimeType,
       }),
     );
-
-    return { key, url: `${this.publicEndpoint}/${this.bucket}/${key}` };
   }
 
   /**
@@ -128,6 +142,48 @@ export class StorageService implements OnModuleInit {
         `Objet ${key} non supprime du stockage: ${String(error)}`,
       );
     }
+  }
+
+  /**
+   * Supprime tout ce qui est range sous un prefixe (purge d'un projet ou
+   * d'un compte), y compris les objets qu'aucune ligne ne reference plus.
+   * Contrairement a `remove`, un echec est leve : l'appelant garde alors
+   * ses lignes pour reessayer au passage suivant, plutot que de perdre la
+   * trace d'objets restes dans le seau.
+   */
+  async removePrefix(prefix: string): Promise<number> {
+    // Le `/` final evite que `projects/abc` emporte `projects/abcd`.
+    const folder = prefix.endsWith('/') ? prefix : `${prefix}/`;
+    let removed = 0;
+    let token: string | undefined;
+    do {
+      const page = await this.client.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucket,
+          Prefix: folder,
+          ContinuationToken: token,
+        }),
+      );
+      const keys = (page.Contents ?? []).flatMap((object) =>
+        object.Key ? [{ Key: object.Key }] : [],
+      );
+      if (keys.length > 0) {
+        const result = await this.client.send(
+          new DeleteObjectsCommand({
+            Bucket: this.bucket,
+            Delete: { Objects: keys, Quiet: true },
+          }),
+        );
+        if (result.Errors?.length) {
+          throw new Error(
+            `${result.Errors.length} objet(s) non supprime(s) sous ${folder}`,
+          );
+        }
+        removed += keys.length;
+      }
+      token = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (token);
+    return removed;
   }
 
   urlFor(key: string): string {
@@ -152,6 +208,29 @@ export class StorageService implements OnModuleInit {
         ResponseContentDisposition: `inline; filename*=UTF-8''${encodeURIComponent(fileName)}`,
       }),
       { expiresIn: ttlSeconds },
+    );
+  }
+
+  /**
+   * Lecture signee d'une image affichee a chaque visite (personnalisation
+   * des fiches). Une URL signee change avec l'heure de signature : resignee
+   * a chaque lecture, la meme image aurait une adresse neuve a chaque
+   * chargement et ne serait jamais servie depuis le cache du navigateur.
+   * On signe donc avec le debut de la fenetre courante, et pour deux
+   * fenetres : l'URL reste identique toute une fenetre, et une URL copiee
+   * cesse de fonctionner au plus tard deux fenetres apres.
+   */
+  stableSignedUrlFor(
+    key: string,
+    windowSeconds: number,
+    now: Date = new Date(),
+  ): Promise<string> {
+    const windowMs = windowSeconds * 1000;
+    const windowStart = Math.floor(now.getTime() / windowMs) * windowMs;
+    return getSignedUrl(
+      this.signer,
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+      { signingDate: new Date(windowStart), expiresIn: 2 * windowSeconds },
     );
   }
 

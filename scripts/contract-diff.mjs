@@ -22,12 +22,7 @@ const ROOT = new URL('..', import.meta.url).pathname;
 /** Absences et ajouts assumes : tout le reste est une derive. */
 const EXPECTED_MISSING = [];
 
-const EXPECTED_EXTRA = [
-  'GET /health',
-  'GET /health/ready',
-  // Sans creation de signalement, la file de moderation est vide.
-  'POST /reports',
-];
+const EXPECTED_EXTRA = ['GET /health', 'GET /health/ready'];
 
 function sourceFiles(dir) {
   return readdirSync(dir).flatMap((entry) => {

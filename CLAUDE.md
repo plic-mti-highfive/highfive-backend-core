@@ -10,10 +10,10 @@ Plus de multi-tenance : la plateforme est mono-instance.
 
 ### Dans le perimetre
 
-- Les 89 routes du contrat v2, messagerie comprise (13 routes, voir
-  `docs/MESSAGERIE.md`), plus
-  6 routes hors contrat : sante (2), Le Mur (3, voir `docs/CANVAS.md`) et
-  creation de signalement.
+- Les 97 routes du contrat v2, messagerie (13 routes, voir
+  `docs/MESSAGERIE.md`), Le Mur (voir `docs/CANVAS.md`), creation de
+  signalement et personnalisation de la fiche (4 routes, voir
+  `docs/PERSONNALISATION.md`) comprises, plus 2 sondes de sante hors contrat.
 - Droits, regles metier (R-xx), persistance.
 - Emission du jeton d'acces au service canvas (Le Mur).
 - Frontiere vers le service IA : files BullMQ + lecture des recommandations.
@@ -45,8 +45,8 @@ src/
                sessions), stockage, frontiere IA, mappers entite -> contrat
   modules/     un module par domaine du contrat : auth, users, tags, projects,
                highfives, memberships, announcements, comments, tasks, wall,
-               files, notifications, conversations, search,
-               admin, maintenance
+               files, notifications, conversations, customization,
+               search, admin, maintenance
 ```
 
 ## Conventions
@@ -72,7 +72,7 @@ pnpm typecheck                  # tsc --noEmit
 pnpm lint                       # eslint --fix
 docker compose up -d db redis   # dependances locales
 node scripts/seed.mjs           # jeu de demonstration
-node scripts/smoke.mjs          # parcours de bout en bout (~75 verifications)
+node scripts/smoke.mjs          # parcours de bout en bout (~380 verifications)
 ```
 
 ## Documentation
@@ -81,6 +81,7 @@ node scripts/smoke.mjs          # parcours de bout en bout (~75 verifications)
 | --- | --- |
 | `docs/REFACTO-V2.md` | Ce qui a ete supprime et pourquoi, ce qui est implemente, la frontiere IA, les ecarts assumes. |
 | `docs/MESSAGERIE.md` | La messagerie : etapes, choix retenus, verifications, decisions ouvertes. |
+| `docs/PERSONNALISATION.md` | La personnalisation de la fiche : etapes, choix retenus, verifications. |
 | `docs/CANVAS.md` | Inventaire des fonctions du Mur : celles servies au front, celles conservees sans ecran. |
 | `Database.md` | Modele relationnel, table par table. |
 | `openapi.yaml` | Le contrat, copie depuis le front. Servi sur `/api/docs`. |

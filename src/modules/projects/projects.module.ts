@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import {
   ColumnEntity,
-  AdminActionEntity,
   MembershipEntity,
   NeedEntity,
   ProjectEntity,
@@ -10,11 +9,8 @@ import {
   UserEntity,
   WallEntity,
 } from '../../entities/index.js';
-import { NotificationsModule } from '../notifications/notifications.module.js';
 import { TagsModule } from '../tags/tags.module.js';
-import { CustomizationController } from './customization.controller.js';
-import { CustomizationService } from './customization.service.js';
-import { ProjectImagesService } from './project-images.service.js';
+import { CustomizationReaderService } from './customization-reader.service.js';
 import { ProjectAccessService } from './project-access.service.js';
 import { ProjectsController } from './projects.controller.js';
 import { ProjectsService } from './projects.service.js';
@@ -24,7 +20,6 @@ import { ProjectsService } from './projects.service.js';
     TypeOrmModule.forFeature([
       ProjectEntity,
       ProjectImageEntity,
-      AdminActionEntity,
       MembershipEntity,
       NeedEntity,
       ColumnEntity,
@@ -32,15 +27,13 @@ import { ProjectsService } from './projects.service.js';
       UserEntity,
     ]),
     TagsModule,
-    NotificationsModule,
   ],
-  controllers: [ProjectsController, CustomizationController],
+  controllers: [ProjectsController],
   providers: [
     ProjectAccessService,
-    ProjectImagesService,
-    CustomizationService,
+    CustomizationReaderService,
     ProjectsService,
   ],
-  exports: [ProjectAccessService, ProjectImagesService, ProjectsService],
+  exports: [ProjectAccessService, CustomizationReaderService, ProjectsService],
 })
 export class ProjectsModule {}

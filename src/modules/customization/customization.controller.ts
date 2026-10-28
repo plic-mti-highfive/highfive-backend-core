@@ -1,5 +1,4 @@
 import {
-  Body,
   Controller,
   Delete,
   Get,
@@ -12,14 +11,12 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { z } from 'zod';
+import { Throttle } from '@nestjs/throttler';
 import { AdminOnly, CurrentUser } from '../../common/auth/decorators.js';
-import { ApiError } from '../../common/errors/api-error.js';
 import {
   requireFile,
   type UploadedFile as Upload,
 } from '../../common/http/upload.js';
-import { ZodBody } from '../../common/http/zod.pipe.js';
 import {
   projectCustomizationSchema,
   type AdminProjectMedia,
@@ -27,63 +24,62 @@ import {
   type Project,
   type ProjectCustomization,
 } from '../../contracts/index.js';
+import { ZodBody } from '../../common/http/zod.pipe.js';
 import type { UserEntity } from '../../entities/index.js';
+import { reasonBodySchema } from '../admin/admin.controller.js';
 import { CustomizationService } from './customization.service.js';
 
-/** Motif facultatif d'un retrait par l'administration (journalise, R-S4). */
-const removeBodySchema = z.object({
-  reason: z.string().trim().max(1000).optional(),
-});
+/** Le corps est facultatif : le porteur n'en envoie pas, l'admin peut. */
+const optionalReasonSchema = reasonBodySchema.optional();
+
+/**
+ * Plafond de lecture du corps multipart : le double de
+ * `customization.maxImageBytes` (un decorateur ne lit pas la configuration).
+ * Un fichier un peu trop lourd recoit ainsi le 400 du service, qui dit la
+ * limite (« Ce fichier depasse 2 Mo ») ; Multer coupe la lecture exactement a
+ * sa limite, une marge d'un octet ne suffisait pas. Au-dela, le 413 generique.
+ */
+const MAX_READ_BYTES = 2 * 2 * 1024 * 1024;
 
 @Controller()
 export class CustomizationController {
   constructor(private readonly customization: CustomizationService) {}
 
+  /** Remplacement complet ; renvoie la fiche a jour (cache du front). */
   @Patch('projects/:slug/customization')
-  update(
+  save(
     @Param('slug') slug: string,
     @CurrentUser() user: UserEntity,
     @ZodBody(projectCustomizationSchema) input: ProjectCustomization,
   ): Promise<Project> {
-    return this.customization.update(slug, user, input);
+    return this.customization.save(slug, user, input);
   }
 
+  /** Porteur seul ; le `PATCH` suivant reference l'`id` renvoye. */
   @Post('projects/:slug/customization/images')
   @HttpCode(201)
-  @UseInterceptors(FileInterceptor('file'))
-  upload(
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MAX_READ_BYTES } }),
+  )
+  uploadImage(
     @Param('slug') slug: string,
     @CurrentUser() user: UserEntity,
-    @UploadedFile() file?: Upload,
+    @UploadedFile() file: Upload | undefined,
   ): Promise<CustomizationImageUpload> {
     return this.customization.upload(slug, user, requireFile(file));
   }
 
-  /**
-   * Le corps d'un DELETE n'est pas garanti par tous les intermediaires : il
-   * est lu de facon defensive, comme pour la suppression d'un projet.
-   */
+  /** Porteur, ou admin qui modere (journalise et notifie le porteur). */
   @Delete('projects/:slug/customization/images/:imageId')
   @HttpCode(204)
-  async remove(
+  removeImage(
     @Param('slug') slug: string,
     @Param('imageId', ParseUUIDPipe) imageId: string,
     @CurrentUser() user: UserEntity,
-    @Body() rawBody: unknown,
+    @ZodBody(optionalReasonSchema) body: { reason?: string } | undefined,
   ): Promise<void> {
-    const parsed = removeBodySchema.safeParse(rawBody ?? {});
-    if (!parsed.success) {
-      throw ApiError.validation(
-        'Le motif est limite a 1000 caracteres.',
-        parsed.error.issues,
-      );
-    }
-    await this.customization.remove(
-      slug,
-      user,
-      imageId,
-      parsed.data.reason || undefined,
-    );
+    return this.customization.removeImage(slug, user, imageId, body?.reason);
   }
 
   @AdminOnly()

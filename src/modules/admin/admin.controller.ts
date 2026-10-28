@@ -27,7 +27,7 @@ import type { UserEntity } from '../../entities/index.js';
 import { AdminService } from './admin.service.js';
 
 /** Un motif est facultatif, mais il est journalise quand il est donne (R-S4). */
-const reasonBodySchema = z.object({
+export const reasonBodySchema = z.object({
   reason: z.string().max(1000).optional(),
 });
 

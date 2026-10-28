@@ -15,6 +15,8 @@
  * Usage : node scripts/seed.mjs   (API demarree, base vide ou deja seedee)
  */
 
+import { crc32, deflateSync } from 'node:zlib';
+
 const API = (process.env.API_URL ?? 'http://localhost:3000') + '/api';
 const PASSWORD = 'demo1234';
 
@@ -279,6 +281,115 @@ if (!canal) {
     body: { body: 'La peinture est commandee, livraison jeudi.' },
   });
   console.log(`  canal ${fresqueSlug}`);
+}
+
+// Personnalisation : alignee sur src/mocks/data/customizationFixtures.ts du
+// front (memes palettes, memes textes). Images = degrades, pas de fausses
+// photos (PRODUCT.md du front). Une fiche deja personnalisee n'est pas
+// retouchee : le porteur a pu la modifier depuis.
+
+/** PNG d'un degrade diagonal, sans dependance (`zlib` suffit). */
+function gradientPng(from, to, width, height) {
+  const chunk = (type, data) => {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body));
+    return Buffer.concat([length, body, crc]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8; // 8 bits par canal
+  header[9] = 2; // RVB
+  const rows = Buffer.alloc((width * 3 + 1) * height);
+  for (let y = 0; y < height; y++) {
+    const offset = y * (width * 3 + 1);
+    rows[offset] = 0; // pas de filtre
+    for (let x = 0; x < width; x++) {
+      const t = (x / width + y / height) / 2;
+      for (let c = 0; c < 3; c++) {
+        rows[offset + 1 + x * 3 + c] = Math.round(from[c] + (to[c] - from[c]) * t);
+      }
+    }
+  }
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', header),
+    chunk('IDAT', deflateSync(rows)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+async function uploadImage(slug, token, png) {
+  const form = new FormData();
+  form.append('file', new Blob([png], { type: 'image/png' }), 'degrade.png');
+  const response = await fetch(`${API}/projects/${slug}/customization/images`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(`POST /projects/${slug}/customization/images -> ${response.status} ${JSON.stringify(payload)}`);
+  }
+  return payload;
+}
+
+const section = (order, hidden = []) =>
+  order.map((id) => ({ id, visible: !hidden.includes(id) }));
+
+const CUSTOMIZATIONS = [
+  {
+    // Banniere, galerie et palette Bonbon, ordre par defaut.
+    owner: 'alex.rivera',
+    slug: fresqueSlug,
+    banner: { from: [255, 77, 140], to: [255, 208, 226], alt: 'Degrade rose evoquant les couleurs de la fresque', focal: { x: 50, y: 50 } },
+    theme: { background: '#fff0f5', panel: '#ffffff', text: '#3a1d2b', accent: '#d6246e' },
+    sections: section(['pinned', 'needs', 'about', 'gallery', 'comments']),
+    gallery: [
+      { from: [255, 208, 226], to: [204, 0, 85], alt: 'Aplat de rose et de rouge, premier jet du mur', caption: 'Premier jet de la palette' },
+      { from: [255, 107, 26], to: [255, 214, 0], alt: "Degrade orange, ambiance de l'atelier du samedi", caption: 'Atelier du samedi' },
+    ],
+  },
+  {
+    // Sans banniere : palette Foret, A propos en premier.
+    owner: 'sophie.b',
+    slug: slugify(PROJECTS[1].title),
+    theme: { background: '#eaf1e8', panel: '#fafdf9', text: '#1d2b20', accent: '#2f7d4f' },
+    sections: section(['about', 'pinned', 'needs', 'gallery', 'comments']),
+    gallery: [
+      { from: [94, 214, 81], to: [237, 252, 232], alt: 'Degrade vert evoquant les bacs du jardin' },
+    ],
+  },
+];
+
+for (const custom of CUSTOMIZATIONS) {
+  const token = sessions.get(custom.owner);
+  const project = await call('GET', `/projects/${custom.slug}`, { token });
+  if (project.customization) {
+    console.log(`  personnalisation ${custom.slug} (deja presente)`);
+    continue;
+  }
+  const banner = custom.banner
+    ? await uploadImage(custom.slug, token, gradientPng(custom.banner.from, custom.banner.to, 1600, 533))
+    : undefined;
+  const gallery = [];
+  for (const item of custom.gallery) {
+    const image = await uploadImage(custom.slug, token, gradientPng(item.from, item.to, 1200, 800));
+    gallery.push({ id: image.id, url: image.url, alt: item.alt, ...(item.caption ? { caption: item.caption } : {}) });
+  }
+  await call('PATCH', `/projects/${custom.slug}/customization`, {
+    token,
+    body: {
+      ...(banner ? { banner: { id: banner.id, url: banner.url, alt: custom.banner.alt, focal: custom.banner.focal } } : {}),
+      theme: custom.theme,
+      sections: custom.sections,
+      gallery,
+    },
+  });
+  console.log(`  personnalisation ${custom.slug}`);
 }
 
 console.log('\nTermine.');

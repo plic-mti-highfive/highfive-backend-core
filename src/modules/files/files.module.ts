@@ -9,5 +9,6 @@ import { FilesService } from './files.service.js';
   imports: [TypeOrmModule.forFeature([ProjectFileEntity]), ProjectsModule],
   controllers: [FilesController],
   providers: [FilesService],
+  exports: [FilesService],
 })
 export class FilesModule {}

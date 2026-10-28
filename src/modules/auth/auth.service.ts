@@ -21,7 +21,7 @@ import { AiEventsService } from '../../common/ai/ai-events.service.js';
 const RESET_TTL_MS = 60 * 60 * 1000;
 
 /** Avatar par defaut : deterministe, pour que le meme pseudo ait toujours le meme visage. */
-const defaultAvatar = (username: string): string =>
+export const defaultAvatar = (username: string): string =>
   `https://api.dicebear.com/9.x/glass/svg?seed=${encodeURIComponent(username)}`;
 
 @Injectable()

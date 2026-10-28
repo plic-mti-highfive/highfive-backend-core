@@ -33,7 +33,7 @@ import {
   PROJECT_DELETED,
   PROJECT_TEAM_CHANGED,
 } from '../../common/events/project-events.js';
-import { ProjectImagesService } from './project-images.service.js';
+import { CustomizationReaderService } from './customization-reader.service.js';
 import { ProjectAccessService } from './project-access.service.js';
 import { TagsService } from '../tags/tags.service.js';
 import { slugify } from './slug.js';
@@ -66,15 +66,11 @@ export class ProjectsService {
     private readonly memberships: Repository<MembershipEntity>,
     private readonly dataSource: DataSource,
     private readonly access: ProjectAccessService,
+    private readonly customizations: CustomizationReaderService,
     private readonly tags: TagsService,
     private readonly ai: AiEventsService,
     private readonly events: EventEmitter2,
-    private readonly images: ProjectImagesService,
   ) {}
-
-  private async present(project: ProjectEntity): Promise<Project> {
-    return toProject(project, await this.images.hydrate(project.customization));
-  }
 
   /** `GET /api/projects` — fil public (R-V1). */
   async listPublic(params: {
@@ -447,6 +443,15 @@ export class ProjectsService {
       projectId: project.id,
     });
     return this.present(await this.access.findByIdOrFail(project.id));
+  }
+
+  /**
+   * Toute sortie `Project` passe ici : le front ecrit la reponse dans le
+   * cache de la fiche, et une reponse sans `customization` ferait perdre
+   * banniere et couleurs a l'ecran jusqu'au rechargement.
+   */
+  async present(project: ProjectEntity): Promise<Project> {
+    return toProject(project, await this.customizations.resolve(project));
   }
 
   /**

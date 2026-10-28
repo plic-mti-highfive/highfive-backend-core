@@ -111,6 +111,17 @@ export class FilesService {
     await this.access.touch(project.id);
   }
 
+  /**
+   * Purge definitive d'un projet (R-X3). `project_files` n'a pas de cle
+   * etrangere vers `projects` : sans cela, lignes et objets survivraient au
+   * projet. Objets d'abord ; en cas d'echec, les lignes restent et le
+   * projet est repris au passage suivant.
+   */
+  async purgeProject(projectId: string): Promise<void> {
+    await this.storage.removePrefix(`projects/${projectId}`);
+    await this.files.delete({ projectId });
+  }
+
   private async usedBytes(projectId: string): Promise<number> {
     const { total } = (await this.files
       .createQueryBuilder('file')

@@ -105,8 +105,8 @@ export const visibleNeeds = (needs: NeedEntity[] | undefined): NeedEntity[] =>
     .sort((a, b) => a.label.localeCompare(b.label, 'fr'));
 
 /**
- * `customization` est passee a part : ses URL d'image sont signees (asynchrone)
- * et ne peuvent pas se deduire de l'entite seule.
+ * `customization` arrive deja resolue (URL signees, calcul asynchrone) :
+ * le mapper reste pur.
  */
 export const toProject = (
   project: ProjectEntity,
@@ -123,11 +123,11 @@ export const toProject = (
   participation: project.participation,
   state: project.state,
   ownerId: project.ownerId,
-  customization,
   highfiveCount: project.highfiveCount,
   createdAt: iso(project.createdAt),
   updatedAt: iso(project.updatedAt),
   lastActivityAt: iso(project.lastActivityAt),
+  customization,
 });
 
 export const toMembership = (membership: MembershipEntity): Membership => ({

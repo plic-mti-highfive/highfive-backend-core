@@ -12,9 +12,12 @@ import {
   UserEntity,
 } from '../../entities/index.js';
 import { SessionService } from '../../common/auth/session.service.js';
+import { StorageService } from '../../common/storage/storage.service.js';
+import { defaultAvatar } from '../auth/auth.service.js';
 import { ChannelsService } from '../conversations/channels.service.js';
 import { MessageAttachmentsService } from '../conversations/message-attachments.service.js';
-import { ProjectImagesService } from '../projects/project-images.service.js';
+import { CustomizationService } from '../customization/customization.service.js';
+import { FilesService } from '../files/files.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -54,7 +57,9 @@ export class MaintenanceService implements OnModuleInit, OnModuleDestroy {
     private readonly notifications: NotificationsService,
     private readonly messageAttachments: MessageAttachmentsService,
     private readonly channels: ChannelsService,
-    private readonly projectImages: ProjectImagesService,
+    private readonly customization: CustomizationService,
+    private readonly files: FilesService,
+    private readonly storage: StorageService,
   ) {}
 
   onModuleInit(): void {
@@ -77,8 +82,8 @@ export class MaintenanceService implements OnModuleInit, OnModuleDestroy {
       await this.purgeDeleted();
       // R-MSG8 : depots de messages jamais joints, passe 24 h.
       await this.messageAttachments.purgeOrphans();
-      // Images de personnalisation jamais referencees, passe 24 h.
-      await this.projectImages.purgeOrphans();
+      // Images de personnalisation jamais enregistrees, passe 24 h.
+      await this.customization.purgeOrphans();
       // R-MSG3 : cree les canaux manquants (projets anterieurs a la
       // messagerie) et rattrape une synchronisation qui aurait echoue.
       await this.channels.reconcileAll();
@@ -142,13 +147,44 @@ export class MaintenanceService implements OnModuleInit, OnModuleDestroy {
   private async purgeDeleted(): Promise<void> {
     const threshold = new Date(Date.now() - PURGE_AFTER_MS);
 
-    await this.projects.delete({ deletedAt: LessThan(threshold) });
+    const projects = await this.projects.find({
+      where: { deletedAt: LessThan(threshold) },
+      select: { id: true },
+      loadEagerRelations: false,
+    });
+    for (const { id } of projects) {
+      // Le stockage d'abord : la ligne du projet est le seul fil vers ses
+      // objets. Un echec laisse le projet en place, repris au passage
+      // suivant ; les autres projets sont purges quand meme. Le canal et le
+      // chat du Mur, avec leurs pieces jointes, sont partis des la
+      // suppression (PROJECT_DELETED).
+      try {
+        await this.customization.purgeProject(id);
+        await this.files.purgeProject(id);
+        await this.projects.delete({ id });
+      } catch (error) {
+        this.logger.error(`Purge du projet ${id} reportee: ${String(error)}`);
+      }
+    }
 
     const users = await this.users.find({
       where: { deletedAt: LessThan(threshold) },
     });
     for (const user of users) {
       if (user.accountStatus === 'deleted' && user.email === '') continue;
+
+      // Les photos deposees (l'actuelle et les precedentes) sont des donnees
+      // personnelles : elles partent avec le compte. En cas d'echec, le
+      // compte attend le passage suivant plutot que de perdre la trace de
+      // ses objets.
+      try {
+        await this.storage.removePrefix(`avatars/${user.id}`);
+      } catch (error) {
+        this.logger.error(
+          `Anonymisation du compte ${user.id} reportee: ${String(error)}`,
+        );
+        continue;
+      }
 
       user.accountStatus = 'deleted';
       // L'unicite du pseudo doit survivre a l'anonymisation, d'ou le suffixe.
@@ -158,6 +194,7 @@ export class MaintenanceService implements OnModuleInit, OnModuleDestroy {
       user.email = '';
       user.passwordHash = '';
       user.interests = [];
+      user.avatarUrl = defaultAvatar(user.username);
       await this.users.save(user);
     }
   }

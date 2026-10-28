@@ -49,6 +49,43 @@ describe('detectMimeType', () => {
     expect(detectMimeType(file(isoBmff('M4A ')))).toBe('audio/mp4');
   });
 
+  it('reconnait un AVIF, y compris annonce en marque compatible', () => {
+    expect(detectMimeType(file(isoBmff('avif'), 'video/mp4'))).toBe(
+      'image/avif',
+    );
+    // Boite `ftyp` complete : `mif1` en principale, `avif` en compatible.
+    const mif1 = [
+      ...[0x00, 0x00, 0x00, 0x1c],
+      ...Buffer.from('ftypmif1', 'latin1'),
+      ...[0x00, 0x00, 0x00, 0x00],
+      ...Buffer.from('mif1avifmiaf', 'latin1'),
+    ];
+    expect(detectMimeType(file(mif1))).toBe('image/avif');
+  });
+
+  it('ne lit pas de marque compatible au-dela de la boite ftyp', () => {
+    // La boite s'arrete apres la marque principale : `avif` qui suit n'en
+    // fait pas partie.
+    const short = [
+      ...[0x00, 0x00, 0x00, 0x10],
+      ...Buffer.from('ftypisom', 'latin1'),
+      ...[0x00, 0x00, 0x00, 0x00],
+      ...Buffer.from('avif', 'latin1'),
+    ];
+    expect(detectMimeType(file(short))).toBe('video/mp4');
+  });
+
+  it('reconnait un WebP a son conteneur RIFF', () => {
+    const riff = (format: string) => [
+      ...Buffer.from('RIFF', 'latin1'),
+      ...[0x24, 0x00, 0x00, 0x00],
+      ...Buffer.from(format, 'latin1'),
+    ];
+    expect(detectMimeType(file(riff('WEBP'), 'image/png'))).toBe('image/webp');
+    // Un WAV garde le type annonce, comme avant.
+    expect(detectMimeType(file(riff('WAVE'), 'audio/wav'))).toBe('audio/wav');
+  });
+
   it('retombe sur le type annonce pour les formats sans signature connue', () => {
     expect(
       detectMimeType(file([0x3c, 0x73, 0x76, 0x67], 'image/svg+xml')),

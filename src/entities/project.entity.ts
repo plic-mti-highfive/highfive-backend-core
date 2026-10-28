@@ -12,14 +12,30 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import type {
+  BannerFocal,
+  CustomizationSection,
   Participation,
   ProjectState,
+  ProjectTheme,
   Visibility,
 } from '../contracts/index.js';
-import type { StoredCustomization } from '../modules/projects/customization.logic.js';
 import { TagEntity } from './tag.entity.js';
 import { UserEntity } from './user.entity.js';
 import { NeedEntity } from './need.entity.js';
+
+/**
+ * Personnalisation telle qu'elle est enregistree : le contrat
+ * `ProjectCustomization`, mais les images y sont referencees par leur id
+ * dans `project_images`, sans URL. Les URL sont signees et expirent : elles
+ * se calculent a la lecture, et l'URL envoyee par le client n'est jamais
+ * conservee (on ne sert pas une adresse arbitraire).
+ */
+export type StoredCustomization = {
+  banner?: { imageId: string; alt: string; focal: BannerFocal };
+  theme?: ProjectTheme;
+  sections: CustomizationSection[];
+  gallery: { imageId: string; alt: string; caption?: string }[];
+};
 
 /**
  * Projet (doc 04 §3). Deux axes independants, jamais fondus en un seul enum :
@@ -86,15 +102,17 @@ export class ProjectEntity {
   @Column({ type: 'varchar', length: 16, default: 'draft' })
   state!: ProjectState;
 
+  @Column({ name: 'highfive_count', type: 'int', default: 0 })
+  highfiveCount!: number;
+
   /**
-   * Personnalisation de la fiche (porteur seul), sans URL d'image : voir
-   * `StoredCustomization`. Portee par le projet, donc conservee au transfert.
+   * Personnalisation de la fiche, remplacee d'un bloc par
+   * `PATCH /projects/:slug/customization`. `NULL` = fiche par defaut. Une
+   * colonne plutot que des tables : le contrat ne lit ni n'ecrit jamais une
+   * section seule, et la galerie est bornee a 8 images.
    */
   @Column({ type: 'jsonb', nullable: true })
   customization!: StoredCustomization | null;
-
-  @Column({ name: 'highfive_count', type: 'int', default: 0 })
-  highfiveCount!: number;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;

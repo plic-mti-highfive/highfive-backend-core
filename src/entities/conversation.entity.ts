@@ -22,7 +22,11 @@ export type ConversationKind = 'messaging' | 'wall';
  * canal d'equipe, ni visible dans la messagerie).
  */
 @Entity('conversations')
-@Index('uq_conversations_channel_project', ['projectId'], {
+// Renomme quand `kind` est apparu (ex-`uq_conversations_channel_project`,
+// `WHERE type = 'channel'`) : TypeORM ne compare les index que par leur nom,
+// et la synchronisation laissait l'ancienne condition en place. La
+// conversation `wall` du projet entrait alors en conflit avec le canal.
+@Index('uq_conversations_team_channel_project', ['projectId'], {
   unique: true,
   where: "type = 'channel' AND kind = 'messaging'",
 })

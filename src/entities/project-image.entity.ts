@@ -1,15 +1,28 @@
-import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { ProjectEntity } from './project.entity.js';
 
 /**
- * Image de personnalisation d'une fiche (banniere ou galerie), televersee avant
- * d'etre referencee par `projects.customization`. Le contenu vit sous un
- * prefixe prive du stockage (R-V3 : l'URL d'un projet prive ne doit pas etre
- * publique) et ne se lit que par URL signee.
+ * Image de personnalisation d'une fiche (banniere ou galerie), deposee avant
+ * d'etre referencee par `projects.customization` (docs/PERSONNALISATION.md).
+ * Le contenu vit dans le stockage objet, sous un prefixe prive : il ne se lit
+ * que par URL signee, y compris pour un projet public — un projet qui passe
+ * prive ne laisse ainsi aucune image lisible a une adresse publique.
  *
- * Une image qu'aucune personnalisation ne reference apres 24 h est purgee par
- * l'entretien periodique.
+ * `attachedAt` est nul tant qu'aucun enregistrement de la personnalisation ne
+ * reference l'image : passe 24 h, l'entretien periodique la purge. Une image
+ * qui cesse d'etre referencee est supprimee a l'enregistrement meme.
  */
 @Entity('project_images')
+@Index('ix_project_images_pending', ['uploadedAt'], {
+  where: 'attached_at IS NULL',
+})
 export class ProjectImageEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -18,16 +31,45 @@ export class ProjectImageEntity {
   @Column({ name: 'project_id', type: 'uuid' })
   projectId!: string;
 
+  @ManyToOne(() => ProjectEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'project_id' })
+  project!: ProjectEntity;
+
+  /**
+   * Nullable pour les seules lignes heritees de la premiere implementation
+   * (PR #5), qui ne le notait pas : la synchronisation ne peut pas ajouter
+   * une colonne `NOT NULL` a une table non vide. Complete au demarrage par
+   * `LegacyCustomizationService`.
+   */
+  @Column({ name: 'uploaded_by', type: 'uuid', nullable: true })
+  uploadedBy!: string | null;
+
+  /**
+   * Type reel, detecte a la reception (JPEG, PNG, WebP ou AVIF). Longueur
+   * reprise de la PR #5 : la changer ferait recreer la colonne par la
+   * synchronisation, donnees comprises.
+   */
   @Column({ name: 'mime_type', type: 'varchar', length: 64 })
   mimeType!: string;
 
+  /** 2 Mo au plus : un `int` suffit. */
   @Column({ type: 'int' })
   size!: number;
 
   @Column({ name: 'storage_key', type: 'text' })
   storageKey!: string;
 
-  @Index()
+  /**
+   * Variante WebP de 640 px de large au plus, pour les cartes de projet.
+   * Nulle seulement pour une ligne heritee dont la miniature n'a pas pu etre
+   * produite : la carte sert alors l'original.
+   */
+  @Column({ name: 'thumb_key', type: 'text', nullable: true })
+  thumbKey!: string | null;
+
   @Column({ name: 'uploaded_at', type: 'timestamptz', default: () => 'now()' })
   uploadedAt!: Date;
+
+  @Column({ name: 'attached_at', type: 'timestamptz', nullable: true })
+  attachedAt!: Date | null;
 }

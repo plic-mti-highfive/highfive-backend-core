@@ -5,30 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.2.0] - 2026-10-28
 
 ### Added
 
-- **Personnalisation de la fiche projet** (`modules/projects/customization.*`,
-  4 routes, contrat copie de `docs/v2/customization-scope.md` du front) :
-  - `PATCH /projects/:slug/customization` (porteur seul, remplace l'objet
-    entier), `POST .../customization/images` (multipart, JPEG/PNG/WebP/AVIF,
-    2 Mo, type reel verifie, 20 images par projet), `DELETE
-    .../customization/images/:imageId` (porteur ou administration) et
-    `GET /admin/projects/:slug/media` ;
-  - `Project.customization`, `ProjectSummary.accent` et `ProjectSummary.banner`
-    renvoyes partout ou le projet l'est ; la personnalisation suit le transfert ;
-  - images en stockage prive, lues par URL signee (6 h, R-V3) ; images jamais
-    referencees purgees apres 24 h ;
-  - retrait d'un media par un admin sur le projet d'autrui : journal
-    `remove_project_media` et notification au porteur.
-- Detection WebP et AVIF dans `detectMimeType` ; un RIFF qui n'est pas du WebP
-  n'est plus accepte sur la foi du type annonce.
+- **Personnalisation de la fiche projet** (`modules/customization/`, 4
+  routes) — detail, choix et verifications dans `docs/PERSONNALISATION.md` :
+  - depot d'image (`POST /projects/:slug/customization/images`) : porteur
+    seul, JPEG/PNG/WebP/AVIF par type reel, 2 Mo, 20 depots en attente par
+    projet et 20 par minute ; miniature WebP de 640 px (`sharp`) ;
+  - enregistrement (`PATCH /projects/:slug/customization`) : banniere avec
+    point focal, palette de quatre couleurs, ordre et visibilite des
+    sections, galerie de 8 images ; images referencees par id, URL du corps
+    ignoree ; une image retiree est supprimee ;
+  - `Project.customization` sur toutes les reponses `Project`,
+    `ProjectSummary.accent` et `banner` (miniature) sur toutes les cartes,
+    en une requete par lot ;
+  - retrait d'image par le porteur ou l'administration
+    (`DELETE .../customization/images/:imageId`) : journal
+    `remove_project_media` et notification `admin_decision` au porteur ;
+    `GET /admin/projects/:slug/media`, y compris projet prive ou brouillon ;
+  - images en stockage prive (`customization/<projet>/`), URL signees
+    stables sur 6 h pour le cache du navigateur.
+- Entretien periodique : purge des images jamais enregistrees (24 h).
+- `StorageService.removePrefix` ; detection WebP et AVIF par
+  `detectMimeType`.
+- Seed : deux fiches personnalisees ; smoke : scenarios de personnalisation
+  (99 routes exercees sur 99).
+- Remplace l'implementation de la meme fonctionnalite fusionnee par la PR #5
+  (`modules/projects/customization.*`, `project-images.service.ts`), dont
+  elle reprend la detection RIFF stricte (un WAV ou un AVI n'est jamais pris
+  pour du WebP), le test du contrat (`contracts/customization.spec.ts`) et
+  des scenarios de smoke. Une base qui a fait tourner la PR #5 est convertie
+  au demarrage (references d'images, rattachement, miniatures).
 
-### Known gaps
+### Changed
 
-- Les cartes servent la banniere en pleine taille : pas de variante miniature
-  (~640 px) tant qu'aucune bibliotheque de redimensionnement n'est ajoutee.
+- Contrat recopie du front : 97 operations (les 4 de la personnalisation ;
+  `POST /reports` et les routes du Mur y figurent desormais).
+- Purge definitive d'un projet (R-X3) : supprime aussi **tous** ses objets
+  (images, fichiers de projet) ; un echec du stockage reporte ce projet au
+  passage suivant.
+- Anonymisation d'un compte (R-P2) : ses photos deposees sont supprimees et
+  l'avatar revient a celui par defaut.
+
+### Fixed
+
+- Les lignes `project_files` et leurs objets survivaient a la purge
+  definitive de leur projet (pas de cle etrangere).
+- L'entretien periodique echouait (« Cannot read properties of null ») sur
+  une base anterieure au chat du Mur : l'index unique du canal d'equipe
+  gardait son ancienne condition. Il est renomme
+  `uq_conversations_team_channel_project`.
 
 ## [2.1.0] - 2026-10-06
 
