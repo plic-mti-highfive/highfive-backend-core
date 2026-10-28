@@ -14,6 +14,7 @@ import {
 import { SessionService } from '../../common/auth/session.service.js';
 import { ChannelsService } from '../conversations/channels.service.js';
 import { MessageAttachmentsService } from '../conversations/message-attachments.service.js';
+import { ProjectImagesService } from '../projects/project-images.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -53,6 +54,7 @@ export class MaintenanceService implements OnModuleInit, OnModuleDestroy {
     private readonly notifications: NotificationsService,
     private readonly messageAttachments: MessageAttachmentsService,
     private readonly channels: ChannelsService,
+    private readonly projectImages: ProjectImagesService,
   ) {}
 
   onModuleInit(): void {
@@ -75,6 +77,8 @@ export class MaintenanceService implements OnModuleInit, OnModuleDestroy {
       await this.purgeDeleted();
       // R-MSG8 : depots de messages jamais joints, passe 24 h.
       await this.messageAttachments.purgeOrphans();
+      // Images de personnalisation jamais referencees, passe 24 h.
+      await this.projectImages.purgeOrphans();
       // R-MSG3 : cree les canaux manquants (projets anterieurs a la
       // messagerie) et rattrape une synchronisation qui aurait echoue.
       await this.channels.reconcileAll();

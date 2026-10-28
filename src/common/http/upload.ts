@@ -36,6 +36,7 @@ const MAGIC: { bytes: number[]; mime: string }[] = [
  */
 const FTYP_BRANDS: { brands: string[]; mime: string }[] = [
   { brands: ['qt  '], mime: 'video/quicktime' },
+  { brands: ['avif', 'avis'], mime: 'image/avif' },
   { brands: ['heic', 'heix', 'mif1', 'msf1'], mime: 'image/heic' },
   { brands: ['M4A ', 'M4B '], mime: 'audio/mp4' },
 ];
@@ -49,6 +50,20 @@ function detectIsoBmff(buffer: Buffer): string | undefined {
     FTYP_BRANDS.find((entry) => entry.brands.includes(brand))?.mime ??
     'video/mp4'
   );
+}
+
+/**
+ * RIFF (WebP, WAV, AVI) : la signature seule ne dit rien, le format est aux
+ * octets 8..12. Un RIFF qui n'est pas du WebP ne doit pas passer pour une
+ * image sur la foi du type annonce.
+ */
+function detectRiff(buffer: Buffer): string | undefined {
+  if (buffer.length < 12 || buffer.toString('latin1', 0, 4) !== 'RIFF') {
+    return undefined;
+  }
+  const format = buffer.toString('latin1', 8, 12);
+  if (format === 'WEBP') return 'image/webp';
+  return format === 'WAVE' ? 'audio/wav' : 'application/octet-stream';
 }
 
 /** Signatures d'executables : refusees quel que soit le type annonce. */
@@ -73,8 +88,9 @@ export function detectMimeType(file: UploadedFile): string {
 
   const detected =
     MAGIC.find((entry) => startsWith(file.buffer, entry.bytes))?.mime ??
+    detectRiff(file.buffer) ??
     detectIsoBmff(file.buffer);
-  // `webp`, `svg` et quelques formats audio n'ont pas de signature dans cette
+  // `svg` et quelques formats audio n'ont pas de signature dans cette
   // table : on retombe sur le type annonce, qui sera confronte a la liste
   // blanche juste apres.
   return detected ?? file.mimetype;

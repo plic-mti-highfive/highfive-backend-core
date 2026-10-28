@@ -459,6 +459,110 @@ paths:
               schema: { $ref: "#/components/schemas/ApiErrorBody" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /projects/{slug}/customization:
+    patch:
+      operationId: updateProjectCustomization
+      tags: [projects]
+      summary: Personnaliser la fiche (banniere, theme, sections, galerie) — porteur seul
+      description: >-
+        Remplace la personnalisation complete (`Project.customization`). Chaque
+        image referencee doit avoir ete televersee pour ce projet via
+        `POST /projects/{slug}/customization/images`. Regles non representees
+        dans le JSON Schema : voir SPEC.md (sections, galerie).
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProjectCustomization" }
+      responses:
+        "200":
+          description: Projet avec sa nouvelle personnalisation.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        "400":
+          description: Corps invalide (alt manquant, plus de 8 images, section dupliquee...) ou image inconnue pour ce projet.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Reserve au porteur (un co-porteur ne personnalise pas).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /projects/{slug}/customization/images:
+    post:
+      operationId: uploadCustomizationImage
+      tags: [projects]
+      summary: Televerser une image de personnalisation — porteur seul
+      description: >-
+        L'image n'est referencee qu'au prochain `PATCH /projects/{slug}/customization`.
+        Le client la compresse avant l'envoi (WebP, 1600 px de large pour la
+        banniere, 1200 px pour la galerie). Les images televersees mais jamais
+        referencees sont a nettoyer cote backend.
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+              required: [file]
+      responses:
+        "201":
+          description: Image televersee.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomizationImageUpload" }
+        "400":
+          description: "Fichier manquant, format hors JPEG/PNG/WebP/AVIF, ou plus de 2 Mo."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413":
+          description: Image trop volumineuse (alternative a un 400, au choix du backend — voir SPEC.md).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorBody" }
+
+  /projects/{slug}/customization/images/{imageId}:
+    delete:
+      operationId: deleteCustomizationImage
+      tags: [projects]
+      summary: Retirer une image de personnalisation — porteur ou admin (moderation)
+      description: >-
+        Supprime l'image et la retire de la banniere ou de la galerie qui la
+        referencait. Un admin peut retirer un media de n'importe quel projet ;
+        l'action est journalisee comme les autres actions admin.
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+        - $ref: "#/components/parameters/ImageIdParam"
+      requestBody:
+        required: false
+        description: Motif facultatif, journalise quand c'est un admin qui retire le media d'un autre porteur.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 1000 }
+      responses:
+        "204": { description: Image retiree. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /me/projects:
     get:
       operationId: listMyProjects
@@ -891,6 +995,28 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ApiErrorBody" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /reports:
+    post:
+      operationId: createReport
+      tags: [admin]
+      summary: Signaler un contenu (personne connectee, R-S1)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReportCreateInput" }
+      responses:
+        "201":
+          description: Signalement cree.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Report" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
 
   /comments/{commentId}/hide:
     post:
@@ -1883,6 +2009,29 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /admin/projects/{slug}/media:
+    get:
+      operationId: getAdminProjectMedia
+      tags: [admin]
+      summary: Medias de personnalisation d'un projet (moderation)
+      description: >-
+        Banniere et galerie du projet, y compris s'il est prive ou en
+        brouillon : l'administration doit voir ce qu'elle retire. Le retrait
+        passe par `DELETE /projects/{slug}/customization/images/{imageId}`
+        (journalise sous `remove_project_media`, avec un motif facultatif
+        dans le corps `{ reason }`).
+      parameters:
+        - $ref: "#/components/parameters/SlugParam"
+      responses:
+        "200":
+          description: Medias du projet.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminProjectMedia" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /admin/tags:
     get:
       operationId: listAdminTags
@@ -1977,6 +2126,12 @@ components:
       in: path
       required: true
       schema: { $ref: "#/components/schemas/Id" }
+    ImageIdParam:
+      name: imageId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Id" }
+      description: Identifiant d'une image de personnalisation (`CustomizationImageUpload.id`).
     ConversationIdParam:
       name: conversationId
       in: path
@@ -2034,14 +2189,18 @@ components:
     # --- Genere par `pnpm export:schemas` depuis src/domain/index.ts, un $ref
     # --- par fichier de docs/v2/backend/schemas/. Ne pas editer a la main :
     # --- regenerer le script si le domaine change.
+    AccentColor: { $ref: "./schemas/AccentColor.json" }
+    AcceptSuggestedTasksInput:
+      { $ref: "./schemas/AcceptSuggestedTasksInput.json" }
     AccountStatus: { $ref: "./schemas/AccountStatus.json" }
-    AcceptSuggestedTasksInput: { $ref: "./schemas/AcceptSuggestedTasksInput.json" }
     AdminAction: { $ref: "./schemas/AdminAction.json" }
     AdminActionType: { $ref: "./schemas/AdminActionType.json" }
+    AdminProjectMedia: { $ref: "./schemas/AdminProjectMedia.json" }
     AdminStats: { $ref: "./schemas/AdminStats.json" }
     Announcement: { $ref: "./schemas/Announcement.json" }
     AnnouncementCreateInput: { $ref: "./schemas/AnnouncementCreateInput.json" }
     ApiErrorBody: { $ref: "./schemas/ApiErrorBody.json" }
+    BannerFocal: { $ref: "./schemas/BannerFocal.json" }
     Column: { $ref: "./schemas/Column.json" }
     ColumnCreateInput: { $ref: "./schemas/ColumnCreateInput.json" }
     Comment: { $ref: "./schemas/Comment.json" }
@@ -2056,9 +2215,14 @@ components:
     ConversationUpdateInput: { $ref: "./schemas/ConversationUpdateInput.json" }
     CurrentUser: { $ref: "./schemas/CurrentUser.json" }
     CursorPagination: { $ref: "./schemas/CursorPagination.json" }
+    CustomizationImageUpload:
+      { $ref: "./schemas/CustomizationImageUpload.json" }
+    CustomizationSection: { $ref: "./schemas/CustomizationSection.json" }
+    CustomizationSectionId: { $ref: "./schemas/CustomizationSectionId.json" }
     DiscoverFeed: { $ref: "./schemas/DiscoverFeed.json" }
     DiscoverSection: { $ref: "./schemas/DiscoverSection.json" }
     DiscoverSectionId: { $ref: "./schemas/DiscoverSectionId.json" }
+    GalleryItem: { $ref: "./schemas/GalleryItem.json" }
     Highfive: { $ref: "./schemas/Highfive.json" }
     Id: { $ref: "./schemas/Id.json" }
     Invitation: { $ref: "./schemas/Invitation.json" }
@@ -2105,7 +2269,9 @@ components:
       { $ref: "./schemas/PasswordResetRequestInput.json" }
     PlatformRole: { $ref: "./schemas/PlatformRole.json" }
     Project: { $ref: "./schemas/Project.json" }
+    ProjectBanner: { $ref: "./schemas/ProjectBanner.json" }
     ProjectCreateInput: { $ref: "./schemas/ProjectCreateInput.json" }
+    ProjectCustomization: { $ref: "./schemas/ProjectCustomization.json" }
     ProjectFile: { $ref: "./schemas/ProjectFile.json" }
     ProjectState: { $ref: "./schemas/ProjectState.json" }
     ProjectSummary: { $ref: "./schemas/ProjectSummary.json" }

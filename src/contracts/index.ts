@@ -14,6 +14,7 @@
 export * from './common.js';
 export * from './tag.js';
 export * from './user.js';
+export * from './customization.js';
 export * from './project.js';
 export * from './membership.js';
 export * from './highfive.js';

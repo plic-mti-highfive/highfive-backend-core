@@ -7,6 +7,7 @@ import {
   ProjectEntity,
   UserEntity,
 } from '../../entities/index.js';
+import { ProjectImagesService } from './project-images.service.js';
 import { ApiError } from '../../common/errors/api-error.js';
 import {
   toUserSummary,
@@ -58,6 +59,7 @@ export class ProjectAccessService {
     private readonly memberships: Repository<MembershipEntity>,
     @InjectRepository(UserEntity)
     private readonly users: Repository<UserEntity>,
+    private readonly images: ProjectImagesService,
   ) {}
 
   /** R-X3 : un projet supprime n'existe plus pour aucune lecture. */
@@ -205,7 +207,16 @@ export class ProjectAccessService {
       byProject.set(membership.projectId, list);
     }
 
+    // Les bannieres des cartes : une requete pour tout le lot.
+    const bannerUrls = await this.images.urlsFor(
+      projects.flatMap((p) =>
+        p.customization?.banner ? [p.customization.banner.id] : [],
+      ),
+    );
+
     return projects.map((project) => {
+      const banner = project.customization?.banner;
+      const bannerUrl = banner && bannerUrls.get(banner.id);
       const team = byProject.get(project.id) ?? [];
       // Le porteur d'abord, puis les autres par anciennete : un visage connu
       // en tete plutot qu'un ordre de base de donnees.
@@ -235,6 +246,10 @@ export class ProjectAccessService {
         owner: toUserSummary(
           byUserId.get(project.ownerId) ?? ({} as UserEntity),
         ),
+        ...(project.customization?.theme && {
+          accent: project.customization.theme.accent,
+        }),
+        ...(banner && bannerUrl && { banner: { ...banner, url: bannerUrl } }),
       };
     });
   }

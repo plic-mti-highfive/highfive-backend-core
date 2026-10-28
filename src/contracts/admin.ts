@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { idSchema, isoDateTimeSchema, slugSchema } from './common.js';
+import { galleryItemSchema, projectBannerSchema } from './customization.js';
 import { userSummarySchema } from './user.js';
 
 /**
@@ -80,6 +81,7 @@ export const adminActionTypeSchema = z.enum([
   'suspend_account',
   'reactivate_account',
   'delete_project',
+  'remove_project_media',
   'hide_comment',
   'reject_report',
   'resolve_report',
@@ -110,3 +112,15 @@ export const adminStatsSchema = z.object({
   ),
 });
 export type AdminStats = z.infer<typeof adminStatsSchema>;
+
+/**
+ * Medias de personnalisation d'un projet vus par l'administration
+ * (`GET /admin/projects/:slug/media`), y compris pour un projet prive ou en
+ * brouillon : l'admin doit pouvoir voir ce qu'il retire (doc customization-scope,
+ * « Modération »). Le retrait passe par `DELETE /projects/:slug/customization/images/:imageId`.
+ */
+export const adminProjectMediaSchema = z.object({
+  banner: projectBannerSchema.optional(),
+  gallery: z.array(galleryItemSchema),
+});
+export type AdminProjectMedia = z.infer<typeof adminProjectMediaSchema>;

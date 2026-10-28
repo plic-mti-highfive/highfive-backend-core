@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "background": {
+      "type": "string",
+      "pattern": "^#[0-9a-f]{6}$"
+    },
+    "panel": {
+      "type": "string",
+      "pattern": "^#[0-9a-f]{6}$"
+    },
+    "text": {
+      "type": "string",
+      "pattern": "^#[0-9a-f]{6}$"
+    },
+    "accent": {
+      "type": "string",
+      "pattern": "^#[0-9a-f]{6}$"
+    }
+  },
+  "required": ["background", "panel", "text", "accent"],
+  "additionalProperties": false,
+  "title": "ProjectTheme"
+}
