@@ -3,10 +3,12 @@
 API REST NestJS de la plateforme HighFive! : projets, equipes, Le Lab (Le Mur
 et Les Taches), fil de decouverte, notifications, moderation.
 
-Les 89 operations du contrat sont servies. La messagerie est servie (texte,
+Les 97 operations du contrat sont servies. La messagerie est servie (texte,
 projet ou fichier de projet en piece jointe, images, videos et fichiers
 deposes), avec ses notifications, la moderation des messages et les canaux
-de projet (`docs/MESSAGERIE.md`).
+de projet (`docs/MESSAGERIE.md`). La personnalisation de la fiche aussi :
+banniere, palette, ordre des sections, galerie, miniatures des cartes et
+moderation des medias (`docs/PERSONNALISATION.md`).
 
 Le contrat est celui du front (`highfive-frontend`, `docs/v2/`) : ce depot
 l'implemente, il ne le definit pas. Voir **`docs/REFACTO-V2.md`** pour ce qui a
@@ -44,7 +46,7 @@ Compte de demonstration : `alex.rivera@example.com` / `demo1234`.
 
 ```bash
 pnpm check:contract          # derive du contrat, sans rien demarrer
-pnpm smoke                   # ~200 verifications + rapport de couverture des routes
+pnpm smoke                   # ~380 verifications + rapport de couverture des routes
 pnpm smoke:integration       # chaine complete du Mur, et files du service IA
 ```
 
@@ -64,6 +66,7 @@ redemarrage suivant.
 Rien a preparer a la main : le seau est cree au demarrage s'il manque, et
 ouvert en lecture anonyme sur les deux prefixes servis publiquement
 (`avatars/`, `projects/`) — le contrat rend ces URL directement lisibles.
+Le reste (`messages/`, `customization/`) est prive, lu par URL signee.
 
 ## Scripts
 
@@ -85,9 +88,12 @@ src/
   modules/     un module par domaine du contrat
     auth/ users/ tags/ projects/ highfives/ memberships/ announcements/
     comments/ tasks/ wall/ files/ notifications/ search/ admin/ maintenance/
+    conversations/ customization/
 docs/
-  REFACTO-V2.md  ce qui change, ce qui manque, pourquoi
-  CANVAS.md      inventaire des fonctions du Mur
+  REFACTO-V2.md       ce qui change, ce qui manque, pourquoi
+  CANVAS.md           inventaire des fonctions du Mur
+  MESSAGERIE.md       la messagerie : etapes, choix, verifications
+  PERSONNALISATION.md la personnalisation de la fiche : etapes, choix, verifications
 openapi.yaml     le contrat, servi sur /api/docs
 ```
 
@@ -110,6 +116,10 @@ openapi.yaml     le contrat, servi sur /api/docs
 - **Messagerie** : conversations directes, groupes et canaux de projet,
   pieces jointes et medias (stockage prive, URL signees). Choix et limites :
   `docs/MESSAGERIE.md`.
+- **Personnalisation** : porteur seul ; images en deux temps (depot, puis
+  enregistrement qui les reference), miniature WebP de 640 px pour les
+  cartes, depots jamais enregistres purges apres 24 h. Choix et limites :
+  `docs/PERSONNALISATION.md`.
 - **Limitation de debit** : comptee par personne connectee (par IP a
   defaut), 200 requetes par minute et par route ; plus strict sur l'envoi
   de messages (60), les depots et l'ouverture de conversations (20).

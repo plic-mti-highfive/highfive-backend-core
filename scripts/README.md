@@ -5,8 +5,8 @@ base : ce qu'ils produisent et verifient est ce qu'un client normal obtiendrait.
 
 | Script | Role | Prerequis |
 | --- | --- | --- |
-| `seed.mjs` | Jeu de demonstration (5 personnes, 5 projets, highfives, equipes, conversations). | API demarree |
-| `smoke.mjs` | Parcours de bout en bout : ~200 verifications, et **un rapport de couverture** — toute route servie qui ne serait appelee par aucun scenario fait echouer le script. | API demarree, `ADMIN_EMAILS`, MinIO pour les fichiers |
+| `seed.mjs` | Jeu de demonstration (5 personnes, 5 projets, highfives, equipes, conversations, deux fiches personnalisees). | API demarree, MinIO pour les images |
+| `smoke.mjs` | Parcours de bout en bout : ~380 verifications, et **un rapport de couverture** — toute route servie qui ne serait appelee par aucun scenario fait echouer le script. | API demarree, `ADMIN_EMAILS`, MinIO pour les fichiers et la personnalisation |
 | `smoke-integration.mjs` | Ce que `smoke.mjs` ne peut pas voir : la chaine complete du Mur (jeton du core -> Hocuspocus -> export -> taches) avec un vrai client Yjs, et les jobs reellement deposes sur les files du service IA. | API, service canvas, Redis |
 | `contract-diff.mjs` | Compare les routes des controleurs a celles d'`openapi.yaml`. Ne demande rien de demarre : utilisable en integration continue. | — |
 
@@ -30,6 +30,10 @@ node scripts/smoke-integration.mjs
   le 204 systematique et le refus d'un jeton invalide sont verifies.
 - **Lecture seule du role `viewer` sur le document du Mur** : appliquee par le
   service canvas, non verifiee depuis le core.
+- **Purges de l'entretien periodique** (depots de personnalisation jamais
+  enregistres, fichiers d'un projet purge, photos d'un compte anonymise) :
+  elles demandent de vieillir des lignes en base, ce que ces scripts ne font
+  pas. Verifiees a la main, voir `docs/PERSONNALISATION.md` (etape 7).
 - **Recommandations du service IA** : seule la degradation est verifiee (IA
   injoignable, le fil repond quand meme). Le classement lui-meme demande une
   instance du service IA avec ses embeddings.

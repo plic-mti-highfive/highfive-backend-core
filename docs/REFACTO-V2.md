@@ -39,11 +39,11 @@ front v2, et cout de maintenance mis a part, nourrissait surtout la confusion :
 
 ## 2. Ce qui est implemente
 
-**Les 89 operations du contrat** (84 a l'origine, plus le depot de medias
-de la messagerie, R-MSG8, et la gestion des groupes, R-MSG9), messagerie
-comprise (§3). S'y ajoutent 6 routes hors contrat, toutes documentees : deux
-sondes de sante, trois routes du Mur (`docs/CANVAS.md` §2) et `POST /reports`
-(§6). Un module par domaine, sous `src/modules/` :
+**Les 97 operations du contrat** (84 a l'origine, plus le depot de medias
+de la messagerie, R-MSG8, la gestion des groupes, R-MSG9, les trois routes
+du Mur et `POST /reports`, passees depuis au contrat, et les quatre routes
+de la personnalisation), messagerie comprise (§3). Seules les deux sondes de
+sante restent hors contrat. Un module par domaine, sous `src/modules/` :
 
 | Domaine | Routes | Module |
 | --- | --- | --- |
@@ -51,24 +51,30 @@ sondes de sante, trois routes du Mur (`docs/CANVAS.md` §2) et `POST /reports`
 | Themes | 1 | `tags/` |
 | Personnes | 4 + avatar | `users/` |
 | Projets | 8 | `projects/` |
+| Personnalisation de la fiche | 4 (dont `GET /admin/projects/{slug}/media`) | `customization/` |
 | Highfives | 3 | `highfives/` |
 | Equipe, demandes, invitations | 13 | `memberships/` |
 | Annonces | 4 | `announcements/` |
 | Commentaires | 4 | `comments/` |
 | Taches et colonnes | 8 | `tasks/` |
-| Le Mur | 2 (+3 hors contrat, voir `CANVAS.md`) | `wall/` |
+| Le Mur | 5 (voir `CANVAS.md`) | `wall/` |
 | Fichiers | 3 | `files/` |
 | Notifications | 5 | `notifications/` |
 | Recherche et fil | 4 | `search/` |
-| Administration | 10 (+1, voir §6) | `admin/` |
-| Entretien periodique (archivage, expirations, purge) | — | `maintenance/` |
+| Administration | 11 (dont `POST /reports`, voir §6) | `admin/` |
+| Entretien periodique (archivage, expirations, purges) | — | `maintenance/` |
+
+La personnalisation (banniere, palette, sections, galerie) est detaillee
+dans `PERSONNALISATION.md` : images en stockage prive lues par URL signee
+stable, miniature WebP pour les cartes, purge des depots jamais enregistres,
+et purge R-X3 de **tous** les fichiers d'un projet.
 
 Verifiable de bout en bout :
 
 | Commande | Ce qu'elle prouve |
 | --- | --- |
 | `pnpm check:contract` | Aucune derive entre les controleurs et `openapi.yaml`. Ne demande rien de demarre. |
-| `pnpm smoke` | ~200 verifications sur une API demarree, chacune rattachee a une regle du contrat (R-PR1, R-H1/H2, R-M1/M2/M3/M4, R-I1/I2/I3, R-D2/D3, R-A1/A2, R-C2/C3/C4, R-K1/K3/K4/K5, R-W1/W2, R-F1/F2/F3/F4, R-N2/N3/N4, R-P1, R-S2/S4, R-PR7, R-V4/V8, R-X3). Le script **echoue si une route servie n'est exercee par aucun scenario** : 95 sur 95 le sont. |
+| `pnpm smoke` | ~380 verifications sur une API demarree, chacune rattachee a une regle du contrat (R-PR1, R-H1/H2, R-M1/M2/M3/M4, R-I1/I2/I3, R-D2/D3, R-A1/A2, R-C2/C3/C4, R-K1/K3/K4/K5, R-W1/W2, R-F1/F2/F3/F4, R-N2/N3/N4, R-P1, R-S2/S4, R-PR7, R-V4/V8, R-X3). Le script **echoue si une route servie n'est exercee par aucun scenario** : 99 sur 99 le sont. |
 | `pnpm smoke:integration` | La chaine complete du Mur — le core emet un jeton, un vrai client Yjs se connecte au service canvas, ecrit des records tldraw, et la conversion en taches reprend leur texte reel — puis le depot effectif des jobs sur les files du service IA. |
 
 Ce que ces scripts ne couvrent volontairement pas est liste dans
@@ -161,7 +167,7 @@ Numerotation de la section 6 de `SPEC.md` (« Ecarts connus »).
 | 3 | « Depuis ta derniere visite » | Non construit : aucun ecran ne le demande. |
 | 4 | `DELETE /me`, suppression de compte par l'administration | Non ajoutes. L'anonymisation (R-P2) est en revanche implementee et declenchee par l'entretien periodique. |
 | 5 | Activation/desactivation d'un theme | Pas de route. La colonne `active` existe et est respectee a la lecture ; seule une migration peut la changer. |
-| 6 | `POST /reports` | **Ajoute** — sans creation de signalement, la file de moderation est vide par construction. C'est le seul ajout de route hors contrat, hors Mur. |
+| 6 | `POST /reports` | **Ajoute** — sans creation de signalement, la file de moderation est vide par construction. Repris depuis au contrat front. |
 | 7 | Limite de membres par projet (R-M5) | Non implementee : le champ n'existe pas dans `ProjectUpdateInput`. |
 | 8 | Reglage « Mur/Taches ouverts aux observateurs » | Non implemente ; le defaut du document produit est applique (lecture pour les observateurs). |
 | 9 | Accord explicite au transfert de propriete (R-M2) | Transfert immediat, comme le mock. Le destinataire n'est pas consulte. |

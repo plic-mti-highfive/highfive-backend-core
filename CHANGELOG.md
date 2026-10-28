@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-10-28
+
+### Added
+
+- **Personnalisation de la fiche projet** (`modules/customization/`, 4
+  routes) — detail, choix et verifications dans `docs/PERSONNALISATION.md` :
+  - depot d'image (`POST /projects/:slug/customization/images`) : porteur
+    seul, JPEG/PNG/WebP/AVIF par type reel, 2 Mo, 20 depots en attente par
+    projet et 20 par minute ; miniature WebP de 640 px (`sharp`) ;
+  - enregistrement (`PATCH /projects/:slug/customization`) : banniere avec
+    point focal, palette de quatre couleurs, ordre et visibilite des
+    sections, galerie de 8 images ; images referencees par id, URL du corps
+    ignoree ; une image retiree est supprimee ;
+  - `Project.customization` sur toutes les reponses `Project`,
+    `ProjectSummary.accent` et `banner` (miniature) sur toutes les cartes,
+    en une requete par lot ;
+  - retrait d'image par le porteur ou l'administration
+    (`DELETE .../customization/images/:imageId`) : journal
+    `remove_project_media` et notification `admin_decision` au porteur ;
+    `GET /admin/projects/:slug/media`, y compris projet prive ou brouillon ;
+  - images en stockage prive (`customization/<projet>/`), URL signees
+    stables sur 6 h pour le cache du navigateur.
+- Entretien periodique : purge des images jamais enregistrees (24 h).
+- `StorageService.removePrefix` ; detection WebP et AVIF par
+  `detectMimeType`.
+- Seed : deux fiches personnalisees ; smoke : scenarios de personnalisation
+  (99 routes exercees sur 99).
+
+### Changed
+
+- Contrat recopie du front : 97 operations (les 4 de la personnalisation ;
+  `POST /reports` et les routes du Mur y figurent desormais).
+- Purge definitive d'un projet (R-X3) : supprime aussi **tous** ses objets
+  (images, fichiers de projet) ; un echec du stockage reporte ce projet au
+  passage suivant.
+- Anonymisation d'un compte (R-P2) : ses photos deposees sont supprimees et
+  l'avatar revient a celui par defaut.
+
+### Fixed
+
+- Les lignes `project_files` et leurs objets survivaient a la purge
+  definitive de leur projet (pas de cle etrangere).
+- L'entretien periodique echouait (« Cannot read properties of null ») sur
+  une base anterieure au chat du Mur : l'index unique du canal d'equipe
+  gardait son ancienne condition. Il est renomme
+  `uq_conversations_team_channel_project`.
+
 ## [2.1.0] - 2026-10-06
 
 ### Added

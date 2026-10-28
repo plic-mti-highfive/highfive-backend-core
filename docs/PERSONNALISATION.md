@@ -19,7 +19,7 @@ serveur.
 | 5 | Cartes : `ProjectSummary.accent` et `banner` (miniature) | Fait |
 | 6 | Retrait d'image et moderation (`DELETE`, `GET /admin/.../media`, notification) | Fait |
 | 7 | Cycle de vie : orphelins, transfert, purge R-X3 de tous les fichiers | Fait |
-| 8 | Finitions, documentation, branchement du front | A faire |
+| 8 | Finitions, documentation, branchement du front | Fait |
 
 Decisions du 28/10/2026 (voir « Decisions prises ») : URL signees pour
 toutes les images, miniature des cartes dans ce lot, image retiree du
@@ -603,6 +603,36 @@ cles inconnues. A couvrir par un test.
   ce serveur » ne doit plus apparaitre.
 - Front, a mettre a jour ensuite : `customization-scope.md` (statut,
   branche), `CHANGELOG.md`.
+- **Fait.**
+  - `seed.mjs` : la fresque (banniere, deux images, palette Bonbon) et le
+    jardin (palette Foret, A propos en premier, une image), alignes sur
+    `customizationFixtures.ts` du front ; images = degrades PNG generes sans
+    dependance (`zlib`) ; une fiche deja personnalisee n'est pas retouchee.
+  - `smoke.mjs` : section « personnalisation de la fiche » (24 controles,
+    moderation comprise) et 3 controles de plus au transfert ; les quatre
+    routes sont exercees.
+  - Documentation : `README.md`, `CLAUDE.md`, `docs/REFACTO-V2.md` (97
+    operations, seules les sondes de sante hors contrat),
+    `scripts/README.md`, `Database.md` (etapes 2 et 7), `CHANGELOG.md`
+    (2.2.0), version 2.2.0.
+  - Front (`feat/personnalisation`) : `customization-scope.md` (statut, ce
+    que le backend traite), `SPEC.md` (ecart 12 corrige), `CHANGELOG.md`.
+- Verifie, sur une pile isolee (base `highfive_smoke`, Redis et seau
+  dedies, service IA et OpenAI coupes ; tout est supprime ensuite) :
+  - seed : deux passages, le second sans effet ;
+  - smoke : **385 controles, 99 routes sur 99, aucun saute** ;
+  - interface (front en mode `http` sur la pile isolee, Chromium sans
+    tete) : fil (miniatures de banniere sur les cartes), fiche (banniere,
+    palette, galerie signee, visionneuse), editeur (ouvert sans le message
+    « pas encore disponible », depot dans la galerie, section descendue,
+    palette Foret, enregistrement 200, fiche rechargee conforme, garde de
+    sortie), administration (dialogue « Medias », retrait avec motif 204),
+    notification du porteur ; aucune erreur de console ni requete en
+    echec. Un PNG de 867 Ko depose depuis l'editeur arrive en WebP de
+    7 Ko (compression du front).
+- Constate cote front, hors de ce lot : la notification `admin_decision`
+  s'affiche « a pris une decision concernant ton compte » meme quand la
+  cible est un projet.
 
 ## Decisions prises
 
