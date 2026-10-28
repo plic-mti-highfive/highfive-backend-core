@@ -1,12 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import type { ConfigService } from '@nestjs/config';
+import type { Repository } from 'typeorm';
+import type { StorageService } from '../../common/storage/storage.service.js';
 import {
   projectCustomizationSchema,
   projectUpdateInputSchema,
 } from '../../contracts/index.js';
-import type { StoredCustomization } from '../../entities/index.js';
+import type {
+  ProjectEntity,
+  ProjectImageEntity,
+  StoredCustomization,
+} from '../../entities/index.js';
 import { toProject } from '../../common/mappers/index.js';
-import type { ProjectEntity } from '../../entities/index.js';
 import {
+  CustomizationReaderService,
   materialize,
   referencedImageIds,
 } from './customization-reader.service.js';
@@ -104,5 +111,65 @@ describe('PATCH /projects/:slug (D6)', () => {
       customization: { sections: [], gallery: [] },
     });
     expect(parsed).not.toHaveProperty('customization');
+  });
+});
+
+describe('CustomizationReaderService.cards', () => {
+  const PROJECT = '66666666-6666-4666-8666-666666666666';
+  const OTHER = '77777777-7777-4777-8777-777777777777';
+  const card = (id: string, customization: StoredCustomization | null) =>
+    ({ id, customization }) as ProjectEntity;
+  const reader = (rows: Partial<ProjectImageEntity>[]) => {
+    const find = vi.fn(() => Promise.resolve(rows));
+    const service = new CustomizationReaderService(
+      { find } as unknown as Repository<ProjectImageEntity>,
+      { get: () => 21600 } as unknown as ConfigService,
+      {
+        stableSignedUrlFor: (key: string) =>
+          Promise.resolve(`https://stockage.example/${key}?sig`),
+      } as unknown as StorageService,
+    );
+    return { service, find };
+  };
+
+  it('sans banniere dans le lot : aucune requete, accent seul', async () => {
+    const { service, find } = reader([]);
+    const cards = await service.cards([
+      card(PROJECT, {
+        theme: stored.theme,
+        sections: stored.sections,
+        gallery: [],
+      }),
+      card(OTHER, null),
+    ]);
+    expect(find).not.toHaveBeenCalled();
+    expect(cards.get(PROJECT)).toEqual({ accent: '#3a7f6b' });
+    expect(cards.has(OTHER)).toBe(false);
+  });
+
+  it('banniere servie sur sa miniature, une requete pour tout le lot', async () => {
+    const { service, find } = reader([
+      {
+        id: BANNER,
+        projectId: PROJECT,
+        thumbKey: 'customization/p/b-640.webp',
+      },
+    ]);
+    const cards = await service.cards([
+      card(PROJECT, stored),
+      card(OTHER, { ...stored, theme: undefined }),
+    ]);
+    expect(find).toHaveBeenCalledTimes(1);
+    expect(cards.get(PROJECT)).toEqual({
+      accent: '#3a7f6b',
+      banner: {
+        id: BANNER,
+        url: 'https://stockage.example/customization/p/b-640.webp?sig',
+        alt: 'Le mur repeint',
+        focal: { x: 50, y: 30 },
+      },
+    });
+    // La meme image referencee par un autre projet ne lui est pas servie.
+    expect(cards.get(OTHER)).toEqual({});
   });
 });

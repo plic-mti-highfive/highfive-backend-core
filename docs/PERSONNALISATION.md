@@ -16,7 +16,7 @@ serveur.
 | 2 | Socle : modele, configuration, detection WebP/AVIF, URL signees stables, `sharp` | Fait |
 | 3 | Depot d'image et miniature (`POST .../customization/images`) | Fait |
 | 4 | Enregistrement (`PATCH .../customization`) et lecture dans `Project` | Fait |
-| 5 | Cartes : `ProjectSummary.accent` et `banner` (miniature) | A faire |
+| 5 | Cartes : `ProjectSummary.accent` et `banner` (miniature) | Fait |
 | 6 | Retrait d'image et moderation (`DELETE`, `GET /admin/.../media`, notification) | A faire |
 | 7 | Cycle de vie : orphelins, transfert, purge R-X3 de tous les fichiers | A faire |
 | 8 | Finitions, documentation, branchement du front | A faire |
@@ -418,6 +418,32 @@ cles inconnues. A couvrir par un test.
   `/users/:username/projects` portent `accent`/`banner` pour le projet
   personnalise, rien pour les autres ; nombre de requetes SQL inchange pour
   un fil de 12 projets.
+- **Fait.** Choix retenus :
+  - `CustomizationReaderService.cards(projects)` rend accent et banniere de
+    tout le lot ; `summarize` (seul producteur de `ProjectSummary` : fil,
+    Decouvrir, recherche, tag, « Mes projets », profil, administration)
+    les ajoute a chaque carte.
+  - Une requete `IN` sur `project_images` **seulement si une carte du lot
+    a une banniere** : un lot sans banniere ne coute rien de plus, un lot
+    avec bannieres coute une requete, quel que soit leur nombre.
+  - La correspondance se fait sur le couple projet + image : une reference
+    ne sert jamais l'image d'un autre projet. Banniere introuvable : omise
+    et journalisee, l'accent reste.
+  - La carte pointe sur la miniature (`thumb_key`), la fiche garde
+    l'original.
+- Verifie : 2 tests unitaires de plus (lot sans banniere : aucune requete ;
+  lot avec banniere : une requete, miniature, image d'un autre projet non
+  servie) ; contre la stack de demo, 38 controles : `GET /projects`
+  (connecte et anonyme), `/feed/discover`, `/search`, `/me/projects`,
+  `/users/:username/projects`, `/tags/:tagId/projects` et
+  `/admin/projects` portent accent et banniere pour le projet personnalise,
+  l'accent seul pour un projet a theme sans banniere, rien pour les autres,
+  et toutes les cartes respectent `projectSummarySchema` ; miniature
+  lisible (WebP, 640 px), distincte de l'URL de la fiche ; banniere retiree
+  : la carte la perd et garde l'accent. Requetes SQL comptees par le
+  journal de Postgres (`log_statement=all` pour le seul conteneur de
+  test) : 7 pour un fil sans personnalisation, 8 avec deux projets
+  personnalises dont un a banniere.
 
 ## Etape 6 — Retrait et moderation
 

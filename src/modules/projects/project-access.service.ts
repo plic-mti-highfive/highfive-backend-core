@@ -8,6 +8,7 @@ import {
   UserEntity,
 } from '../../entities/index.js';
 import { ApiError } from '../../common/errors/api-error.js';
+import { CustomizationReaderService } from './customization-reader.service.js';
 import {
   toUserSummary,
   visibleNeeds,
@@ -58,6 +59,7 @@ export class ProjectAccessService {
     private readonly memberships: Repository<MembershipEntity>,
     @InjectRepository(UserEntity)
     private readonly users: Repository<UserEntity>,
+    private readonly customizations: CustomizationReaderService,
   ) {}
 
   /** R-X3 : un projet supprime n'existe plus pour aucune lecture. */
@@ -197,6 +199,7 @@ export class ProjectAccessService {
     ];
     const users = await this.users.find({ where: { id: In(userIds) } });
     const byUserId = new Map(users.map((user) => [user.id, user]));
+    const cards = await this.customizations.cards(projects);
 
     const byProject = new Map<string, MembershipEntity[]>();
     for (const membership of memberships) {
@@ -235,6 +238,7 @@ export class ProjectAccessService {
         owner: toUserSummary(
           byUserId.get(project.ownerId) ?? ({} as UserEntity),
         ),
+        ...cards.get(project.id),
       };
     });
   }
