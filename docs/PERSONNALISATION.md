@@ -14,7 +14,7 @@ serveur.
 | --- | --- | --- |
 | 1 | Contrat : recopie depuis le front | Fait |
 | 2 | Socle : modele, configuration, detection WebP/AVIF, URL signees stables, `sharp` | Fait |
-| 3 | Depot d'image et miniature (`POST .../customization/images`) | A faire |
+| 3 | Depot d'image et miniature (`POST .../customization/images`) | Fait |
 | 4 | Enregistrement (`PATCH .../customization`) et lecture dans `Project` | A faire |
 | 5 | Cartes : `ProjectSummary.accent` et `banner` (miniature) | A faire |
 | 6 | Retrait d'image et moderation (`DELETE`, `GET /admin/.../media`, notification) | A faire |
@@ -264,6 +264,10 @@ cles inconnues. A couvrir par un test.
   l'insertion est ignoree, la relecture rend `null`. Les etapes de
   l'entretien qui precedent `reconcileAll` (purges) s'executent ; le
   rattrapage des canaux et du Mur, non.
+  **Corrige ensuite** (commit a part) : l'index est renomme
+  `uq_conversations_team_channel_project` ; la synchronisation supprime
+  l'ancien et cree le bon. Verifie contre la base de demo : plus d'erreur,
+  et le rattrapage cree les 8 conversations `wall` qui manquaient.
 
 ## Etape 3 — Depot d'image
 
@@ -290,6 +294,39 @@ cles inconnues. A couvrir par un test.
 - Verification (`smoke.mjs`) : depot par le porteur (201, URL lisible),
   co-porteur 403, membre 403, anonyme 401, GIF 400, SVG 400, 2 Mo + 1 octet
   400/413, quota de 20 en attente.
+
+- **Fait.** Choix retenus :
+  - `CustomizationService.upload` : projet introuvable ou invisible
+    d'abord (404 brouillon, 403 prive, comme partout), puis
+    `assertCanCustomize` (porteur seul, compte actif ; message dedie au
+    co-porteur et au compte suspendu).
+  - Ordre : taille, type reel, plafond des depots en attente, **miniature
+    avant tout ecrit** (une image qui ne se decode pas ne laisse rien), puis
+    original, miniature et ligne ; si la miniature ou la ligne echoue, les
+    objets deja ecrits sont supprimes.
+  - Extension de l'objet tiree du type reel, jamais du nom envoye.
+  - Miniature : `sharp` avec orientation EXIF appliquee, 640 px sans
+    agrandir, WebP qualite 80, **plafond de 40 millions de pixels** a la
+    lecture (une image de 2 Mo peut se decompresser en gigaoctets).
+  - Multer lit jusqu'a 4 Mo (le double du plafond) : un fichier un peu trop
+    lourd recoit le 400 « Ce fichier depasse 2 Mo » ; Multer coupe
+    exactement a sa limite, une marge d'un octet renvoyait le 413 generique.
+- Verifie : 9 tests unitaires de plus (miniature : PNG, AVIF, pas
+  d'agrandissement, contenu illisible, image demesuree ; droits ; nom de la
+  miniature) ; contre la stack de demo (image Docker de la branche, port a
+  part), 42 controles : les quatre formats (y compris WebP annonce PNG et
+  AVIF annonce `application/octet-stream`) avec type reel enregistre, cle
+  sous `customization/<projet>/`, miniature presente dans le stockage, URL
+  signee lisible et URL non signee refusee (403) ; anonyme 401, membre,
+  co-porteur, porteur d'un autre projet et porteur suspendu 403, projet
+  prive d'autrui 403, brouillon d'autrui et projet inexistant 404 ; GIF,
+  SVG, executable deguise, PNG illisible, 2 Mo + 1 octet et 3 Mo 400, 5 Mo
+  413, sans fichier 400, 21e depot en attente 400. Les modifications
+  temporaires de la base (role, visibilite, etat, compte) sont annulees.
+- Non verifie : le plafond de debit (20 depots par minute), qui reprend le
+  mecanisme deja en place sur les depots de messages. Les scenarios
+  rejoindront `scripts/smoke.mjs` a l'etape 8, avec ceux des routes
+  suivantes.
 
 ## Etape 4 — Enregistrement et lecture
 
