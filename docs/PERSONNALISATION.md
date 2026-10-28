@@ -17,7 +17,7 @@ serveur.
 | 3 | Depot d'image et miniature (`POST .../customization/images`) | Fait |
 | 4 | Enregistrement (`PATCH .../customization`) et lecture dans `Project` | Fait |
 | 5 | Cartes : `ProjectSummary.accent` et `banner` (miniature) | Fait |
-| 6 | Retrait d'image et moderation (`DELETE`, `GET /admin/.../media`, notification) | A faire |
+| 6 | Retrait d'image et moderation (`DELETE`, `GET /admin/.../media`, notification) | Fait |
 | 7 | Cycle de vie : orphelins, transfert, purge R-X3 de tous les fichiers | A faire |
 | 8 | Finitions, documentation, branchement du front | A faire |
 
@@ -470,6 +470,44 @@ cles inconnues. A couvrir par un test.
   notification `admin_decision` au porteur, `GET /admin/stats` et le
   journal coherents) ; membre 403 ; image d'un autre projet 404 ;
   `GET /admin/projects/:slug/media` d'un brouillon prive.
+- **Fait.** Choix retenus :
+  - Les deux routes sont servies par le module `customization`, y compris
+    la vue admin : il depend de l'administration (journal), qui ne peut
+    donc pas dependre de lui. `AdminService.journal` devient public et
+    `AdminModule` exporte `AdminService` ; `reasonBodySchema` est exporte
+    par le controleur d'administration et rendu facultatif (le porteur
+    n'envoie pas de corps).
+  - « Moderation » = admin sur le projet d'un autre : ni visibilite ni
+    droit de porteur verifies, journal `remove_project_media` et
+    notification `admin_decision` au porteur apres le commit. Un admin sur
+    son propre projet agit en porteur (pas de journal, motif ignore).
+  - L'image peut etre enregistree ou seulement deposee (l'editeur du front
+    nettoie ses depots par cette route) ; la reference est retiree sous le
+    verrou du projet (meme verrou que le `PATCH`, factorise dans
+    `lockProject`), puis la ligne, puis les objets apres le commit.
+  - `lastActivityAt` avance quand le porteur retire une image, pas lors
+    d'une moderation : ce n'est pas une activite du projet (tri du fil,
+    archivage automatique R-PR6).
+  - `GET /admin/projects/:slug/media` rend ce que la fiche affiche (images
+    rattachees), pas les depots en attente.
+- Verifie : 3 tests unitaires de plus (`withoutImage`) ; contrat entierement
+  servi (`EXPECTED_MISSING` vide, 97 operations) ; contre la stack de demo,
+  31 controles : le porteur retire une image de galerie sans corps (reference
+  retiree, ligne et objets supprimes, pas de journal, `lastActivityAt` mis a
+  jour) et un depot en attente ; anonyme 401, membre 403, image inconnue ou
+  d'un autre projet 404, identifiant mal forme 400, sans rien retirer ; sur
+  un brouillon prive, un admin non membre lit les medias (conformes a
+  `adminProjectMediaSchema`, URL lisibles), le porteur non admin 403,
+  anonyme 401, projet inexistant ou supprime 404 ; motif de 1001
+  caracteres 400 ; l'admin retire la banniere avec motif (journal avec
+  motif, notification `admin_decision` au porteur, `lastActivityAt`
+  inchange), puis une image sans motif ; un admin porteur ne journalise
+  rien. Base de demo remise en etat.
+- Constate, hors de ce lot : le 400 d'un identifiant mal forme vient de
+  `ParseUUIDPipe` et reste en anglais (« Validation failed (uuid is
+  expected) »), comme sur les routes des taches et des membres ; et le
+  front affiche `admin_decision` comme « a pris une decision concernant
+  ton compte », meme quand la cible est un projet.
 
 ## Etape 7 — Cycle de vie
 

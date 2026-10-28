@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, IsNull, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, IsNull, Repository } from 'typeorm';
 import type {
+  AdminProjectMedia,
   CustomizationImageUpload,
   Project,
   ProjectCustomization,
@@ -26,6 +27,8 @@ import {
 } from '../projects/customization-reader.service.js';
 import { ProjectAccessService } from '../projects/project-access.service.js';
 import { ProjectsService } from '../projects/projects.service.js';
+import { AdminService } from '../admin/admin.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { makeThumbnail } from './thumbnail.js';
 
 /** Extension de l'objet stocke, tiree du type reel et jamais du nom envoye. */
@@ -81,6 +84,45 @@ export function toStored(input: ProjectCustomization): StoredCustomization {
   };
 }
 
+/**
+ * Personnalisation sans l'image retiree (banniere et/ou galerie), ou
+ * `undefined` si elle ne la referencait pas.
+ */
+export function withoutImage(
+  stored: StoredCustomization | null,
+  imageId: string,
+): StoredCustomization | undefined {
+  if (!stored || !referencedImageIds(stored).includes(imageId)) {
+    return undefined;
+  }
+  const { banner, ...rest } = stored;
+  return {
+    ...rest,
+    ...(banner && banner.imageId !== imageId ? { banner } : {}),
+    gallery: stored.gallery.filter((item) => item.imageId !== imageId),
+  };
+}
+
+/**
+ * Verrou de la ligne projet : les ecritures de personnalisation se suivent
+ * au lieu de s'entremeler (l'une rattacherait ce que l'autre supprime).
+ * Rend la personnalisation relue sous verrou. Requete sans jointure :
+ * `findOne` chargerait les relations eager, et Postgres refuse
+ * `FOR UPDATE` sur une jointure externe.
+ */
+async function lockProject(
+  manager: EntityManager,
+  projectId: string,
+): Promise<StoredCustomization | null> {
+  const locked = await manager
+    .createQueryBuilder(ProjectEntity, 'project')
+    .select(['project.id', 'project.customization'])
+    .where('project.id = :id', { id: projectId })
+    .setLock('pessimistic_write')
+    .getOne();
+  return locked?.customization ?? null;
+}
+
 /** La miniature est rangee a cote de l'original : `<cle sans extension>-640.webp`. */
 export function thumbKeyFor(storageKey: string, width: number): string {
   return `${storageKey.replace(/\.[a-z0-9]+$/, '')}-${width}.webp`;
@@ -99,7 +141,85 @@ export class CustomizationService {
     private readonly access: ProjectAccessService,
     private readonly projects: ProjectsService,
     private readonly reader: CustomizationReaderService,
+    private readonly admin: AdminService,
+    private readonly notifications: NotificationsService,
   ) {}
+
+  /**
+   * Retrait d'une image, enregistree ou seulement deposee : par le porteur
+   * (son editeur nettoie ses depots), ou par un admin qui modere. Un admin
+   * agit meme sur un projet prive ou en brouillon : il doit pouvoir retirer
+   * ce qu'il voit dans `GET /admin/projects/:slug/media`.
+   */
+  async removeImage(
+    slug: string,
+    user: UserEntity,
+    imageId: string,
+    reason: string | undefined,
+  ): Promise<void> {
+    const project = await this.access.findBySlugOrFail(slug);
+    // Un admin sur son propre projet agit en porteur : rien a journaliser.
+    const moderating =
+      user.platformRole === 'admin' && project.ownerId !== user.id;
+    if (!moderating) {
+      await this.access.assertCanView(project, user);
+      assertCanCustomize(project, user);
+    }
+
+    const keys = await this.dataSource.transaction(async (manager) => {
+      const stored = await lockProject(manager, project.id);
+      const images = manager.getRepository(ProjectImageEntity);
+      const image = await images.findOne({
+        where: { id: imageId, projectId: project.id },
+      });
+      if (!image) throw ApiError.notFound("Cette image n'existe pas.");
+
+      const next = withoutImage(stored, imageId);
+      if (next) {
+        await manager.getRepository(ProjectEntity).update(
+          { id: project.id },
+          {
+            customization: next,
+            // Une moderation n'est pas une activite du projet (tri du fil,
+            // archivage automatique R-PR6).
+            ...(moderating ? {} : { lastActivityAt: new Date() }),
+          },
+        );
+      }
+      await images.delete({ id: image.id });
+      return [image.storageKey, image.thumbKey];
+    });
+
+    await Promise.all(keys.map((key) => this.storage.remove(key)));
+
+    if (moderating) {
+      await this.admin.journal(
+        user,
+        'remove_project_media',
+        'project',
+        project.id,
+        reason,
+      );
+      // R-S3 : le porteur apprend qu'un media de sa fiche a ete retire.
+      await this.notifications.notify({
+        recipientId: project.ownerId,
+        actorId: user.id,
+        type: 'admin_decision',
+        targetType: 'project',
+        targetId: project.id,
+      });
+    }
+  }
+
+  /** Ce que la fiche affiche, quels que soient visibilite et etat. */
+  async adminMedia(slug: string): Promise<AdminProjectMedia> {
+    const project = await this.access.findBySlugOrFail(slug);
+    const customization = await this.reader.resolve(project);
+    return {
+      ...(customization?.banner ? { banner: customization.banner } : {}),
+      gallery: customization?.gallery ?? [],
+    };
+  }
 
   /**
    * Remplacement complet (`PATCH`). Rattache les images nouvellement
@@ -120,16 +240,7 @@ export class CustomizationService {
     const referenced = new Set(referencedImageIds(stored));
 
     const removedKeys = await this.dataSource.transaction(async (manager) => {
-      // Deux enregistrements simultanes se suivent au lieu de s'entremeler
-      // (l'un rattacherait ce que l'autre supprime). Requete sans jointure :
-      // `findOne` chargerait les relations eager, et Postgres refuse
-      // `FOR UPDATE` sur une jointure externe.
-      await manager
-        .createQueryBuilder(ProjectEntity, 'project')
-        .select('project.id')
-        .where('project.id = :id', { id: project.id })
-        .setLock('pessimistic_write')
-        .getOne();
+      await lockProject(manager, project.id);
       // Images verrouillees aussi : la purge des orphelins ne peut pas
       // retirer une image en attente pendant qu'on la rattache.
       const images = manager.getRepository(ProjectImageEntity);

@@ -355,8 +355,12 @@ export class AdminService {
     return toReport(report);
   }
 
-  /** R-S4 : toute decision laisse une trace, jamais modifiable ensuite. */
-  private async journal(
+  /**
+   * R-S4 : toute decision laisse une trace, jamais modifiable ensuite.
+   * Publique : la moderation des medias de personnalisation journalise
+   * depuis son propre module.
+   */
+  async journal(
     admin: UserEntity,
     type: AdminActionType,
     targetType: ReportTargetType,

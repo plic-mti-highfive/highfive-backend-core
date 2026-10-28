@@ -20,11 +20,7 @@ import { parse } from 'yaml';
 const ROOT = new URL('..', import.meta.url).pathname;
 
 /** Absences et ajouts assumes : tout le reste est une derive. */
-const EXPECTED_MISSING = [
-  // Personnalisation de la fiche, en cours : docs/PERSONNALISATION.md.
-  'DELETE /projects/:slug/customization/images/:imageId',
-  'GET /admin/projects/:slug/media',
-];
+const EXPECTED_MISSING = [];
 
 const EXPECTED_EXTRA = ['GET /health', 'GET /health/ready'];
 

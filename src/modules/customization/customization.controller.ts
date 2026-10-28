@@ -1,7 +1,10 @@
 import {
   Controller,
+  Delete,
+  Get,
   HttpCode,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   UploadedFile,
@@ -9,20 +12,25 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
-import { CurrentUser } from '../../common/auth/decorators.js';
+import { AdminOnly, CurrentUser } from '../../common/auth/decorators.js';
 import {
   requireFile,
   type UploadedFile as Upload,
 } from '../../common/http/upload.js';
 import {
   projectCustomizationSchema,
+  type AdminProjectMedia,
   type CustomizationImageUpload,
   type Project,
   type ProjectCustomization,
 } from '../../contracts/index.js';
 import { ZodBody } from '../../common/http/zod.pipe.js';
 import type { UserEntity } from '../../entities/index.js';
+import { reasonBodySchema } from '../admin/admin.controller.js';
 import { CustomizationService } from './customization.service.js';
+
+/** Le corps est facultatif : le porteur n'en envoie pas, l'admin peut. */
+const optionalReasonSchema = reasonBodySchema.optional();
 
 /**
  * Plafond de lecture du corps multipart : le double de
@@ -60,5 +68,23 @@ export class CustomizationController {
     @UploadedFile() file: Upload | undefined,
   ): Promise<CustomizationImageUpload> {
     return this.customization.upload(slug, user, requireFile(file));
+  }
+
+  /** Porteur, ou admin qui modere (journalise et notifie le porteur). */
+  @Delete('projects/:slug/customization/images/:imageId')
+  @HttpCode(204)
+  removeImage(
+    @Param('slug') slug: string,
+    @Param('imageId', ParseUUIDPipe) imageId: string,
+    @CurrentUser() user: UserEntity,
+    @ZodBody(optionalReasonSchema) body: { reason?: string } | undefined,
+  ): Promise<void> {
+    return this.customization.removeImage(slug, user, imageId, body?.reason);
+  }
+
+  @AdminOnly()
+  @Get('admin/projects/:slug/media')
+  adminMedia(@Param('slug') slug: string): Promise<AdminProjectMedia> {
+    return this.customization.adminMedia(slug);
   }
 }

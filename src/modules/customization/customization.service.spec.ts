@@ -4,6 +4,7 @@ import {
   assertCanCustomize,
   thumbKeyFor,
   toStored,
+  withoutImage,
 } from './customization.service.js';
 
 const project = { ownerId: 'porteur' } as ProjectEntity;
@@ -65,5 +66,33 @@ describe('toStored', () => {
       gallery: [{ imageId: 'photo', alt: 'Photo' }],
     });
     expect(JSON.stringify(stored)).not.toContain('ailleurs.example');
+  });
+});
+
+describe('withoutImage', () => {
+  const stored = {
+    banner: { imageId: 'b', alt: 'Banniere', focal: { x: 50, y: 50 } },
+    sections: [{ id: 'about' as const, visible: true }],
+    gallery: [
+      { imageId: 'g1', alt: 'Un' },
+      { imageId: 'b', alt: 'La banniere aussi en galerie' },
+    ],
+  };
+
+  it('retire la banniere et ses apparitions en galerie', () => {
+    expect(withoutImage(stored, 'b')).toEqual({
+      sections: stored.sections,
+      gallery: [{ imageId: 'g1', alt: 'Un' }],
+    });
+  });
+
+  it('retire une image de galerie et garde la banniere', () => {
+    expect(withoutImage(stored, 'g1')?.banner).toEqual(stored.banner);
+    expect(withoutImage(stored, 'g1')?.gallery).toHaveLength(1);
+  });
+
+  it("rend undefined si l'image n'etait pas referencee", () => {
+    expect(withoutImage(stored, 'depot-en-attente')).toBeUndefined();
+    expect(withoutImage(null, 'b')).toBeUndefined();
   });
 });
