@@ -23,6 +23,30 @@ jobs:
       pull-requests: write
       packages: read
 
+    # Services jetables des tests d'integration : detruits avec le job. Les
+    # tests y creent chacun leur propre base (`hf_test_<aleatoire>`).
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: hf-test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -58,6 +82,21 @@ jobs:
         with:
           name: Vitest Test Results
           path: 'junit.xml'
+          reporter: jest-junit
+
+      - name: Run integration tests and generate JUnit report
+        run: pnpm exec vitest run -c vitest.integration.config.ts --reporter=default --reporter=junit --outputFile=junit-integration.xml
+        env:
+          NODE_ENV: test
+          TEST_DATABASE_URL: postgres://postgres:hf-test@localhost:5432/postgres
+          TEST_REDIS_URL: redis://localhost:6379
+
+      - name: Publish Integration Test Report
+        uses: dorny/test-reporter@v1
+        if: success() || failure()
+        with:
+          name: Vitest Integration Test Results
+          path: 'junit-integration.xml'
           reporter: jest-junit
 
       - name: Generate coverage report
