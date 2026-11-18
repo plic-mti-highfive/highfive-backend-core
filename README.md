@@ -50,8 +50,11 @@ par l'API, rejoue l'historique dans l'ordre chronologique (les vecteurs
 d'interet de l'IA evoluent donc dans le bon ordre), puis reecrit les dates en
 base (`DB_*`), y compris `embeddings.updated_at` que lit le trending de l'IA.
 Avec un worker IA muni d'une cle OpenAI, il attend les vrais embeddings
-(`SEED_AI_WAIT_S`, 300 s par defaut, 0 pour ne pas attendre). Contenu :
-`scripts/seed-data.mjs`. Relance sans effet ; pour repartir de zero, vider la
+(`SEED_AI_WAIT_S`, 300 s par defaut, 0 pour ne pas attendre). Trente fiches
+recoivent des photos du domaine public, telechargees depuis Openverse a partir
+d'identifiants choisis a la main (`SEED_PHOTOS=0` pour s'en passer) ; ne
+jamais les remplacer par une recherche par mot-cle, qui renvoie parfois des
+images explicites malgre le filtre. Contenu : `scripts/seed-data.mjs`. Relance sans effet ; pour repartir de zero, vider la
 base.
 
 ### Verification de bout en bout

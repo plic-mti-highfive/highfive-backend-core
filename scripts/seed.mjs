@@ -34,8 +34,8 @@
  *         SEED_DRY_RUN=1 node scripts/seed.mjs  (statistiques du monde simule, sans reseau)
  *
  * Variables : API_URL, SEED_PEOPLE (100), SEED_AI_WAIT_S (300, 0 = pas
- * d'attente), DB_HOST/DB_PORT/DB_USERNAME/DB_PASSWORD/DB_DATABASE (memes
- * defauts que le core), AI_TENANT_ID.
+ * d'attente), SEED_PHOTOS (1, 0 = pas de photos Openverse), DB_HOST/DB_PORT/
+ * DB_USERNAME/DB_PASSWORD/DB_DATABASE (memes defauts que le core), AI_TENANT_ID.
  */
 
 import { crc32, deflateSync } from 'node:zlib';
@@ -56,6 +56,7 @@ const PASSWORD = 'demo1234';
 const PEOPLE_COUNT = Number(process.env.SEED_PEOPLE ?? 100);
 const AI_WAIT_MS = Number(process.env.SEED_AI_WAIT_S ?? 300) * 1000;
 const DRY_RUN = process.env.SEED_DRY_RUN === '1';
+const PHOTOS = process.env.SEED_PHOTOS !== '0';
 const TENANT_ID = process.env.AI_TENANT_ID ?? '00000000-0000-4000-8000-000000000001';
 
 const HOUR = 3_600_000;
@@ -503,6 +504,216 @@ for (const project of world.projects) {
 console.log(`  ${world.projects.length} projets (${freshProjects.size} nouveaux)`);
 
 const db = await connectDb();
+
+// ---------------------------------------------------------------------------
+// Images des fiches : banniere et galerie en photos du domaine public
+// (Openverse, CC0 / PDM : aucune attribution exigee, on credite quand meme en
+// legende). Les photos sont designees par identifiant dans seed-data.mjs,
+// apres avoir ete regardees une a une : **jamais de recherche par mot-cle**,
+// meme filtree (`mature=false`) elle renvoie parfois des images explicites.
+// Telechargees a chaque lancement, donc rien dans le depot ; une photo retiree
+// d'Openverse, ou pas de reseau, et le projet reste sans cette image — la
+// fresque et le jardin du front retombent alors sur leurs degrades.
+//
+// Fait avant la reecriture des dates : la personnalisation remet
+// `last_activity_at` a maintenant. Pour un projet deja present (relance),
+// ses dates sont restaurees juste apres.
+// ---------------------------------------------------------------------------
+
+const OPENVERSE = 'https://api.openverse.org/v1/images/';
+const USER_AGENT = 'highfive-seed/1.0';
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+const FREE_LICENSES = new Set(['cc0', 'pdm']);
+let openverseOff = !PHOTOS;
+
+/** Une photo designee par son identifiant Openverse, ou rien. */
+async function fetchPhoto(id) {
+  if (openverseOff) return undefined;
+  let info;
+  try {
+    const response = await fetch(`${OPENVERSE}${id}/`, {
+      headers: { 'User-Agent': USER_AGENT },
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (response.status === 429) {
+      openverseOff = true;
+      console.warn('  ! Openverse : quota anonyme atteint, projets suivants sans photo');
+      return undefined;
+    }
+    if (!response.ok) return undefined; // photo retiree : on s'en passe
+    info = await response.json();
+  } catch (error) {
+    openverseOff = true;
+    console.warn(`  ! Openverse injoignable (${error.message}) : pas de photos`);
+    return undefined;
+  } finally {
+    // API anonyme : on reste poli.
+    await sleep(800);
+  }
+  // Une licence changee entre-temps ferait de la photo une image a crediter
+  // ou interdite : on l'ignore plutot.
+  if (!info?.url || !FREE_LICENSES.has(info.license)) return undefined;
+
+  try {
+    const response = await fetch(info.url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(30_000) });
+    const type = (response.headers.get('content-type') ?? '').split(';')[0];
+    if (!response.ok || !['image/jpeg', 'image/png', 'image/webp'].includes(type)) return undefined;
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.length < 20_000 || bytes.length > MAX_IMAGE_BYTES) return undefined;
+    return { bytes, type, creator: info.creator };
+  } catch {
+    return undefined;
+  }
+}
+
+/** PNG d'un degrade diagonal, sans dependance (`zlib` suffit). */
+function gradientPng(from, to, width, height) {
+  const chunk = (type, data) => {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body));
+    return Buffer.concat([length, body, crc]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8; // 8 bits par canal
+  header[9] = 2; // RVB
+  const rows = Buffer.alloc((width * 3 + 1) * height);
+  for (let y = 0; y < height; y++) {
+    const offset = y * (width * 3 + 1);
+    rows[offset] = 0; // pas de filtre
+    for (let x = 0; x < width; x++) {
+      const t = (x / width + y / height) / 2;
+      for (let c = 0; c < 3; c++) {
+        rows[offset + 1 + x * 3 + c] = Math.round(from[c] + (to[c] - from[c]) * t);
+      }
+    }
+  }
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', header),
+    chunk('IDAT', deflateSync(rows)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+async function uploadImage(slug, token, bytes, type) {
+  for (let attempt = 0; ; attempt++) {
+    const form = new FormData();
+    form.append('file', new Blob([bytes], { type }), type === 'image/png' ? 'image.png' : 'photo.jpg');
+    const response = await fetch(`${API}/projects/${slug}/customization/images`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+    if (response.status === 429 && attempt < 8) {
+      await sleep(10_000);
+      continue;
+    }
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(`POST /projects/${slug}/customization/images -> ${response.status} ${JSON.stringify(payload)}`);
+    }
+    return payload;
+  }
+}
+
+const section = (order, hidden = []) =>
+  order.map((id) => ({ id, visible: !hidden.includes(id) }));
+const DEFAULT_ORDER = ['pinned', 'needs', 'about', 'gallery', 'comments'];
+
+// Palettes et ordres alignes sur src/mocks/data/customizationFixtures.ts du
+// front ; leurs degrades ne servent plus que de repli sans photo.
+const PALETTES = {
+  [slugify(PROJECTS[0].title)]: {
+    theme: { background: '#fff0f5', panel: '#ffffff', text: '#3a1d2b', accent: '#d6246e' },
+    sections: section(DEFAULT_ORDER),
+    fallback: {
+      banner: { from: [255, 77, 140], to: [255, 208, 226], alt: 'Degrade rose evoquant les couleurs de la fresque' },
+      gallery: [
+        { from: [255, 208, 226], to: [204, 0, 85], alt: 'Aplat de rose et de rouge, premier jet du mur', caption: 'Premier jet de la palette' },
+        { from: [255, 107, 26], to: [255, 214, 0], alt: "Degrade orange, ambiance de l'atelier du samedi", caption: 'Atelier du samedi' },
+      ],
+    },
+  },
+  [slugify(PROJECTS[1].title)]: {
+    theme: { background: '#eaf1e8', panel: '#fafdf9', text: '#1d2b20', accent: '#2f7d4f' },
+    sections: section(['about', 'pinned', 'needs', 'gallery', 'comments']),
+    fallback: {
+      gallery: [{ from: [94, 214, 81], to: [237, 252, 232], alt: 'Degrade vert evoquant les bacs du jardin' }],
+    },
+  },
+};
+
+let customized = 0;
+let withPhotos = 0;
+for (const project of world.projects) {
+  const palette = PALETTES[project.slug];
+  if (project.private || (!project.photos && !palette)) continue;
+  const slug = project.slug;
+  const token = sessions.get(project.owner);
+  // Une fiche deja personnalisee n'est pas retouchee : le porteur a pu la
+  // modifier depuis.
+  if ((await call('GET', `/projects/${slug}`, { token })).customization) continue;
+
+  const photos = [];
+  for (const spec of project.photos ?? []) {
+    const photo = await fetchPhoto(spec.id);
+    if (photo) photos.push({ ...photo, alt: spec.alt });
+  }
+  let banner;
+  const gallery = [];
+  if (photos.length > 0) {
+    // La premiere photo disponible fait la banniere, les autres la galerie.
+    const [first, ...rest] = photos;
+    const uploaded = await uploadImage(slug, token, first.bytes, first.type);
+    banner = { id: uploaded.id, url: uploaded.url, alt: first.alt, focal: { x: 50, y: 50 } };
+    for (const photo of rest) {
+      const image = await uploadImage(slug, token, photo.bytes, photo.type);
+      const credit = photo.creator ? `Photo : ${String(photo.creator).slice(0, 100)}, domaine public` : undefined;
+      gallery.push({ id: image.id, url: image.url, alt: photo.alt, ...(credit ? { caption: credit } : {}) });
+    }
+    withPhotos++;
+  } else if (palette) {
+    const { fallback } = palette;
+    if (fallback.banner) {
+      const uploaded = await uploadImage(slug, token, gradientPng(fallback.banner.from, fallback.banner.to, 1600, 533), 'image/png');
+      banner = { id: uploaded.id, url: uploaded.url, alt: fallback.banner.alt, focal: { x: 50, y: 50 } };
+    }
+    for (const item of fallback.gallery) {
+      const image = await uploadImage(slug, token, gradientPng(item.from, item.to, 1200, 800), 'image/png');
+      gallery.push({ id: image.id, url: image.url, alt: item.alt, ...(item.caption ? { caption: item.caption } : {}) });
+    }
+  } else {
+    continue;
+  }
+
+  const before =
+    db && !freshProjects.has(slug)
+      ? (await db.query('SELECT updated_at, last_activity_at FROM projects WHERE id = $1', [projectIds.get(slug)])).rows[0]
+      : undefined;
+  await call('PATCH', `/projects/${slug}/customization`, {
+    token,
+    body: {
+      ...(banner ? { banner } : {}),
+      ...(palette ? { theme: palette.theme } : {}),
+      sections: palette?.sections ?? section(DEFAULT_ORDER),
+      gallery,
+    },
+  });
+  if (before) {
+    await db.query('UPDATE projects SET updated_at = $2, last_activity_at = $3 WHERE id = $1', [
+      projectIds.get(slug),
+      before.updated_at,
+      before.last_activity_at,
+    ]);
+  }
+  customized++;
+}
+console.log(`  ${customized} fiches personnalisees (${withPhotos} avec photos)`);
 const withAi = db && AI_WAIT_MS > 0 && (await hasEmbeddingsTable(db));
 if (db && !withAi) console.log('  table embeddings absente ou attente desactivee : pas de synchro IA');
 
@@ -790,114 +1001,6 @@ if (!canal) {
     body: { body: 'La peinture est commandee, livraison jeudi.' },
   });
   console.log(`  canal ${fresqueSlug}`);
-}
-
-// ---------------------------------------------------------------------------
-// Personnalisation : alignee sur src/mocks/data/customizationFixtures.ts du
-// front (memes palettes, memes textes). Images = degrades, pas de fausses
-// photos (PRODUCT.md du front). Une fiche deja personnalisee n'est pas
-// retouchee : le porteur a pu la modifier depuis.
-// ---------------------------------------------------------------------------
-
-/** PNG d'un degrade diagonal, sans dependance (`zlib` suffit). */
-function gradientPng(from, to, width, height) {
-  const chunk = (type, data) => {
-    const length = Buffer.alloc(4);
-    length.writeUInt32BE(data.length);
-    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
-    const crc = Buffer.alloc(4);
-    crc.writeUInt32BE(crc32(body));
-    return Buffer.concat([length, body, crc]);
-  };
-  const header = Buffer.alloc(13);
-  header.writeUInt32BE(width, 0);
-  header.writeUInt32BE(height, 4);
-  header[8] = 8; // 8 bits par canal
-  header[9] = 2; // RVB
-  const rows = Buffer.alloc((width * 3 + 1) * height);
-  for (let y = 0; y < height; y++) {
-    const offset = y * (width * 3 + 1);
-    rows[offset] = 0; // pas de filtre
-    for (let x = 0; x < width; x++) {
-      const t = (x / width + y / height) / 2;
-      for (let c = 0; c < 3; c++) {
-        rows[offset + 1 + x * 3 + c] = Math.round(from[c] + (to[c] - from[c]) * t);
-      }
-    }
-  }
-  return Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk('IHDR', header),
-    chunk('IDAT', deflateSync(rows)),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
-}
-
-async function uploadImage(slug, token, png) {
-  const form = new FormData();
-  form.append('file', new Blob([png], { type: 'image/png' }), 'degrade.png');
-  const response = await fetch(`${API}/projects/${slug}/customization/images`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: form,
-  });
-  const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(`POST /projects/${slug}/customization/images -> ${response.status} ${JSON.stringify(payload)}`);
-  }
-  return payload;
-}
-
-const section = (order, hidden = []) =>
-  order.map((id) => ({ id, visible: !hidden.includes(id) }));
-
-const CUSTOMIZATIONS = [
-  {
-    // Banniere, galerie et palette Bonbon, ordre par defaut.
-    owner: 'alex.rivera',
-    slug: fresqueSlug,
-    banner: { from: [255, 77, 140], to: [255, 208, 226], alt: 'Degrade rose evoquant les couleurs de la fresque', focal: { x: 50, y: 50 } },
-    theme: { background: '#fff0f5', panel: '#ffffff', text: '#3a1d2b', accent: '#d6246e' },
-    sections: section(['pinned', 'needs', 'about', 'gallery', 'comments']),
-    gallery: [
-      { from: [255, 208, 226], to: [204, 0, 85], alt: 'Aplat de rose et de rouge, premier jet du mur', caption: 'Premier jet de la palette' },
-      { from: [255, 107, 26], to: [255, 214, 0], alt: "Degrade orange, ambiance de l'atelier du samedi", caption: 'Atelier du samedi' },
-    ],
-  },
-  {
-    // Sans banniere : palette Foret, A propos en premier.
-    owner: 'sophie.b',
-    slug: slugify(PROJECTS[1].title),
-    theme: { background: '#eaf1e8', panel: '#fafdf9', text: '#1d2b20', accent: '#2f7d4f' },
-    sections: section(['about', 'pinned', 'needs', 'gallery', 'comments']),
-    gallery: [
-      { from: [94, 214, 81], to: [237, 252, 232], alt: 'Degrade vert evoquant les bacs du jardin' },
-    ],
-  },
-];
-
-for (const custom of CUSTOMIZATIONS) {
-  const token = sessions.get(custom.owner);
-  const project = await call('GET', `/projects/${custom.slug}`, { token });
-  if (project.customization) continue;
-  const banner = custom.banner
-    ? await uploadImage(custom.slug, token, gradientPng(custom.banner.from, custom.banner.to, 1600, 533))
-    : undefined;
-  const gallery = [];
-  for (const item of custom.gallery) {
-    const image = await uploadImage(custom.slug, token, gradientPng(item.from, item.to, 1200, 800));
-    gallery.push({ id: image.id, url: image.url, alt: item.alt, ...(item.caption ? { caption: item.caption } : {}) });
-  }
-  await call('PATCH', `/projects/${custom.slug}/customization`, {
-    token,
-    body: {
-      ...(banner ? { banner: { id: banner.id, url: banner.url, alt: custom.banner.alt, focal: custom.banner.focal } } : {}),
-      theme: custom.theme,
-      sections: custom.sections,
-      gallery,
-    },
-  });
-  console.log(`  personnalisation ${custom.slug}`);
 }
 
 console.log('\nTermine.');

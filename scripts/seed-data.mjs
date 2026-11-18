@@ -87,12 +87,18 @@ export const BIO_BITS = {
  * - `private` : projet prive (sur invitation), absent du fil et de l'IA.
  * - `ageDays` : anciennete impose ; `hype` : attrait (1 = moyen) ;
  *   `buzz` : rafale de highfives ces derniers jours (ce qui fait la tendance).
+ * - `photos` : banniere puis galerie, photos du domaine public (CC0 / PDM)
+ *   designees par leur identifiant Openverse. Chacune a ete choisie et
+ *   regardee a la main : une recherche par mot-cle, meme filtree
+ *   (`mature=false`), renvoie parfois des images explicites. Ne jamais
+ *   remplacer ces identifiants par une recherche.
  */
 export const PROJECTS = [
   // --- Les cinq projets du front ---
   {
     owner: 'alex.rivera',
     title: 'Fresque murale collaborative',
+    photos: [{ id: '94cfd8ac-6174-4270-920f-14c4afc9827f', alt: 'Fresque murale colorée le long d\'une passerelle' }, { id: 'ee3d4b1e-d75d-4f54-be8d-120ec9a85508', alt: 'Grenouille peinte sur un mur couvert de graffitis' }],
     tagline: 'Repeindre le mur du gymnase avec le quartier',
     description: "Un mur gris de trente metres, un quartier qui passe devant tous les jours. On veut le couvrir de couleurs, ensemble, un samedi par mois.",
     tags: ['dessin', 'quartier'],
@@ -102,6 +108,7 @@ export const PROJECTS = [
   {
     owner: 'sophie.b',
     title: 'Jardin partage des Lilas',
+    photos: [{ id: '1e02dbc9-7aa3-42a9-a73c-9e19e918b379', alt: 'Bacs de potager surélevés' }, { id: 'fbdb84a1-4d23-40f2-b602-a43510599075', alt: 'Rang de légumes en pleine croissance' }, { id: '3d82f39b-d945-49c1-a76a-a7d0f281468c', alt: 'Potager fleuri dans un parc' }],
     tagline: 'Transformer la friche en potager de quartier',
     description: "Deux cents metres carres de friche derriere l ecole. On defriche, on plante, on partage la recolte.",
     tags: ['jardinage', 'environnement'],
@@ -111,6 +118,7 @@ export const PROJECTS = [
   {
     owner: 'marc.leroy',
     title: 'Repair cafe mensuel',
+    photos: [{ id: 'b3f3d399-4896-4df0-8f41-8523b610074c', alt: 'Bénévoles réparant des appareils sur une grande table' }, { id: 'b130e68e-494f-42cc-9e02-9055a7d45eeb', alt: 'Réparation d\'un batteur électrique' }],
     tagline: 'Reparer ensemble plutot que jeter',
     description: "Un samedi par mois, on ouvre l atelier : grille-pain, velos, lampes. On repare, et surtout on montre comment faire.",
     tags: ['reparation', 'solidarite'],
@@ -120,6 +128,7 @@ export const PROJECTS = [
   {
     owner: 'lea.m',
     title: 'Distribution de soupe',
+    photos: [{ id: '596cb918-e726-4098-b5f2-b964df061aaf', alt: 'Bol de soupe de potiron' }],
     tagline: 'Une soupe chaude devant la gare, tous les jeudis',
     description: "On cuisine l apres-midi, on distribue le soir. Il faut des bras, des marmites et de la bonne humeur.",
     tags: ['cuisine', 'solidarite'],
@@ -139,6 +148,7 @@ export const PROJECTS = [
   // --- Créer ---
   {
     title: 'Chorale intergénérationnelle',
+    photos: [{ id: '45b4e20c-c193-4ca1-a6ab-7b871f3d3a08', alt: 'Chorale en concert, partitions à la main' }, { id: 'b458350c-28be-4631-8ab3-04be4ed90559', alt: 'Choristes chantant sur scène' }],
     tagline: 'Des voix de 8 à 88 ans, un concert à la fête de la musique',
     description: "On répète le mardi soir à la maison de quartier. Pas besoin de savoir lire une partition : il suffit d'aimer chanter. Objectif : un vrai concert en juin, avec les enfants de l'école et les résidents de l'EHPAD voisin.",
     tags: ['musique', 'spectacle', 'quartier'],
@@ -155,6 +165,7 @@ export const PROJECTS = [
   },
   {
     title: 'Fanzine du quartier',
+    photos: [{ id: 'e33b88c2-f54f-4895-9264-ae34fa3198c5', alt: 'Page dessinée d\'un fanzine' }, { id: '92f289f6-f942-4343-a534-a821a2e6c572', alt: 'Enfants découpant et collant du papier à un atelier' }],
     tagline: "Un journal photocopié, écrit et dessiné par les habitants",
     description: "Seize pages tous les deux mois : portraits de voisins, recettes, BD, petites annonces. Tiré à 300 exemplaires et déposé chez les commerçants. Chacun peut proposer un article, un dessin ou une photo.",
     tags: ['ecriture', 'dessin', 'quartier'],
@@ -171,6 +182,7 @@ export const PROJECTS = [
   },
   {
     title: 'Atelier BD pour ados',
+    photos: [{ id: '58588952-142a-4354-b730-27774b2a4e82', alt: 'Enfants autour d\'une table de dessin avec un illustrateur' }],
     tagline: 'Créer une bande dessinée de A à Z en dix séances',
     description: "Scénario, découpage, crayonné, encrage : on accompagne un groupe de collégiens jusqu'à l'impression d'un album collectif. Les séances ont lieu le mercredi après-midi à la médiathèque.",
     tags: ['dessin', 'ecriture', 'entraide-scolaire'],
@@ -179,6 +191,7 @@ export const PROJECTS = [
   },
   {
     title: 'Podcast des anciens du quartier',
+    photos: [{ id: '472c746b-24e2-4ed9-80fb-c7f146b903ba', alt: 'Enregistrement d\'un podcast autour d\'une table' }, { id: 'd4c241f4-572d-4ac6-88bf-dd4659035ef2', alt: 'Petit enregistreur audio numérique' }],
     tagline: "Enregistrer les souvenirs avant qu'ils ne s'effacent",
     description: "Des entretiens d'une heure avec les habitants les plus anciens : l'usine, le marché, les bals. Montés en épisodes de vingt minutes et diffusés sur la radio associative.",
     tags: ['histoire', 'ecriture', 'musique'],
@@ -187,6 +200,7 @@ export const PROJECTS = [
   },
   {
     title: 'Scène ouverte du vendredi',
+    photos: [{ id: '2de2f02a-2f9f-4f8c-92b7-26f493526e22', alt: 'Musicien chantant avec sa guitare au micro' }, { id: 'f1f7ba9f-656c-4ad9-a5f3-4f144a65c90c', alt: 'Violon posé sur des percussions' }],
     tagline: 'Un micro, une scène, dix minutes chacun',
     description: "Slam, chanson, stand-up, poésie : tous les premiers vendredis du mois dans le bar associatif. On cherche des gens pour la technique, l'accueil et bien sûr des artistes qui osent.",
     tags: ['spectacle', 'musique', 'evenement'],
@@ -195,6 +209,7 @@ export const PROJECTS = [
   },
   {
     title: 'Mosaïque de la place du marché',
+    photos: [{ id: 'ebc7e678-10e3-4d82-925f-4682fa7ea0f6', alt: 'Carreaux de faïence cassés assemblés en mosaïque' }, { id: 'a178f01d-943a-47c3-ab6c-e86478db5a5c', alt: 'Mosaïque de carreaux violets et gris' }],
     tagline: 'Habiller les bancs de la place avec des carreaux cassés',
     description: "On récupère de la vaisselle et du carrelage cassés, on dessine ensemble un motif, puis on pose la mosaïque sur les six bancs en béton de la place. Chantier prévu sur quatre week-ends.",
     tags: ['dessin', 'bricolage', 'quartier'],
@@ -237,6 +252,7 @@ export const PROJECTS = [
   },
   {
     title: 'Game jam de quartier',
+    photos: [{ id: 'd2fa98db-33bd-4100-a71d-8c4d44469c49', alt: 'Jeu vidéo en cours de test sur une tablette' }],
     tagline: 'Faire un jeu vidéo en 48 heures, en équipe',
     description: "Un week-end, un thème annoncé le vendredi soir, des équipes mêlant codeurs, dessinateurs et musiciens. Les jeux seront jouables sur une borne installée à la médiathèque.",
     tags: ['jeu-video', 'code', 'evenement'],
@@ -261,6 +277,7 @@ export const PROJECTS = [
   },
   {
     title: "Club d'astronomie amateur",
+    photos: [{ id: 'c93487e0-4dda-4fdb-b1ef-5c3f13269533', alt: 'Astronome amateur réglant un télescope' }, { id: 'd960f041-c970-4559-bab5-011bf316e866', alt: 'Traînées d\'étoiles au-dessus d\'une maison de campagne' }],
     tagline: 'Observer le ciel depuis le toit du collège',
     description: "Un télescope prêté par l'observatoire, un toit accessible et des nuits claires. On organise des soirées d'observation ouvertes à tous, avec une petite initiation avant chaque séance.",
     tags: ['sciences', 'evenement'],
@@ -287,6 +304,7 @@ export const PROJECTS = [
   // --- Jardin, environnement, animaux ---
   {
     title: 'Grainothèque de la médiathèque',
+    photos: [{ id: '01630ee8-6576-495b-b8c6-0358d4df721e', alt: 'Jeunes plants en godets' }, { id: '30e24b78-0390-4323-9c2b-e56d2a4bd2a8', alt: 'Mains repiquant un plant avec sa motte' }],
     tagline: 'Échanger ses graines comme on emprunte un livre',
     description: "Une armoire à tiroirs dans le hall de la médiathèque : on dépose des graines récoltées chez soi, on en prend d'autres. Avec des ateliers pour apprendre à récolter et conserver ses semences.",
     tags: ['jardinage', 'environnement'],
@@ -295,6 +313,7 @@ export const PROJECTS = [
   },
   {
     title: 'Compost collectif de la résidence',
+    photos: [{ id: 'eadbd488-a308-418c-8c4f-1d23965f441e', alt: 'Bacs à compost en bois' }, { id: '9acd1783-c7a3-49c0-a69d-836862c987b0', alt: 'Compost en cours dans un bac en palettes' }],
     tagline: 'Trois bacs, cinquante foyers, zéro odeur',
     description: "On installe un compost partagé au pied des immeubles. Il faut des volontaires pour le retourner chaque semaine et expliquer aux voisins ce qui peut y aller.",
     tags: ['environnement', 'jardinage', 'quartier'],
@@ -303,6 +322,7 @@ export const PROJECTS = [
   },
   {
     title: 'Nettoyage des berges du canal',
+    photos: [{ id: '90e85233-4468-4a69-80bf-c33520057967', alt: 'Bénévoles avec des sacs de déchets ramassés' }, { id: '7fbefc98-72a8-4d54-ae10-e023b15dacdd', alt: 'Bénévole ramassant des déchets au bord de l\'eau' }, { id: '9e15dcc9-36c5-408f-a669-2f52ae23371c', alt: 'Chaîne de bénévoles sur une berge' }],
     tagline: 'Un dimanche matin, des gants, des sacs et du café',
     description: "Chaque mois, on ramasse les déchets le long du canal sur deux kilomètres. La dernière fois : 140 kilos, dont un vélo et deux caddies. Gants et sacs fournis.",
     tags: ['environnement', 'quartier', 'sport'],
@@ -319,6 +339,7 @@ export const PROJECTS = [
   },
   {
     title: 'Refuge pour chats errants',
+    photos: [{ id: 'a3e49bdf-9358-47f8-bc16-0db829de60f9', alt: 'Chat roux caressé dans la rue' }, { id: 'abc69636-3d4c-4189-850a-1c1f8d9275ba', alt: 'Chat roux sur un muret' }, { id: '286e6a2c-6761-4086-9e5e-009c8d7a74a9', alt: 'Chats des rues sur des pavés' }],
     tagline: 'Nourrir, soigner et faire adopter les chats du quartier',
     description: "Une trentaine de chats vivent dans les jardins ouvriers. On organise les campagnes de stérilisation avec la vétérinaire, les tours de nourrissage et les adoptions.",
     tags: ['animaux', 'solidarite'],
@@ -327,6 +348,7 @@ export const PROJECTS = [
   },
   {
     title: 'Vergers en ville',
+    photos: [{ id: '1cc11af3-1552-43b5-bfb2-ec3ace1c9d27', alt: 'Arbres fruitiers aux feuilles dorées' }],
     tagline: 'Planter des arbres fruitiers dans les espaces verts',
     description: "Pommiers, poiriers, cerisiers : on plante une vingtaine d'arbres dans les squares, en libre cueillette. On a besoin de bras pour la plantation de novembre et de parrains pour l'arrosage.",
     tags: ['jardinage', 'environnement', 'quartier'],
@@ -335,6 +357,7 @@ export const PROJECTS = [
   },
   {
     title: 'Inventaire des oiseaux du parc',
+    photos: [{ id: '6b68f0d1-7a0a-4842-85bb-646209743c4b', alt: 'Une garde forestière et une enfant observant des oiseaux aux jumelles' }, { id: 'f4f67389-1c69-4281-a819-b0aa70eca3c6', alt: 'Enfant regardant dans des jumelles' }],
     tagline: 'Compter les oiseaux pour mieux les protéger',
     description: "Un protocole simple, une sortie par mois à l'aube, des jumelles prêtées. Les données sont envoyées au muséum pour le suivi national.",
     tags: ['animaux', 'sciences', 'environnement'],
@@ -343,6 +366,7 @@ export const PROJECTS = [
   },
   {
     title: 'Hôtel à insectes géant',
+    photos: [{ id: 'd1e4ba64-506c-4a28-bc9b-f46a4e8d4497', alt: 'Grand hôtel à insectes en bois' }, { id: '718c5360-1d71-4ded-ae30-a8bfb81358df', alt: 'Abeille sauvage devant des tiges de bambou' }],
     tagline: "Construire un hôtel à insectes avec l'école primaire",
     description: "Palettes, bambous, briques, pommes de pin : on construit avec les enfants un grand hôtel à insectes pour le jardin de l'école.",
     tags: ['bricolage', 'environnement', 'animaux'],
@@ -369,6 +393,7 @@ export const PROJECTS = [
   },
   {
     title: 'Cuisine du monde au centre social',
+    photos: [{ id: 'a641918f-e0d9-4b5e-a853-8afa1f5c9f7a', alt: 'Cuisiniers bénévoles devant des bols prêts à servir' }],
     tagline: 'Chaque mois, une famille fait découvrir sa cuisine',
     description: "Une famille du quartier anime l'atelier et partage les recettes de son pays. On cuisine à quinze, on mange à quarante. Prochaine date : cuisine érythréenne.",
     tags: ['cuisine', 'langues', 'quartier'],
@@ -393,6 +418,7 @@ export const PROJECTS = [
   },
   {
     title: 'Repas partagé de fin d’année',
+    photos: [{ id: '9c849884-c7af-4132-b5bb-fd2bb464cc95', alt: 'Table garnie de plats à partager' }, { id: '2d58da03-8880-4937-acc8-3ba955a22a84', alt: 'Photo de groupe après un repas partagé' }],
     tagline: 'Une grande tablée pour que personne ne soit seul le 24',
     description: "Cent couverts dans le gymnase, un repas cuisiné ensemble, de la musique et des cadeaux pour les enfants. On cherche des cuisiniers, des serveurs, des musiciens et du matériel.",
     tags: ['cuisine', 'solidarite', 'evenement'],
@@ -419,6 +445,7 @@ export const PROJECTS = [
   // --- Bricolage, réparation ---
   {
     title: 'Atelier vélo participatif',
+    photos: [{ id: '5f33ad14-6067-4e72-8bf6-ecaa6514ec82', alt: 'Personne réglant la roue d\'un vélo à l\'atelier' }],
     tagline: 'Apprendre à réparer son vélo soi-même',
     description: "Des outils, des pièces de récup et des bénévoles pour montrer comment changer une chambre à air ou régler ses freins. Ouvert le mercredi soir et le samedi matin.",
     tags: ['reparation', 'bricolage', 'sport'],
@@ -427,6 +454,7 @@ export const PROJECTS = [
   },
   {
     title: 'Boîte à livres en bois',
+    photos: [{ id: '12770030-0f9a-481b-8b7f-3504c6ea119f', alt: 'Boîte à livres rouge plantée dans l\'herbe' }, { id: 'cbc68b94-c8df-4fa9-b2f5-fb182b422718', alt: 'Un père et sa fille choisissant un livre dans une boîte à livres' }],
     tagline: 'Construire trois boîtes à livres pour le quartier',
     description: "Plans libres, bois de récupération, toit en zinc. On construit trois boîtes à livres en atelier et on les installe à l'arrêt de bus, au parc et devant l'école.",
     tags: ['bricolage', 'ecriture', 'quartier'],
@@ -461,6 +489,7 @@ export const PROJECTS = [
   // --- Vivre ensemble : sport, événements, voyages, jeux ---
   {
     title: 'Course solidaire des quais',
+    photos: [{ id: '7f6fed8e-3e66-4b99-9d9c-0bf46e243308', alt: 'Coureurs au départ d\'une course en ville' }, { id: '7398900b-94ab-4d2a-aa45-2885da24d658', alt: 'Enfants courant lors d\'une course solidaire' }],
     tagline: '5 km pour financer le séjour des enfants du centre social',
     description: "Une course familiale sur les quais, ouverte aux coureurs comme aux marcheurs. Les inscriptions financent le séjour d'été des enfants. Il faut des signaleurs, un ravitaillement et une sono.",
     tags: ['sport', 'evenement', 'solidarite'],
@@ -469,6 +498,7 @@ export const PROJECTS = [
   },
   {
     title: 'Ludothèque éphémère',
+    photos: [{ id: '064a9387-98c8-4fbd-ae86-7731d896dc65', alt: 'Partie de go en cours' }],
     tagline: 'Des jeux de société sur la place tous les dimanches',
     description: "On sort des tables, des centaines de jeux et des animateurs qui expliquent les règles. Pour les familles, les ados et les grands-parents.",
     tags: ['jeux', 'quartier', 'evenement'],
@@ -485,6 +515,7 @@ export const PROJECTS = [
   },
   {
     title: 'Voyage à vélo jusqu’à la mer',
+    photos: [{ id: 'd17ce1d9-efe9-4849-b101-5ca16ab75096', alt: 'Cyclistes sur une voie verte' }, { id: 'adbf428d-22ca-419a-bc40-39fe1dcca699', alt: 'Vélo posé au bord d\'une rivière' }],
     tagline: '400 km en une semaine, en groupe et sans voiture',
     description: "Un itinéraire par les véloroutes, du camping chez l'habitant et des étapes de 60 km. Ouvert à tous les niveaux, on roule au rythme du plus lent.",
     tags: ['voyage', 'sport', 'environnement'],
@@ -527,6 +558,7 @@ export const PROJECTS = [
   // --- Savoirs ---
   {
     title: 'Mémoire de l’usine Lebrun',
+    photos: [{ id: 'bbf67953-0b95-4af1-892d-65b952b4073d', alt: 'Atelier d\'une ancienne fabrique de pianos, photo d\'archive' }, { id: 'e2045e21-a16c-437f-b084-0bc5fc6677e4', alt: 'Ouvriers devant une usine, photo d\'archive' }],
     tagline: 'Collecter photos et témoignages des anciens ouvriers',
     description: "L'usine a fermé en 1987, mais beaucoup d'anciens habitent encore le quartier. On numérise leurs photos, on enregistre leurs souvenirs et on prépare une exposition pour les 40 ans de la fermeture.",
     tags: ['histoire', 'photo', 'quartier'],
@@ -535,6 +567,7 @@ export const PROJECTS = [
   },
   {
     title: 'Balades historiques commentées',
+    photos: [{ id: '9067000b-419c-4b90-abcd-7f5199d834b0', alt: 'Groupe écoutant un guide lors d\'une visite à pied' }],
     tagline: 'Découvrir le quartier en une heure et demie',
     description: "Des habitants passionnés guident des balades gratuites le premier dimanche du mois : l'ancien lavoir, la gare, les maisons ouvrières. On écrit un petit guide pour les nouveaux guides.",
     tags: ['histoire', 'quartier', 'voyage'],
@@ -543,6 +576,7 @@ export const PROJECTS = [
   },
   {
     title: 'Expériences de science au parc',
+    photos: [{ id: '460b9b85-7c57-49ad-902a-78e45aefd73c', alt: 'Animatrice faisant une démonstration à l\'azote liquide' }],
     tagline: 'Des expériences spectaculaires pour les enfants, en plein air',
     description: "Volcans, fusées à eau, électricité statique : un après-midi par mois au parc, pour donner aux enfants le goût des sciences. Animé par des profs et des étudiants.",
     tags: ['sciences', 'entraide-scolaire', 'evenement'],
@@ -558,6 +592,7 @@ export const PROJECTS = [
   },
   {
     title: 'Herbier du quartier',
+    photos: [{ id: '34f0e998-bf9d-4d64-8228-634b61a8a652', alt: 'Prairie de fleurs sauvages' }, { id: '3c3da83c-ef60-4d78-bd53-8bc0ea22d8d7', alt: 'Petites fleurs blanches sauvages' }],
     tagline: 'Recenser et dessiner les plantes sauvages de nos trottoirs',
     description: "Les plantes qui poussent entre les pavés ont des noms et des histoires. On les cueille, on les dessine et on écrit à la craie leur nom sur le trottoir.",
     tags: ['jardinage', 'dessin', 'sciences'],
