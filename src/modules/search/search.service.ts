@@ -34,6 +34,31 @@ const SECTION_LIMIT = 6;
 /** Colonne « Ce qui bouge en ce moment » : cinq themes au plus. */
 const TRENDING_LIMIT = 5;
 
+/**
+ * « Tendance » : l'ordre du service IA, qui pondere les highfives par leur
+ * fraicheur — un projet tres soutenu il y a deux mois passe derriere celui qui
+ * en recoit cette semaine. Un projet sans aucun highfive n'a rien a faire dans
+ * une section de highfives, meme si l'IA le juge « frais ». Sans reponse de
+ * l'IA, ou pour completer son classement, on retombe sur le total.
+ */
+export function rankTrending(
+  projects: ProjectEntity[],
+  trendingIds: string[],
+): ProjectEntity[] {
+  const rank = new Map(trendingIds.map((id, index) => [id, index]));
+  const ranked = projects
+    .filter((project) => rank.has(project.id) && project.highfiveCount > 0)
+    .sort((a, b) => rank.get(a.id)! - rank.get(b.id)!);
+  const ids = new Set(ranked.map((project) => project.id));
+
+  return [
+    ...ranked,
+    ...projects
+      .filter((project) => !ids.has(project.id))
+      .sort((a, b) => b.highfiveCount - a.highfiveCount),
+  ];
+}
+
 export interface SearchQuery {
   q?: string;
   types?: SearchEntityType[];
@@ -115,9 +140,7 @@ export class SearchService {
     sections.push({
       id: 'trending_highfives',
       items: await this.access.summarize(
-        [...rest]
-          .sort((a, b) => b.highfiveCount - a.highfiveCount)
-          .slice(0, SECTION_LIMIT),
+        (await this.rankTrending(rest)).slice(0, SECTION_LIMIT),
       ),
       seeAll: { types: ['projects'], sort: 'popular' },
     });
@@ -367,6 +390,15 @@ export class SearchService {
       items: await this.access.summarize(items),
       seeAll: { types: ['projects'], tags: [...myTags], sort: 'active' },
     };
+  }
+
+  private async rankTrending(
+    projects: ProjectEntity[],
+  ): Promise<ProjectEntity[]> {
+    return rankTrending(
+      projects,
+      await this.recommendations.trendingProjects(SECTION_LIMIT * 4),
+    );
   }
 
   private async rankByAi(

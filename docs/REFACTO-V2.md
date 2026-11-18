@@ -130,8 +130,14 @@ R-IA-28) :
 | --- | --- |
 | Ordre de la section « Pour toi » de Decouvrir | `GET /api/v1/matchmaking/users/{id}/projects` |
 | Colonne « Des gens a rencontrer » | `GET /api/v1/matchmaking/projects/{id}/users` |
+| Ordre de la section « Tendance » (`trending_highfives`) de Decouvrir | `GET /api/v1/matchmaking/trending` |
 
-Dans les deux cas, l'IA **ordonne**, elle ne selectionne pas : le bassin de
+La tendance suit le score de l'IA, `(likes + 1) / (heures depuis le dernier
+highfive + 2)^1.5` : un projet soutenu cette semaine passe devant un projet
+plus soutenu il y a deux mois. Un projet sans highfive en est ecarte, et sans
+reponse de l'IA l'ordre retombe sur le total (`rankTrending`, `search.service.ts`).
+
+Dans tous les cas, l'IA **ordonne**, elle ne selectionne pas : le bassin de
 projets reste celui des regles deterministes (themes suivis, projets
 decouvrables). Si elle ne repond pas, l'ordre retombe sur l'activite recente et
 la section reste affichee. `AI_URL` vide desactive proprement ces appels.
