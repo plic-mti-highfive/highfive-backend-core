@@ -19,6 +19,52 @@ export const CORE_PEOPLE = [
   { username: 'lea.m', displayName: 'Lea Moreau', email: 'lea.m@example.com', bio: 'Cuisine de quartier, sans chichis.', interests: ['cuisine', 'solidarite'] },
 ];
 
+/**
+ * Portraits des comptes du noyau : photos du domaine public (Openverse, CC0 /
+ * PDM), designees par identifiant apres avoir ete regardees une a une — comme
+ * les photos des fiches, jamais de recherche par mot-cle. Il n'en existe qu'une
+ * poignee de propres (pas de personnalite publique, pas de mineur, pas de
+ * doublon de la meme personne) : les autres comptes ont un avatar illustre.
+ */
+export const PORTRAITS = {
+  'alex.rivera': 'bd9f07e1-8a17-4359-b93e-d89ff2e69ed8',
+  'marc.leroy': '621b7f31-f3db-40d6-862c-2c558eda6da4',
+  'sophie.b': '7f0122cd-3f39-41fe-aacd-5a4deb51194b',
+  'yanis.f': 'b9b701ad-9263-4993-bb90-1e89e57de2a3',
+  'lea.m': '7aa147ad-78ab-460a-8986-ef4e7162cd1b',
+};
+
+/**
+ * Portraits de femmes en plus, distribues aux premieres personnes generees
+ * dont le prenom est feminin (le monde est deterministe : toujours les memes).
+ */
+export const PORTRAITS_FEMININS = [
+  '18f50553-85ba-491b-847a-bb9782da1cbe',
+  'f96e0871-a425-4a42-9a71-05c7695b030c',
+  'd80012e3-96d5-4fcb-8d5a-31fde28012ec',
+  'e2999f28-6e48-463e-acbf-4bb1a10814b4',
+  'cf558d2c-9a95-4dc5-8e67-486d16ba63d2',
+];
+
+/**
+ * Etapes (taches du tableau) communes a tous les projets, dans l'ordre ou on
+ * les rencontre. Le seed les repartit entre « A faire », « En cours » et
+ * « Fait » selon l'anciennete du projet, et y ajoute une tache par besoin.
+ */
+export const STEPS = [
+  { title: 'Fixer les objectifs et une premiere date', details: 'Ce que l on veut obtenir, pour quand, avec combien de monde.' },
+  { title: 'Rediger l annonce du projet', details: 'Quelques lignes claires pour donner envie de rejoindre l equipe.' },
+  { title: 'Reunir les premiers volontaires', details: 'Un premier groupe de cinq a dix personnes suffit pour demarrer.' },
+  { title: 'Preparer le premier rendez-vous', details: 'Lieu, horaire, materiel et une personne pour accueillir.' },
+  { title: 'Faire le point apres la premiere seance', details: 'Ce qui a marche, ce qui bloque, la suite a donner.' },
+];
+
+export const FEMININE_FIRST_NAMES = new Set([
+  'Inès', 'Chloé', 'Manon', 'Sarah', 'Jade', 'Emma', 'Lina', 'Zoé', 'Nina', 'Clara', 'Maëlys',
+  'Juliette', 'Yasmine', 'Alice', 'Louise', 'Anaïs', 'Salomé', 'Romane', 'Aya', 'Elsa', 'Margaux',
+  'Fatou', 'Agathe', 'Célia', 'Océane', 'Charlotte', 'Rose', 'Mila',
+]);
+
 export const FIRST_NAMES = [
   'Camille', 'Hugo', 'Inès', 'Lucas', 'Chloé', 'Nathan', 'Manon', 'Théo', 'Sarah', 'Mehdi',
   'Jade', 'Louis', 'Emma', 'Adam', 'Lina', 'Rayan', 'Zoé', 'Gabriel', 'Nina', 'Arthur',

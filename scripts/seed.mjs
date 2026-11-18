@@ -45,10 +45,14 @@ import {
   COMMENTS,
   COMMUNITIES,
   CORE_PEOPLE,
+  FEMININE_FIRST_NAMES,
   FIRST_NAMES,
   LAST_NAMES,
+  PORTRAITS,
+  PORTRAITS_FEMININS,
   PROJECTS,
   REPLIES,
+  STEPS,
 } from './seed-data.mjs';
 
 const API = (process.env.API_URL ?? 'http://localhost:3000') + '/api';
@@ -456,11 +460,15 @@ console.log(`\nSeed sur ${API}`);
 const sessions = new Map();
 const userIds = new Map();
 const freshUsers = new Set();
+// Personnes qui ont encore l'avatar pose a l'inscription (URL DiceBear « glass ») :
+// ce sont elles que l'etape des avatars habille, y compris sur une base deja seedee.
+const defaultAvatars = new Set();
 
 for (const person of world.people) {
   const { session, created } = await ensureAccount(person);
   sessions.set(person.username, session.token);
   userIds.set(person.username, session.user.id);
+  if (/api\.dicebear\.com\/[^/]+\/glass\//.test(session.user.avatar ?? '')) defaultAvatars.add(person.username);
   if (created) {
     freshUsers.add(person.username);
     await call('PATCH', '/me', {
@@ -526,8 +534,12 @@ const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const FREE_LICENSES = new Set(['cc0', 'pdm']);
 let openverseOff = !PHOTOS;
 
-/** Une photo designee par son identifiant Openverse, ou rien. */
-async function fetchPhoto(id) {
+/**
+ * Fiche Openverse d'une image designee par son identifiant, ou rien : photo
+ * retiree, licence changee depuis (une licence non libre ferait de l'image une
+ * image a crediter ou interdite : on l'ignore), quota atteint, pas de reseau.
+ */
+async function openverseInfo(id) {
   if (openverseOff) return undefined;
   let info;
   try {
@@ -537,7 +549,7 @@ async function fetchPhoto(id) {
     });
     if (response.status === 429) {
       openverseOff = true;
-      console.warn('  ! Openverse : quota anonyme atteint, projets suivants sans photo');
+      console.warn('  ! Openverse : quota anonyme atteint, images suivantes ignorees');
       return undefined;
     }
     if (!response.ok) return undefined; // photo retiree : on s'en passe
@@ -550,9 +562,14 @@ async function fetchPhoto(id) {
     // API anonyme : on reste poli.
     await sleep(800);
   }
-  // Une licence changee entre-temps ferait de la photo une image a crediter
-  // ou interdite : on l'ignore plutot.
   if (!info?.url || !FREE_LICENSES.has(info.license)) return undefined;
+  return info;
+}
+
+/** Une photo designee par son identifiant Openverse, ou rien. */
+async function fetchPhoto(id) {
+  const info = await openverseInfo(id);
+  if (!info) return undefined;
 
   try {
     const response = await fetch(info.url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(30_000) });
@@ -619,6 +636,78 @@ async function uploadImage(slug, token, bytes, type) {
     }
     return payload;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Avatars des personnes. Les comptes du noyau et quelques autres ont un portrait
+// du domaine public (PORTRAITS, voir seed-data.mjs) ; les autres un avatar
+// illustre Lorelei (DiceBear, CC0), graine = pseudo. Sans reseau ou avec
+// SEED_PHOTOS=0, on garde l'avatar par defaut pose a l'inscription. Seules les
+// personnes qui l'ont encore sont habillees : une relance ne retouche rien, et
+// une base deja seedee recoit ses avatars.
+// ---------------------------------------------------------------------------
+
+const DICEBEAR = 'https://api.dicebear.com/9.x/lorelei/png';
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+async function downloadImage(url) {
+  try {
+    const response = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(30_000) });
+    const type = (response.headers.get('content-type') ?? '').split(';')[0];
+    if (!response.ok || !IMAGE_TYPES.includes(type)) return undefined;
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.length < 1_000 || bytes.length > MAX_IMAGE_BYTES) return undefined;
+    return { bytes, type };
+  } catch {
+    return undefined;
+  }
+}
+
+/** Portrait Openverse en miniature (600 px : un avatar n'a pas besoin de l'original). */
+async function fetchPortrait(id) {
+  const info = await openverseInfo(id);
+  return info ? downloadImage(info.thumbnail ?? `${OPENVERSE}${id}/thumb/`) : undefined;
+}
+
+async function uploadAvatar(token, { bytes, type }) {
+  for (let attempt = 0; ; attempt++) {
+    const form = new FormData();
+    form.append('avatar', new Blob([bytes], { type }), type === 'image/png' ? 'avatar.png' : 'avatar.jpg');
+    const response = await fetch(`${API}/me/avatar`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+    if (response.status === 429 && attempt < 8) {
+      await sleep(10_000);
+      continue;
+    }
+    if (!response.ok) throw new Error(`POST /me/avatar -> ${response.status} ${await response.text()}`);
+    return;
+  }
+}
+
+if (PHOTOS && defaultAvatars.size > 0) {
+  const portraitIds = new Map(Object.entries(PORTRAITS));
+  const feminine = [...PORTRAITS_FEMININS];
+  for (const person of world.people) {
+    if (portraitIds.has(person.username) || feminine.length === 0) continue;
+    if (FEMININE_FIRST_NAMES.has(person.displayName.split(' ')[0])) portraitIds.set(person.username, feminine.shift());
+  }
+
+  let portraits = 0;
+  let drawings = 0;
+  for (const person of world.people) {
+    if (!defaultAvatars.has(person.username)) continue;
+    const portrait = portraitIds.has(person.username) ? await fetchPortrait(portraitIds.get(person.username)) : undefined;
+    const image = portrait ?? (await downloadImage(`${DICEBEAR}?seed=${encodeURIComponent(person.username)}&size=256`));
+    if (!image) continue;
+    await uploadAvatar(sessions.get(person.username), image);
+    if (portrait) portraits++;
+    else drawings++;
+    if (!portrait) await sleep(100);
+  }
+  console.log(`  ${portraits + drawings} avatars (${portraits} portraits, ${drawings} illustres)`);
 }
 
 const section = (order, hidden = []) =>
@@ -714,6 +803,52 @@ for (const project of world.projects) {
   customized++;
 }
 console.log(`  ${customized} fiches personnalisees (${withPhotos} avec photos)`);
+// Etapes : les taches du tableau, repartie entre les trois colonnes par
+// defaut selon l'anciennete du projet (un projet termine a tout fait). Un
+// tableau qui a deja des taches n'est pas retouche, donc une base deja seedee
+// recoit ses etapes sans doublon. Poser une tache fait avancer
+// `last_activity_at` : l'etape 4 le reecrit pour les projets de ce run, et pour
+// les autres on le restaure ici (sans base, on les laisse).
+let taskCount = 0;
+for (const project of world.projects) {
+  const fresh = freshProjects.has(project.slug);
+  if (!fresh && !db) continue;
+  const token = sessions.get(project.owner);
+  if ((await call('GET', `/projects/${project.slug}/tasks`, { token })).length > 0) continue;
+  const columns = (await call('GET', `/projects/${project.slug}/columns`, { token })).sort((a, b) => a.order - b.order);
+  if (columns.length < 3) continue;
+  const before = fresh
+    ? undefined
+    : (await db.query('SELECT updated_at, last_activity_at FROM projects WHERE id = $1', [projectIds.get(project.slug)])).rows[0];
+  const [todo, doing, done] = columns;
+
+  const finished = world.events.some((event) => event.project.slug === project.slug && event.kind === 'complete');
+  const progress = finished ? 1 : Math.min(1, (project.ageDays ?? 30) / 120);
+  const steps = STEPS.map((step, i) => {
+    const position = (i + 0.5) / STEPS.length;
+    const column = finished || position < progress * 0.8 ? done : position < progress * 0.8 + 0.25 ? doing : todo;
+    return { ...step, column };
+  });
+  const needs = (project.needs ?? []).map((need) => ({
+    title: `Trouver : ${need.label}`.slice(0, 120),
+    details: 'Besoin indique sur la fiche du projet.',
+    column: finished ? done : todo,
+  }));
+
+  for (const { title, details, column } of [...steps, ...needs]) {
+    await call('POST', '/tasks', { token, body: { columnId: column.id, title, details } });
+    taskCount++;
+  }
+  if (before) {
+    await db.query('UPDATE projects SET updated_at = $2, last_activity_at = $3 WHERE id = $1', [
+      projectIds.get(project.slug),
+      before.updated_at,
+      before.last_activity_at,
+    ]);
+  }
+}
+console.log(`  ${taskCount} etapes (taches du tableau)`);
+
 const withAi = db && AI_WAIT_MS > 0 && (await hasEmbeddingsTable(db));
 if (db && !withAi) console.log('  table embeddings absente ou attente desactivee : pas de synchro IA');
 
