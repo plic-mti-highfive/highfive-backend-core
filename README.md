@@ -37,10 +37,22 @@ En developpement, le schema de base est synchronise au demarrage
 ### Jeu de demonstration
 
 ```bash
-node scripts/seed.mjs   # 5 personnes, 5 projets, highfives et equipes
+node scripts/seed.mjs                 # ~100 personnes, ~60 projets, 4 mois d'historique
+SEED_DRY_RUN=1 node scripts/seed.mjs  # statistiques du monde simule, sans rien ecrire
 ```
 
 Compte de demonstration : `alex.rivera@example.com` / `demo1234`.
+
+Le seed simule un site en service : inscriptions etalees, highfives guides
+par les centres d'interet et dates (rafales recentes sur quelques projets),
+candidatures, commentaires, annonces, projets termines ou archives. Il passe
+par l'API, rejoue l'historique dans l'ordre chronologique (les vecteurs
+d'interet de l'IA evoluent donc dans le bon ordre), puis reecrit les dates en
+base (`DB_*`), y compris `embeddings.updated_at` que lit le trending de l'IA.
+Avec un worker IA muni d'une cle OpenAI, il attend les vrais embeddings
+(`SEED_AI_WAIT_S`, 300 s par defaut, 0 pour ne pas attendre). Contenu :
+`scripts/seed-data.mjs`. Relance sans effet ; pour repartir de zero, vider la
+base.
 
 ### Verification de bout en bout
 
