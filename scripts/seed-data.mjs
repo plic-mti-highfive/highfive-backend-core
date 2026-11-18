@@ -157,6 +157,7 @@ export const PROJECTS = [
   },
   {
     title: 'Court métrage tourné au téléphone',
+    photos: [{ id: '9b4c3763-6ac0-46af-9c8f-5fc55d8e5079', alt: 'Clap de cinéma tenu devant des façades anciennes' }, { id: '3ee29b0c-8950-46ed-8e4a-705028212fa8', alt: 'Jeune femme filmant avec une caméra sur trépied' }],
     tagline: 'Un film de quinze minutes, entièrement filmé au smartphone',
     description: "Un scénario écrit à plusieurs, un tournage sur trois week-ends dans le quartier, une projection publique à la médiathèque. On cherche des acteurs, des monteurs et des gens qui savent tenir une perche son.",
     tags: ['video', 'ecriture', 'spectacle'],
@@ -174,6 +175,7 @@ export const PROJECTS = [
   },
   {
     title: 'Portraits de commerçants',
+    photos: [{ id: 'd16f7ae1-c256-4ae3-b7ba-519e66ea1e54', alt: 'Étal de légumes au marché et sa marchande' }, { id: '23098bc1-60ea-4c19-b51e-0eb6f58e8ca3', alt: 'Antiquaire au milieu de ses meubles' }],
     tagline: 'Une expo photo des visages qui font vivre la rue',
     description: "Trente portraits en noir et blanc des commerçants du quartier, avec quelques lignes sur leur histoire. L'expo sera accrochée dans les vitrines elles-mêmes pendant un mois.",
     tags: ['photo', 'quartier', 'histoire'],
@@ -244,6 +246,7 @@ export const PROJECTS = [
   },
   {
     title: 'Club de robotique du samedi',
+    photos: [{ id: 'acee97cf-a2b6-4507-a8dc-d6c8d82a4248', alt: 'Jeunes pilotant un robot télécommandé lors d\'une compétition' }, { id: '0a624192-2606-44b6-8982-40e657e467a5', alt: 'Petits robots en briques de construction' }],
     tagline: 'Construire des robots avec des collégiens',
     description: "Arduino, capteurs, moteurs récupérés sur des imprimantes : on apprend en construisant. L'objectif de l'année est de participer à la coupe de robotique régionale.",
     tags: ['sciences', 'code', 'entraide-scolaire'],
@@ -261,6 +264,7 @@ export const PROJECTS = [
   },
   {
     title: 'Ateliers numériques pour seniors',
+    photos: [{ id: 'd3ba3d71-d8ff-4f8e-8398-e6c74b609deb', alt: 'Personne travaillant sur un ordinateur dans une salle informatique' }],
     tagline: 'Apprendre à appeler ses petits-enfants en visio',
     description: "Une heure par semaine, en petit groupe, pour apprivoiser le smartphone : messages, photos, démarches en ligne. Patience et bonne humeur exigées, compétences techniques minimales.",
     tags: ['code', 'solidarite', 'entraide-scolaire'],
@@ -331,6 +335,7 @@ export const PROJECTS = [
   },
   {
     title: 'Ruches sur le toit de la mairie',
+    photos: [{ id: 'f7a679f0-11f8-4254-8153-0bf1ff2f42cd', alt: 'Apicultrice présentant un cadre de ruche couvert d\'abeilles' }, { id: '4bb56e57-f6a8-4542-ba51-3f85dd3b3044', alt: 'Ruches colorées dans une prairie' }],
     tagline: 'Installer deux ruches et partager le miel',
     description: "La mairie a donné son accord pour deux ruches sur le toit-terrasse. On cherche un apiculteur pour encadrer, et des curieux pour apprendre. Le miel sera vendu au profit de l'école.",
     tags: ['environnement', 'animaux'],
@@ -377,6 +382,7 @@ export const PROJECTS = [
   // --- Solidarité, cuisine, langues ---
   {
     title: 'Frigo solidaire',
+    photos: [{ id: '709407e9-2757-4fa8-8f2d-329e3525ff6f', alt: 'Carton de denrées données : conserves, boissons et fruits secs' }, { id: 'c5832309-6324-44fa-894d-89e8be1c0bdc', alt: 'Bénévoles triant des légumes à donner' }],
     tagline: 'Un frigo en libre-service devant la boulangerie',
     description: "Les commerçants et les habitants y déposent ce qu'ils ne mangeront pas, chacun se sert. Il faut des bénévoles pour le nettoyer et vérifier les dates chaque jour.",
     tags: ['solidarite', 'cuisine', 'environnement'],
@@ -507,6 +513,7 @@ export const PROJECTS = [
   },
   {
     title: 'Tournoi de foot inter-quartiers',
+    photos: [{ id: 'dc8a708e-f791-477b-ad4c-db3d6bb3e6f5', alt: 'Jeunes footballeurs en plein match sur un terrain synthétique' }, { id: '9dc7f629-36c6-435e-b01c-4fb2c1e5aacc', alt: 'Partie de foot entre enfants au coucher du soleil' }],
     tagline: 'Huit équipes, une journée, une coupe en carton',
     description: "Des équipes mixtes de tous âges, des matchs de dix minutes et un grand pique-nique à midi. On cherche des arbitres, des bénévoles pour la buvette et des maillots.",
     tags: ['sport', 'evenement', 'quartier'],
@@ -532,6 +539,7 @@ export const PROJECTS = [
   },
   {
     title: 'Fête des voisins géante',
+    photos: [{ id: '9fc9d671-601a-4087-86fc-5a0689b90df3', alt: 'Enfants à vélo dans une rue fermée à la circulation et fleurie' }, { id: 'dfb5dd5a-f2c5-4182-8105-d325580e3675', alt: 'Promeneurs dans une rue piétonne en fête' }, { id: 'a16accd5-241d-4395-8f9e-b8ab4ecb98f0', alt: 'Enfants maquillés sous un barnum de fête de quartier' }],
     tagline: 'Toute la rue fermée pour un après-midi de fête',
     description: "Tables dans la rue, scène ouverte, jeux pour enfants, barbecue partagé. La rue sera fermée à la circulation de 14 h à minuit.",
     tags: ['evenement', 'quartier', 'cuisine'],
